@@ -1,0 +1,71 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "thy1016/mooncmd/mystate"
+
+// Values
+
+// Errors
+
+// Types and methods
+pub struct EventWriter[E, A] {
+  run : () -> (A, Array[E])
+}
+pub fn[E, A, B] EventWriter::bind(Self[E, A], (A) -> Self[E, B]) -> Self[E, B]
+pub fn[E, A] EventWriter::eval(Self[E, A]) -> A
+pub fn[E, A] EventWriter::exec(Self[E, A]) -> Array[E]
+pub fn[E, A, B] EventWriter::map(Self[E, A], (A) -> B) -> Self[E, B]
+pub fn[E, A] EventWriter::new(() -> (A, Array[E])) -> Self[E, A]
+pub fn[E, A] EventWriter::pure(A) -> Self[E, A]
+pub fn[E, A] EventWriter::run_writer(Self[E, A]) -> (A, Array[E])
+pub fn[E, A] EventWriter::sequence(Array[Self[E, A]]) -> Self[E, Array[A]]
+pub fn[E] EventWriter::tell(E) -> Self[E, Unit]
+pub fn[E] EventWriter::tell_many(Array[E]) -> Self[E, Unit]
+pub fn[E, A, B] EventWriter::traverse(Array[A], (A) -> Self[E, B]) -> Self[E, Array[B]]
+
+pub struct Reader[Env, A] {
+  // private fields
+}
+pub fn[Env] Reader::ask() -> Self[Env, Env]
+pub fn[Env, A] Reader::asks((Env) -> A) -> Self[Env, A]
+pub fn[Env, A, B] Reader::bind(Self[Env, A], (A) -> Self[Env, B]) -> Self[Env, B]
+pub fn[Env, A] Reader::local_(Self[Env, A], (Env) -> Env) -> Self[Env, A]
+pub fn[Env, A, B] Reader::map(Self[Env, A], (A) -> B) -> Self[Env, B]
+pub fn[Env, A] Reader::new((Env) -> A) -> Self[Env, A]
+pub fn[Env, A] Reader::pure(A) -> Self[Env, A]
+pub fn[Env, A] Reader::run(Self[Env, A], Env) -> A
+
+type State[S, V]
+pub fn[S, V, W] State::apply(Self[S, (V) -> W], Self[S, V]) -> Self[S, W]
+pub fn[S, V, A] State::bind(Self[S, V], (V) -> Self[S, A]) -> Self[S, A]
+pub fn[S, V] State::eval_state(Self[S, V], S) -> V
+pub fn[S, V] State::exec_state(Self[S, V], S) -> S
+pub fn[S] State::get() -> Self[S, S]
+pub fn[S, V, W] State::map(Self[S, V], (V) -> W) -> Self[S, W]
+pub fn[S] State::modify((S) -> S) -> Self[S, Unit]
+pub fn[S, V] State::new(V) -> Self[S, V]
+pub fn[S] State::put(S) -> Self[S, Unit]
+pub fn[S, V] State::run_state(Self[S, V], S) -> (V, S)
+pub fn[S, A] State::sequence(Array[Self[S, A]]) -> Self[S, Array[A]]
+pub fn[S, V] State::state((S) -> (V, S)) -> Self[S, V]
+pub fn[S, A, B] State::traverse(Array[A], (A) -> Self[S, B]) -> Self[S, Array[B]]
+
+pub struct Writer[W, A] {
+  run : () -> (A, W)
+  config : WriterConfig[W]
+}
+pub fn[W, A, B] Writer::bind(Self[W, A], (A) -> Self[W, B]) -> Self[W, B]
+pub fn[W, A] Writer::eval(Self[W, A]) -> A
+pub fn[W, A] Writer::exec(Self[W, A]) -> W
+pub fn[W, A, B] Writer::map(Self[W, A], (A) -> B) -> Self[W, B]
+pub fn[W] Writer::new(W, (W, W) -> W) -> WriterConfig[W]
+pub fn[W, A] Writer::pure(A, WriterConfig[W]) -> Self[W, A]
+pub fn[W, A] Writer::run_writer(Self[W, A]) -> (A, W)
+pub fn[W] Writer::tell(W, WriterConfig[W]) -> Self[W, Unit]
+
+pub struct WriterConfig[W] {
+  empty : W
+  concat : (W, W) -> W
+}
+
+// Type aliases
+
+// Traits

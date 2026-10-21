@@ -1,0 +1,59 @@
+// pub(all) enum StoreTestEvent {
+//   Created(String)
+//   Updated(String)
+//   Deleted
+// } derive(Debug, Eq)
+
+///|
+/// 测试用的简单事件类型
+enum TestEvent {
+  Created(String)
+  Updated(String)
+  Deleted
+} derive(Debug, Eq)
+
+///|
+fn get_test_event_type_name(event : TestEvent) -> String {
+  match event {
+    Created(_) => "Created"
+    Updated(_) => "Updated"
+    Deleted => "Deleted"
+  }
+}
+
+///|
+
+///|
+/// 役5（FR-MC-1）：乐观并发金样——批次首事件版本 ≠ 当前版本 + 1 ⇒ DuplicateVersion，拒写不落脏
+async test "SQLiteEventStore 乐观并发：版本冲突即拒" {
+  let db_path = "/tmp/test_event_store_conflict.db"
+  @fs.remove_file(db_path) catch {
+    _ => ()
+  }
+  let store = @mooncmd.SQLiteEventStore::new(
+    db_path, serialize_test_event, deserialize_test_event, get_test_event_type_name,
+  )
+  let aggregate_id = "conflict-aggregate"
+  store.append(aggregate_id, [
+    @mooncmd.EventMessage::new(TestEvent::Created("A"), aggregate_id, 1),
+  ])
+  let stale = @mooncmd.EventMessage::new(
+    TestEvent::Updated("B"),
+    aggregate_id,
+    1,
+  )
+  let mut conflict = false
+  store.append(aggregate_id, [stale]) catch {
+    e =>
+      match e {
+        @mooncmd.EventStoreError::DuplicateVersion(_) => conflict = true
+        _ => ()
+      }
+  }
+  assert_true(conflict)
+  // 拒写后不落脏：当前版本仍是 1
+  assert_eq(store.current_version(aggregate_id), 1)
+  @fs.remove_file(db_path) catch {
+    _ => ()
+  }
+}

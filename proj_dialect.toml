@@ -1,0 +1,24 @@
+# mooncmd proj dialect (moonxr ops_projgen v1.6 stdin contract).
+# Generate:
+#   cat mooncmd/proj_dialect.toml | moon run moonxr/ops_projgen.mbtx
+# pkgs intentionally empty: both pkgs (mooncmd root + mystate) were
+# hand-planted; each moon.pkg is the hand-written maintenance surface
+# (supported_targets / aliases / for-"test" block), so no [[pkg]] rows
+# here -- this file manages the module-root artifacts only
+# (moon.mod / .gitignore).
+# NOTE: moon.mod has been hand-enriched with publish metadata
+# (repository/license/keywords/description/readme/preferred_target,
+# moonspace precedent) -- regenerating from this file would clobber
+# that; metadata is hand-maintained thereafter.
+
+[project]
+mode = "standalone"
+module = "thy1016/mooncmd"
+version = "0.1.0"
+deps = [
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/x@0.5.5",
+  "moonbit-community/sqlite3@0.2.3",
+  "f4ah6o/uuidm@0.2.1",
+]
+ignores = ["_build/", ".mooncakes/", "bak/", "ctx.md", "todo.md"]

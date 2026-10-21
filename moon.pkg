@@ -1,0 +1,20 @@
+import {
+  "thy1016/mooncmd/mystate",
+  "moonbitlang/async",
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/core/json",
+  "moonbit-community/sqlite3",
+  "f4ah6o/uuidm" @uuid,
+}
+
+import {
+  "moonbitlang/x/fs",
+  "moonbitlang/core/json",
+  "moonbitlang/core/encoding/utf8",
+} for "test"
+
+supported_targets = "native+wasm"
+
+options(
+  "is-main": false,
+)
