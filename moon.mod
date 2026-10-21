@@ -13,7 +13,14 @@ repository = "https://www.gitlink.org.cn/thy7/mbt.cmd"
 
 license = "MulanPSL-2.0"
 
-keywords = [ "event-sourcing", "cqrs", "event-store", "aggregate", "snapshot", "sqlite" ]
+keywords = [
+  "event-sourcing",
+  "cqrs",
+  "event-store",
+  "aggregate",
+  "snapshot",
+  "sqlite",
+]
 
 description = "Command-side event sourcing kernel for MoonBit: pure command handlers, auto-wrapped EventMessage metadata (correlation/causation), optimistic concurrency with duplicate-version rejection, SQLite event store, projections and snapshots."
 

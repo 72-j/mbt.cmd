@@ -38,6 +38,7 @@ pub(all) suberror CommandError {
   NotFound(String)
   Conflict(Int, Int)
 }
+pub fn CommandError::to_string(Self) -> String
 
 pub(all) suberror EventBusError {
   PublishError(String)
@@ -64,26 +65,6 @@ pub(all) suberror SnapshotError {
 pub fn SnapshotError::to_string(Self) -> String
 
 // Types and methods
-pub(all) enum AccountCommand {
-  CreateAccount(String, Int)
-  DepositMoney(Int)
-  WithdrawMoney(Int)
-  CloseAccount
-}
-
-pub(all) enum AccountEvent {
-  AccountCreated(String, Int)
-  MoneyDeposited(Int)
-  MoneyWithdrawn(Int)
-  AccountClosed
-}
-
-pub(all) struct AccountState {
-  name : String
-  balance : Int
-  is_active : Bool
-}
-
 pub struct AggUUID {
   value : String
 }

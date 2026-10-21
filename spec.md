@@ -1,6 +1,6 @@
 # mooncmd 规格卷（spec）
 
-版本：**v0.1.6**（2026-10-08 立卷；同日 MC-6 拍定 + MU1 执行同步；2026-10-21 役5a 收口 + 独立成仓同步，见变更记录）
+版本：**v0.1.7**（2026-10-08 立卷；同日 MC-6 拍定 + MU1 执行同步；2026-10-21 役5a 收口 + 独立成仓同步，见变更记录）
 体例：世界卷 `bangto/world/const.md` §5.1 `spec` 卷位——**结构事实与契约**；**禁止承载决策**（裁定与被否方案归 MCMD-S1 及其拆出 `adr`，本卷只记裁定后的结构结果）。
 上游：《mooncmd 需求档》（MCMD-S1 v0.1.1）——**已拆卷归档** `bak/requirements.md`（2026-10-08 MU2 立卷笔）；本卷为拆卷正身，`[提案]` 行原样搬迁（拆卷 ≠ 签发）。
 配套：`const.md` v1.0.0（红线六条）/ `adr.md` v1.0.0（ADR-MC-001..006）/ `todo.md` v1.0.0（役1–6，役1–3 已收）/ `ctx.md` v0.1.3（即时账本）/ `cmd.md`（设计注记，本卷 §2 的来源稿）。
@@ -12,7 +12,7 @@
 
 | 项 | 事实 |
 |---|---|
-| 目录形态 | `mooncmd/`（主包 13 件）+ `mooncmd/mystate/`（函数式基础设施子包 8 件）；扁平式布局（world const §5.4 小项目形态）；测试命名循 moonttl 标准——黑盒 `*_test.mbt` ×4（主包）、白盒 `*_wbtest.mbt` ×3（mystate） |
+| 目录形态 | `mooncmd/`（主包 13 件）+ `mooncmd/mystate/`（函数式基础设施子包 8 件）+ `mooncmd/examples/`（可执行示例自证包，native）；扁平式布局；测试命名循 moonttl 标准——黑盒 `*_test.mbt` ×4（主包）+ 夹具件 ×1、白盒 `*_wbtest.mbt` ×3（mystate） |
 | 模块形态 | **独立模块** `thy1016/mooncmd`（moon.mod 在盘，moonspace 范式；ADR-MC-007）；主仓树内在存但主仓不跟踪（主仓 .gitignore 止蚀） |
 | 包路径 | `thy1016/mooncmd`（模块根包）；子包 `thy1016/mooncmd/mystate` |
 | 运行时依赖 | `mystate`（`@mystate`）· `moonbitlang/async@0.22.4` · `moonbit-community/sqlite3@0.2.3`（`@sqlite3`）· `f4ah6o/uuidm@0.2.1`（`@uuid`）；core（utf8/json）内置 |
@@ -104,7 +104,7 @@ State Monad（`State[S, V]`，三法则注记在案）· Writer Monad（`Writer[
 | 乐观并发 | **已落**（守门 + DuplicateVersion + 金样） | —— |
 | 幂等写入约束 | **已落**（表级 UNIQUE + 钉子；竞态路径测试待补） | 役5b |
 | schema_version 预留 | **已落**（默认 1，只预留） | —— |
-| Account 测试夹具 | ⚠ **违约在册**：`pub(all)` 入 .mbti（spec §7.6 非目标） | 役5c |
+| Account 测试夹具 | **已出契约面**（2026-10-21：类型迁测试包 `account_fixture_test.mbt`，.mbti 零 Account；使用示例另立 `examples/` 可执行包） | —— |
 | 包卫生 | MU1 已执行；独立仓 gitlink `thy7/mbt.cmd`（2026-10-21，ADR-MC-007）；`bak/` 本地归档不入仓（底稿仅存本机盘，待裁） | 待裁 |
 
 ## 6. 判据与门（NFR，自 MCMD-S1 §四 `[提案]` 原样搬迁）
@@ -148,6 +148,7 @@ State Monad（`State[S, V]`，三法则注记在案）· Writer Monad（`Writer[
 
 | 版本 | 日期 | 变更 |
 |---|---|---|
+| v0.1.7 | 2026-10-21 | **役5d 示例拆分**：① Account 夹具出生产面/契约面（迁 `account_fixture_test.mbt` 测试包私有，.mbti 零 Account，§7.6 违约销账）；② 新立 `examples/` 可执行示例包（moonspace 先例形，`moon run examples` 全链自证：聚合定义→命令链→落库→重放→乐观并发拒写→销户闭环→快照两径同果，终判 EXAMPLE:PASS）；③ 顺笔：`CommandError` 补 `Show::to_string` 显式晋升（FR-MC-6 缺口，examples 插值面需）。 |
 | v0.1.6 | 2026-10-21 | **独立成仓同步（ADR-MC-007）**：定位行/§1 模块形态重写（独立模块 thy1016/mooncmd + gitlink mbt.cmd + 依赖钉版随迁）；§6 棘轮改独立模块口径 41（根仓 104 为沿革参考）；§2/§9 内部卷名去敏（WVGEN→消费方中性表述，release_review ③ 类门对齐）。 |
 | v0.1.5 | 2026-10-21 | **役5a 收口同步**：§3.1 EventMessage 补 schema_version 字段；§4 缺口 1–3 划闭、新增缺口 4–6（迁移/适配器/错误抹平）；§5 已落-未落表对实态改口；§6 棘轮 98→104（根仓口径）；§8 追溯矩阵改口。役5 主体（10-09~16）当时未同步本卷——补齐对账。 |
 | v0.1.4 | 2026-10-08 | **MU2 立卷笔（spec 侧收尾）**：头部上游/配套行随拆卷实态更新（需求档归档 `bak/requirements.md`；const/adr/todo 三卷立）；§3.2 交叉引用改指 ADR-MC-003，顺修 mystore 拼写。 |

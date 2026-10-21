@@ -24,6 +24,10 @@ pub(all) suberror CommandError {
 }
 
 ///|
+/// 显式晋升 Show::to_string（[0079] 隐式晋升已弃会；examples 插值面需要——FR-MC-6 错误面 Show 稳定）
+pub extend CommandError with Show::{to_string}
+
+///|
 impl Show for CommandError with fn output(self, buf) {
   match self {
     InvalidCommand(reason) => buf.write_string("InvalidCommand: \{reason}")

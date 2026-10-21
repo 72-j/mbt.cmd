@@ -4,17 +4,17 @@ test "快照等价：快照态起跑 + 尾部重放 ≡ 全量重放" {
   let handler = account_handler
   let applier = @mooncmd.EventApplier::Single(account_applier_single)
   let e1 = @mooncmd.EventMessage::new(
-    @mooncmd.AccountEvent::AccountCreated("Snap", 1000),
+    AccountEvent::AccountCreated("Snap", 1000),
     "snap-1",
     1,
   )
   let e2 = @mooncmd.EventMessage::new(
-    @mooncmd.AccountEvent::MoneyDeposited(500),
+    AccountEvent::MoneyDeposited(500),
     "snap-1",
     2,
   )
   let e3 = @mooncmd.EventMessage::new(
-    @mooncmd.AccountEvent::MoneyWithdrawn(300),
+    AccountEvent::MoneyWithdrawn(300),
     "snap-1",
     3,
   )
@@ -52,8 +52,8 @@ test "快照等价：快照态起跑 + 尾部重放 ≡ 全量重放" {
 ///|
 /// 役5（FR-MC-5）：快照存储记录面 roundtrip（测试内内存实现，不新增生产后端——ADR-MC-004）
 test "快照存储记录面 roundtrip（内存实现）" {
-  let saved : Array[@mooncmd.Snapshot[String, @mooncmd.AccountState]] = []
-  let store : @mooncmd.SnapshotStore[String, @mooncmd.AccountState] = {
+  let saved : Array[@mooncmd.Snapshot[String, AccountState]] = []
+  let store : @mooncmd.SnapshotStore[String, AccountState] = {
     save: fn(id, s, v, _t) { saved.push(@mooncmd.Snapshot::new(id, s, v)) },
     load: fn(id) {
       let mut found = None
@@ -71,15 +71,11 @@ test "快照存储记录面 roundtrip（内存实现）" {
     "snap-2",
     [
       @mooncmd.EventMessage::new(
-        @mooncmd.AccountEvent::AccountCreated("Snap2", 1000),
+        AccountEvent::AccountCreated("Snap2", 1000),
         "snap-2",
         1,
       ),
-      @mooncmd.EventMessage::new(
-        @mooncmd.AccountEvent::MoneyDeposited(500),
-        "snap-2",
-        2,
-      ),
+      @mooncmd.EventMessage::new(AccountEvent::MoneyDeposited(500), "snap-2", 2),
     ],
     handler,
     applier,

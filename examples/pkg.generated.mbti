@@ -1,0 +1,17 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "thy1016/mooncmd/examples"
+
+// Values
+
+// Errors
+
+// Types and methods
+type DemoAccountState
+
+type DemoCommand
+
+type DemoEvent
+
+// Type aliases
+
+// Traits

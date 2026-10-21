@@ -12,6 +12,9 @@
 - 记录型函数面：`EventStore` / `SnapshotStore` / `EventBus`（struct-of-functions 定版）
 - 投影面：`Projection` 记录型 + `SubscriptionPosition` + SQLite 持久化投影
 - 子包 `mystate`：State / Writer / Reader / EventWriter 纯函数 Monad 基础设施
+- `examples/` 可执行示例包：银行账户聚合全链自证（`moon run examples`——
+  定义→命令链→落库→重放→乐观并发拒写→销户闭环→快照两径同果，
+  终判 `EXAMPLE:PASS`）；用法即文档，业务夹具不入库公开契约面
 - 错误面：`EventSourcingErr`（Command/EventStore/Snapshot/Aggregate 四臂 suberror）
 - 门读数：104 测试全绿（主包 62 + mystate 42）；`moon check --deny-warn` 双 0
 

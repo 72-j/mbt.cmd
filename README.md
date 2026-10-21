@@ -36,14 +36,12 @@ Monad 基础设施（State / Writer / Reader / EventWriter），不含事件溯�
 
 ## 使用
 
-```moonbit
-// 1. 定义命令/事件/状态（业务侧）
-// 2. handler : (S, C) -> Result[Array[E], CommandError]（纯函数）
-// 3. applier : EventApplier[S, E]
-// 4. 组装 RouteEnv + Router，dispatch_now 或 dispatch Reader
+```sh
+moon run examples   # 全链自证：聚合定义→命令链→落库→重放→并发拒写→销户→快照
 ```
 
-完整示例见测试面（`command_test.mbt` 银行账户夹具：开户/存款/取款/销户）。
+`examples/main.mbt` 即接入范文：定义状态/命令/事件三件套 → 纯函数 handler 与
+applier → `AggregateRoot` 命令链 → `SQLiteEventStore` 落库与重放重建。
 
 ## 许可证
 
