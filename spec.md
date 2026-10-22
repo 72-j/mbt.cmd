@@ -39,6 +39,12 @@ Command → CommandMessage（correlation_id / causation_id / user_id）
       → Step4.5 EventBus.publish（可空选；失败=Failed 诚实——事件已落库，
         盲重试会双重作用，at-least-once 归消费方接入役）→ Step5 每 100 版存快照
   → 投影（拉取式：Projection + LiveProjection，检查点即版本）
+
+Dispatch 门面（根包 `dispatch`，编排层定稿）：`dispatch(store, bus,
+aggregate, cmd, projections~, consistency~, poll_wait~, poll_budget~)`
+一个调用串完 ①exec 裁决 ②append 持久化 ③publish 通知（可空选）④提交
+⑤Strong 轮询投影检查点（预算超 = `ConsistencyErr`；等待注入，红线6）。
+高级编排（快照基态 / 重试机 / Reader）仍走 Router。
 ```
 
 - **红线三条**（const.md §1，已签发）：① Handler 只返回纯事件；② `execute` 独占包装权；③ Router 唯一持久化写入口。
@@ -70,7 +76,7 @@ Command → CommandMessage（correlation_id / causation_id / user_id）
 
 | 包 | 面 | 备注 |
 |---|---|---|
-| 根包 | `Router`（`dispatch`/`dispatch_now`/`dispatch_once`/`dispatch_with_config`/`dispatch_batch`/`dispatch_default` + `DispatchReader` 组合子）/ `RouteEnv`/`CommandConfig`/`RouterBuilder` / 总错误 `EventSourcingErr` / `Logger` | router_e2e_test 五钉（役5b） |
+| 根包 | `dispatch` 编排门面（五步串行 + Strong 一致性等待）/ `Router`（`dispatch`/`dispatch_now`/`dispatch_once`/`dispatch_with_config`/`dispatch_batch`/`dispatch_default` + `DispatchReader` 组合子）/ `RouteEnv`/`CommandConfig`/`RouterBuilder` / 总错误 `EventSourcingErr`（六臂，含 ConsistencyErr）/ `Logger` | router_e2e 六钉（役5b 五钉 + 钉G Strong） |
 | `aggregate/` | `AggregateRoot`（`new`/`from_events`/`from_snapshot`/`execute`/`exec` 形态 A（在途）/`commit`/`uncommitted_events`/`version`/`current_state`/`to_snapshot`）· `AggregateId` trait + `String`/`Int32`/`AggUUID` impl · `AggregateError` | exec 形态 A 在途件 |
 | `command/` | `CommandMessage`（`new`/`with_correlation`/`with_user`）· `CommandHandler` 型 · `Command` trait · `CommandError`（六变体，Show 全） | FR-MC-6 已闭 |
 | `event/` | `EventMessage`（含 `schema_version`/`user_id`）· `EventStream` · `EventApplier` · `EventBus`（publish 已接通）· `Event` trait · `EventBusError` | |

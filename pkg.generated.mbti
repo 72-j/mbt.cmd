@@ -6,10 +6,13 @@ import {
   "thy1016/mooncmd/command",
   "thy1016/mooncmd/event",
   "thy1016/mooncmd/monads",
+  "thy1016/mooncmd/projection",
   "thy1016/mooncmd/store",
 }
 
 // Values
+pub fn[Id, S, C, E] dispatch(@store.EventStore[Id, E], @event.EventBus[Id, E]?, @aggregate.AggregateRoot[Id, S, C, E], C, projections? : Array[@projection.LiveProjection[Id, E]], consistency? : Consistency, poll_wait? : (Int64) -> Unit, poll_budget? : Int) -> @aggregate.AggregateRoot[Id, S, C, E] raise EventSourcingErr
+
 pub fn[AggregateId, S, E] dispatch_ask() -> @monads.Reader[RouteEnv[AggregateId, S, E], RouteEnv[AggregateId, S, E]]
 
 pub fn[AggregateId, S, E, A] dispatch_asks((RouteEnv[AggregateId, S, E]) -> A) -> @monads.Reader[RouteEnv[AggregateId, S, E], A]
@@ -37,6 +40,7 @@ pub(all) suberror EventSourcingErr {
   EventBusErr(@event.EventBusError)
   SnapshotErr(@store.SnapshotError)
   AggregateErr(@aggregate.AggregateError)
+  ConsistencyErr(String)
 }
 
 // Types and methods

@@ -85,6 +85,21 @@ let rebuilt = @aggregate.AggregateRoot::from_events(
 )
 ```
 
+### 统一分发（dispatch 门面）
+
+执行、落库、通知、提交、强一致等待，一个调用串完：
+
+```moonbit
+let committed = @mooncmd.dispatch(
+  records,                                  // EventStore 记录面
+  None,                                     // EventBus（可选）
+  root,                                     // 聚合根
+  AccountCommand::DepositMoney(500),        // 命令
+  projections=[live_projection],            // Strong 模式需等待的投影
+  consistency=@mooncmd.Strong,              // 默认 Eventual
+)
+```
+
 ### Effect 重试（乐观并发自动重试）
 
 ```moonbit
@@ -148,12 +163,13 @@ wire 往返恒等）。事件命名与粒度属通用语言决策，由词表声
 | `store` | `SQLiteEventStore` / `EventStore` / `SnapshotStore` | SQLite 后端（含 `to_event_store` 适配器）与记录型存储抽象 |
 | `projection` | `Projection` / `LiveProjection` / `PersistedProjection` | 投影定义、内存实时投影（检查点推进）、SQLite 持久化投影 |
 | `monads` | `State` / `Writer` / `Reader` / `EventWriter` | 纯函数 Monad 基础设施 |
-| 根包 | `Router` / `RouteEnv` / `RouterBuilder` | 命令分发（含重试配置与批量分发）与依赖注入环境 |
+| 根包 | `dispatch` / `Router` / `RouteEnv` / `RouterBuilder` | `dispatch` 统一编排门面（执行→落库→通知→提交→强一致等待）；`Router` 高级编排（快照基态 / 重试机 / Reader 注入） |
 
 ## 错误面
 
-总错误 `EventSourcingErr` 四臂：`CommandErr` / `EventStoreErr` /
-`SnapshotErr` / `AggregateErr`。常用变体：`CommandError` 六变体
+总错误 `EventSourcingErr` 五臂：`CommandErr` / `EventStoreErr` /
+`SnapshotErr` / `EventBusErr` / `AggregateErr`，另含 `ConsistencyErr`
+（Strong 一致性轮询超预算）。常用变体：`CommandError` 六变体
 （`InvalidCommand` / `Unauthorized` / `PreconditionFailed` / `NotFound` /
 `Conflict` / `UnregisteredCommand`）；`EventStoreError` 三变体
 （`DuplicateVersion` / `StorageError` / `SerializationError`）。均实现

@@ -425,6 +425,7 @@ pub fn effect_kind_of_sourcing_err(
     EventStoreErr(e) => @aggregate.effect_kind_of_store_error(e)
     SnapshotErr(_) => @aggregate.Storage
     EventBusErr(_) => @aggregate.Storage
+    ConsistencyErr(_) => @aggregate.Other
     AggregateErr(_) => @aggregate.Other
   }
 }

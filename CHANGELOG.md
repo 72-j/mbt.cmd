@@ -6,8 +6,11 @@
   纯裁决 decide）+ `AggregateRoot::exec_with_effect`（错误分类 → 钩子覆写 →
   退避/熔断内算，wait 注入无时钟）；`account_retry.toml` 词表 → gen 产物
   （黄金门逐字节）+ 手写策略钩子（重试策略 = Policy，红线7）；
-  Router `dispatch_with_config` 重试裁决迁移同协议（总错误五臂分类 +
+  Router `dispatch_with_config` 重试裁决迁移同协议（总错误六臂分类 +
   `store_retry_machine`，API 不变）
+- **Dispatch 统一编排门面**：`@mooncmd.dispatch(store, bus, aggregate, cmd)`
+  一个调用串完执行 → 落库 → 通知 → 提交 → Strong 一致性等待（轮询投影
+  检查点，等待注入；预算超 `ConsistencyErr`）；bank 示例销户段已切换狗粮
 - **聚合 gen 上手面**（役7+）：wire 映射随 gen 出（`to_wire`/`from_wire`，
   行格式 v1 首列 schema_version 预留位）+ 契约门脚手架（init 值契约 +
   wire roundtrip 每事件恒等，`<name>_contract_wbtest.mbt` 随件免费）+

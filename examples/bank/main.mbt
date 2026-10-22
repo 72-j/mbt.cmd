@@ -230,7 +230,7 @@ fn main raise {
       effect2_ok,
       "业务拒零重试（执行 \{invalid_calls} 次，重放同结果）",
     )
-  // ========== ⑤ 销户闭环：余额清零 → CloseAccount（AccountClosed 事件）==========
+  // ========== ⑤ 销户闭环（dispatch 门面:执行+落库+提交一步——役9 编排层）==========
   let closable = @aggregate.AggregateRoot::from_events(
     aggregate_id,
     store.load(aggregate_id, 0),
@@ -238,18 +238,9 @@ fn main raise {
     @event.EventApplier::Single(account_applier),
     account_empty_state(),
   )
-  let closable = closable.exec(WithdrawMoney(1200)) catch {
-    err => {
-      println("[FAIL] 清零取款被拒：\{err.to_string()}")
-      return
-    }
-  }
-  let closed = closable.exec(CloseAccount) catch {
-    err => {
-      println("[FAIL] 销户命令被拒：\{err.to_string()}")
-      return
-    }
-  }
+  let records = store.to_event_store()
+  let after_withdraw = @mooncmd.dispatch(records, None, closable, WithdrawMoney(1200))
+  let closed = @mooncmd.dispatch(records, None, after_withdraw, CloseAccount)
   let closed_state = closed.current_state()
   let close_ok = closed_state.balance == 0 && !closed_state.is_active
   all_green = all_green &&
@@ -258,8 +249,7 @@ fn main raise {
       close_ok,
       "户名 \{closed_state.name}，balance = \{closed_state.balance}，active = \{closed_state.is_active}",
     )
-  // ========== ⑥ 快照加速：销户事件入库；快照@v3 全量态 + 尾部 v4/v5 重放 ≡ 全量 ==========
-  store.append(aggregate_id, closed.uncommitted_events())
+  // ========== ⑥ 快照加速：销户事件已随 dispatch 落库；快照@v3 全量态 + 尾部 v4/v5 重放 ≡ 全量 ==========
   let snapshottable = @aggregate.AggregateRoot::from_events(
     aggregate_id,
     loaded,

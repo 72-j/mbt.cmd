@@ -8,4 +8,5 @@ pub(all) suberror EventSourcingErr {
   EventBusErr(@event.EventBusError)
   SnapshotErr(@store.SnapshotError)
   AggregateErr(@aggregate.AggregateError)
+  ConsistencyErr(String)
 }

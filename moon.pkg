@@ -7,6 +7,7 @@ import {
   "thy1016/mooncmd/aggregate",
   "thy1016/mooncmd/store",
   "thy1016/mooncmd/monads",
+  "thy1016/mooncmd/projection",
 }
 
 import {
@@ -16,6 +17,7 @@ import {
   "thy1016/mooncmd/command",
   "thy1016/mooncmd/event",
   "thy1016/mooncmd/store",
+  "thy1016/mooncmd/projection",
 } for "test"
 
 supported_targets = "wasm+native"

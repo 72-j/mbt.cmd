@@ -5,6 +5,7 @@
 // (@aggregate/@command/@event/@store 直连)。
 import {
   "moonbitlang/core/encoding/utf8",
+  "thy1016/mooncmd",
   "thy1016/mooncmd/aggregate",
   "thy1016/mooncmd/command",
   "thy1016/mooncmd/event",

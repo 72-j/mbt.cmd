@@ -491,3 +491,67 @@ test "router e2e: with_config does not retry validation errors" {
   // 零重试:业务拒重放同结果,单次执行即上抛
   assert_eq(handler_calls, 1)
 }
+
+// 钉G·dispatch 门面（役9 编排层）:Strong 一致性——投影检查点追上目标版本
+// 才返回;预算超 = ConsistencyErr。Eventual 默认径不等待（钉E 已覆盖落库）。
+test "router e2e: dispatch facade strong consistency waits projection checkpoint" {
+  let store = e2e_fresh("/tmp/mooncmd_router_e2e_g.db")
+  let records = store.to_event_store()
+  let projection = @projection.Projection::new(
+    fn() { @json.to_json("fresh") },
+    fn(_view, _event) { @json.to_json("bumped") },
+    @projection.default_batch(fn(_view, _events) { @json.to_json("bumped") }),
+  )
+  let proj = @projection.LiveProjection::new(
+    "agg-8",
+    records,
+    projection,
+    @projection.SubscriptionPosition::Origin,
+  )
+  let root = @aggregate.AggregateRoot::new(
+    "agg-8",
+    e2e_handler,
+    @event.EventApplier::Single(e2e_applier),
+    { total: 0, },
+  )
+  let done = @mooncmd.dispatch(
+    records,
+    None,
+    root,
+    Add(4),
+    projections=[proj],
+    consistency=@mooncmd.Strong,
+    poll_wait=fn(_ms) { () },
+    poll_budget=10,
+  )
+  assert_eq(done.version(), 1)
+  assert_eq(proj.checkpoint(), 1)
+  // 预算超:卡死投影（挂另一库,永不更新）→ ConsistencyErr
+  let other = e2e_fresh("/tmp/mooncmd_router_e2e_g2.db")
+  let stuck = @projection.LiveProjection::new(
+    "agg-8b",
+    other.to_event_store(),
+    projection,
+    @projection.SubscriptionPosition::Origin,
+  )
+  let mut timed_out = false
+  try {
+    let _ = @mooncmd.dispatch(
+      records,
+      None,
+      done,
+      Add(2),
+      projections=[stuck],
+      consistency=@mooncmd.Strong,
+      poll_wait=fn(_ms) { () },
+      poll_budget=3,
+    )
+  } catch {
+    e =>
+      match e {
+        EventSourcingErr::ConsistencyErr(_) => timed_out = true
+        _ => fail("expected consistency timeout")
+      }
+  }
+  assert_true(timed_out)
+}
