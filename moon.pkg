@@ -1,17 +1,21 @@
+// mooncmd 主包门面(役8)——Router(用户拍:router 放主目录)/EventSourcingErr
+// 总族/logger;域类型消费方拨真籍(@command/@event/@aggregate/@store 直连,
+// 门面无再导出面——typealias 探针 [3002] 本工具链不支持)。
 import {
+  "thy1016/mooncmd/command",
+  "thy1016/mooncmd/event",
+  "thy1016/mooncmd/aggregate",
+  "thy1016/mooncmd/store",
   "thy1016/mooncmd/monads",
-  "moonbitlang/async",
-  "moonbitlang/core/encoding/utf8",
-  "moonbitlang/core/json",
-  "moonbit-community/sqlite3",
-  "f4ah6o/uuidm" @uuid,
 }
 
 import {
   "moonbitlang/x/fs",
-  "thy1016/skelschema",
   "moonbitlang/core/json",
   "moonbitlang/core/encoding/utf8",
+  "thy1016/mooncmd/command",
+  "thy1016/mooncmd/event",
+  "thy1016/mooncmd/store",
 } for "test"
 
 supported_targets = "wasm+native"

@@ -2,22 +2,25 @@
 package "thy1016/mooncmd"
 
 import {
-  "moonbit-community/sqlite3",
-  "thy1016/mooncmd/mystate",
+  "thy1016/mooncmd/aggregate",
+  "thy1016/mooncmd/command",
+  "thy1016/mooncmd/event",
+  "thy1016/mooncmd/monads",
+  "thy1016/mooncmd/store",
 }
 
 // Values
-pub fn[AggregateId, S, E] dispatch_ask() -> @mystate.Reader[RouteEnv[AggregateId, S, E], RouteEnv[AggregateId, S, E]]
+pub fn[AggregateId, S, E] dispatch_ask() -> @monads.Reader[RouteEnv[AggregateId, S, E], RouteEnv[AggregateId, S, E]]
 
-pub fn[AggregateId, S, E, A] dispatch_asks((RouteEnv[AggregateId, S, E]) -> A) -> @mystate.Reader[RouteEnv[AggregateId, S, E], A]
+pub fn[AggregateId, S, E, A] dispatch_asks((RouteEnv[AggregateId, S, E]) -> A) -> @monads.Reader[RouteEnv[AggregateId, S, E], A]
 
-pub fn[AggregateId, S, E, R, A] dispatch_reader_bind(@mystate.Reader[RouteEnv[AggregateId, S, E], R], (R) -> @mystate.Reader[RouteEnv[AggregateId, S, E], A]) -> @mystate.Reader[RouteEnv[AggregateId, S, E], A]
+pub fn[AggregateId, S, E, R, A] dispatch_reader_bind(@monads.Reader[RouteEnv[AggregateId, S, E], R], (R) -> @monads.Reader[RouteEnv[AggregateId, S, E], A]) -> @monads.Reader[RouteEnv[AggregateId, S, E], A]
 
-pub fn[AggregateId, S, E, R, A] dispatch_reader_map(@mystate.Reader[RouteEnv[AggregateId, S, E], R], (R) -> A) -> @mystate.Reader[RouteEnv[AggregateId, S, E], A]
+pub fn[AggregateId, S, E, R, A] dispatch_reader_map(@monads.Reader[RouteEnv[AggregateId, S, E], R], (R) -> A) -> @monads.Reader[RouteEnv[AggregateId, S, E], A]
 
-pub fn[AggregateId, S, E, R] dispatch_reader_new((RouteEnv[AggregateId, S, E]) -> R) -> @mystate.Reader[RouteEnv[AggregateId, S, E], R]
+pub fn[AggregateId, S, E, R] dispatch_reader_new((RouteEnv[AggregateId, S, E]) -> R) -> @monads.Reader[RouteEnv[AggregateId, S, E], R]
 
-pub fn[AggregateId, S, E, R] dispatch_reader_run(@mystate.Reader[RouteEnv[AggregateId, S, E], R], RouteEnv[AggregateId, S, E]) -> R
+pub fn[AggregateId, S, E, R] dispatch_reader_run(@monads.Reader[RouteEnv[AggregateId, S, E], R], RouteEnv[AggregateId, S, E]) -> R
 
 pub fn log_warn(String) -> Unit
 
@@ -26,78 +29,15 @@ pub fn make_console_logger() -> ConsoleLogger
 pub fn make_mute_logger() -> MuteLogger
 
 // Errors
-pub(all) suberror AggregateError {
-  IdParseError(String)
-}
-
-pub(all) suberror CommandError {
-  InvalidCommand(String)
-  UnregisteredCommand(String)
-  Unauthorized(String)
-  PreconditionFailed(String)
-  NotFound(String)
-  Conflict(Int, Int)
-}
-pub fn CommandError::to_string(Self) -> String
-
-pub(all) suberror EventBusError {
-  PublishError(String)
-}
-
 pub(all) suberror EventSourcingErr {
-  CommandErr(CommandError)
-  EventStoreErr(EventStoreError)
-  EventBusErr(EventBusError)
-  SnapshotErr(SnapshotError)
-  AggregateErr(AggregateError)
+  CommandErr(@command.CommandError)
+  EventStoreErr(@store.EventStoreError)
+  EventBusErr(@event.EventBusError)
+  SnapshotErr(@store.SnapshotError)
+  AggregateErr(@aggregate.AggregateError)
 }
-
-pub(all) suberror EventStoreError {
-  DuplicateVersion(Int)
-  StorageError(String)
-  SerializationError(String)
-}
-pub fn EventStoreError::to_string(Self) -> String
-
-pub(all) suberror SnapshotError {
-  StorageError(String)
-  SerializationError(String)
-}
-pub fn SnapshotError::to_string(Self) -> String
 
 // Types and methods
-pub struct AggUUID {
-  value : String
-}
-pub fn AggUUID::eq(Self, Self) -> Bool
-pub fn AggUUID::from_string(String) -> Result[Self, EventSourcingErr]
-pub fn AggUUID::new() -> Self
-pub fn AggUUID::to_string(Self) -> String
-pub impl AggregateId for AggUUID
-
-pub struct AggregateRoot[AggregateId, S, C, E] {
-  handler : (S, C) -> Result[Array[E], CommandError]
-  applier : EventApplier[S, E]
-  empty_state : S
-  mut state : AggregateState[AggregateId, S, E]
-  id : AggregateId
-}
-pub fn[AggregateId, S, C, E] AggregateRoot::commit(Self[AggregateId, S, C, E]) -> Self[AggregateId, S, C, E]
-pub fn[AggregateId, S, C, E] AggregateRoot::current_state(Self[AggregateId, S, C, E]) -> S
-pub fn[AggregateId, S, C, E] AggregateRoot::execute(Self[AggregateId, S, C, E], CommandMessage[C]) -> Result[Self[AggregateId, S, C, E], CommandError]
-pub fn[AggregateId, S, C, E] AggregateRoot::from_events(AggregateId, Array[EventMessage[AggregateId, E]], (S, C) -> Result[Array[E], CommandError], EventApplier[S, E], S) -> Self[AggregateId, S, C, E]
-pub fn[AggregateId, S, C, E] AggregateRoot::from_snapshot(AggregateId, S, S, Int, Array[EventMessage[AggregateId, E]], (S, C) -> Result[Array[E], CommandError], EventApplier[S, E]) -> Self[AggregateId, S, C, E]
-pub fn[AggregateId, S, C, E] AggregateRoot::new(AggregateId, (S, C) -> Result[Array[E], CommandError], EventApplier[S, E], S) -> Self[AggregateId, S, C, E]
-pub fn[AggregateId, S, C, E] AggregateRoot::to_snapshot(Self[AggregateId, S, C, E]) -> Snapshot[AggregateId, S]
-pub fn[AggregateId, S, C, E] AggregateRoot::uncommitted_events(Self[AggregateId, S, C, E]) -> Array[EventMessage[AggregateId, E]]
-pub fn[AggregateId, S, C, E] AggregateRoot::version(Self[AggregateId, S, C, E]) -> Int
-
-pub struct AggregateState[AggregateId, S, E] {
-  state : S
-  version : Int
-  uncommitted_events : Array[EventMessage[AggregateId, E]]
-}
-
 pub(all) struct CommandConfig {
   timeout_ms : Int64
   max_retries : Int
@@ -108,19 +48,6 @@ pub fn CommandConfig::with_consistency(Self, Consistency) -> Self
 pub fn CommandConfig::with_retries(Self, Int) -> Self
 pub fn CommandConfig::with_timeout(Self, Int64) -> Self
 
-pub struct CommandMessage[C] {
-  command : C
-  command_id : String
-  mut correlation_id : String
-  causation_id : String
-  mut user_id : String?
-  timestamp : Int64
-  metadata : Json
-}
-pub fn[C] CommandMessage::new(C) -> Self[C]
-pub fn[C] CommandMessage::with_correlation(Self[C], String) -> Self[C]
-pub fn[C] CommandMessage::with_user(Self[C], String) -> Self[C]
-
 pub(all) enum Consistency {
   Eventual
   Strong
@@ -130,96 +57,39 @@ type ConsoleLogger
 pub fn ConsoleLogger::info(Self, String) -> Unit
 pub impl Logger for ConsoleLogger
 
-pub(all) enum EventApplier[S, E] {
-  Single((S, E) -> S)
-  Batch((S, Array[E]) -> S)
-}
-
-pub(all) struct EventBus[AggregateId, E] {
-  publish : (EventBus[AggregateId, E], Array[EventMessage[AggregateId, E]]) -> Unit raise EventBusError
-}
-
-pub struct EventMessage[AggregateId, E] {
-  event : E
-  event_id : String
-  aggregate_id : AggregateId
-  aggregate_version : Int
-  correlation_id : String
-  causation_id : String
-  user_id : String?
-  timestamp : Int64
-  metadata : Json
-  schema_version : Int
-}
-pub fn[AggregateId, E, C] EventMessage::from_command(E, AggregateId, Int, CommandMessage[C]) -> Self[AggregateId, E]
-pub fn[AggregateId, E] EventMessage::new(E, AggregateId, Int) -> Self[AggregateId, E]
-
-pub(all) struct EventStore[AggregateId, E] {
-  append : (EventStore[AggregateId, E], AggregateId, Array[EventMessage[AggregateId, E]]) -> Unit raise EventStoreError
-  load : (EventStore[AggregateId, E], AggregateId, Int) -> Array[EventMessage[AggregateId, E]] raise EventStoreError
-  current_version : (EventStore[AggregateId, E], AggregateId) -> Int raise EventStoreError
-}
-
-pub(all) enum EventStream[AggregateId, E] {
-  Nil
-  Cons(EventMessage[AggregateId, E], EventStream[AggregateId, E])
-}
-pub fn[AggregateId, E] EventStream::length(Self[AggregateId, E]) -> Int
-pub fn[AggregateId, E] EventStream::to_array(Self[AggregateId, E]) -> Array[EventMessage[AggregateId, E]]
-
-pub(all) struct LiveProjection[AggregateId, E] {
-  view : Json
-  last_version : Int
-  projection : Projection[AggregateId, E]
-  event_store : EventStore[AggregateId, E]
-  aggregate_id : AggregateId
-}
-
 type MuteLogger
 pub fn MuteLogger::info(Self, String) -> Unit
 pub impl Logger for MuteLogger
 
-type PersistedProjection
-pub fn PersistedProjection::load(Self, String) -> (Json, Int)? raise
-pub fn PersistedProjection::new(@sqlite3.Connection, String) -> Self
-pub fn PersistedProjection::save(Self, String, Json, Int) -> Unit
-
-pub(all) struct Projection[AggregateId, E] {
-  init : () -> Json
-  apply : (Json, EventMessage[AggregateId, E]) -> Json
-  apply_batch : (Json, Array[EventMessage[AggregateId, E]]) -> Json
-}
-pub fn[AggregateId, E] Projection::new(() -> Json, (Json, EventMessage[AggregateId, E]) -> Json, (Json, Array[EventMessage[AggregateId, E]]) -> Json) -> Self[AggregateId, E]
-
 pub struct RouteEnv[AggregateId, S, E] {
-  event_store : EventStore[AggregateId, E]
-  snapshot_store : SnapshotStore[AggregateId, S]
-  event_bus : EventBus[AggregateId, E]?
+  event_store : @store.EventStore[AggregateId, E]
+  snapshot_store : @store.SnapshotStore[AggregateId, S]
+  event_bus : @event.EventBus[AggregateId, E]?
   logger : &Logger
   default_timeout : Int64
   default_retry : Int
 }
-pub fn[AggregateId, E, S] RouteEnv::new(EventStore[AggregateId, E], SnapshotStore[AggregateId, S], EventBus[AggregateId, E]?, Int64, Int) -> Self[AggregateId, S, E]
+pub fn[AggregateId, E, S] RouteEnv::new(@store.EventStore[AggregateId, E], @store.SnapshotStore[AggregateId, S], @event.EventBus[AggregateId, E]?, Int64, Int) -> Self[AggregateId, S, E]
 
 pub struct Router[AggregateId, S, C, E] {
   env : RouteEnv[AggregateId, S, E]
   default_config : CommandConfig
-  handlers : Map[String, (S, C) -> Result[Array[E], CommandError]]
+  handlers : Map[String, (S, C) -> Result[Array[E], @command.CommandError]]
 }
-pub fn[AggregateId, S, C, E] Router::dispatch(Self[AggregateId, S, C, E], AggregateId, CommandMessage[C], (S, C) -> Result[Array[E], CommandError], EventApplier[S, E], S) -> @mystate.Reader[RouteEnv[AggregateId, S, E], Result[AggregateRoot[AggregateId, S, C, E], EventSourcingErr]]
-pub fn[AggregateId, S, C, E] Router::dispatch_batch(Self[AggregateId, S, C, E], Array[(AggregateId, CommandMessage[C])], (S, C) -> Result[Array[E], CommandError], EventApplier[S, E], S) -> @mystate.Reader[RouteEnv[AggregateId, S, E], Result[Array[AggregateRoot[AggregateId, S, C, E]], EventSourcingErr]]
-pub fn[AggregateId, S, C, E] Router::dispatch_default(Self[AggregateId, S, C, E], AggregateId, CommandMessage[C], EventApplier[S, E], S) -> Result[AggregateRoot[AggregateId, S, C, E], EventSourcingErr]
-pub fn[AggregateId, S, C, E] Router::dispatch_now(Self[AggregateId, S, C, E], AggregateId, CommandMessage[C], (S, C) -> Result[Array[E], CommandError], EventApplier[S, E], S) -> Result[AggregateRoot[AggregateId, S, C, E], EventSourcingErr]
-pub fn[AggregateId, S, C, E] Router::dispatch_with_config(Self[AggregateId, S, C, E], AggregateId, CommandMessage[C], (S, C) -> Result[Array[E], CommandError], EventApplier[S, E], S, Int64, Int) -> @mystate.Reader[RouteEnv[AggregateId, S, E], Result[AggregateRoot[AggregateId, S, C, E], EventSourcingErr]]
-pub fn[AggregateId, S, C, E] Router::new(RouteEnv[AggregateId, S, E], CommandConfig, Map[String, (S, C) -> Result[Array[E], CommandError]]) -> Self[AggregateId, S, C, E]
+pub fn[AggregateId, S, C, E] Router::dispatch(Self[AggregateId, S, C, E], AggregateId, @command.CommandMessage[C], (S, C) -> Result[Array[E], @command.CommandError], @event.EventApplier[S, E], S) -> @monads.Reader[RouteEnv[AggregateId, S, E], Result[@aggregate.AggregateRoot[AggregateId, S, C, E], EventSourcingErr]]
+pub fn[AggregateId, S, C, E] Router::dispatch_batch(Self[AggregateId, S, C, E], Array[(AggregateId, @command.CommandMessage[C])], (S, C) -> Result[Array[E], @command.CommandError], @event.EventApplier[S, E], S) -> @monads.Reader[RouteEnv[AggregateId, S, E], Result[Array[@aggregate.AggregateRoot[AggregateId, S, C, E]], EventSourcingErr]]
+pub fn[AggregateId, S, C, E] Router::dispatch_default(Self[AggregateId, S, C, E], AggregateId, @command.CommandMessage[C], @event.EventApplier[S, E], S) -> Result[@aggregate.AggregateRoot[AggregateId, S, C, E], EventSourcingErr]
+pub fn[AggregateId, S, C, E] Router::dispatch_now(Self[AggregateId, S, C, E], AggregateId, @command.CommandMessage[C], (S, C) -> Result[Array[E], @command.CommandError], @event.EventApplier[S, E], S) -> Result[@aggregate.AggregateRoot[AggregateId, S, C, E], EventSourcingErr]
+pub fn[AggregateId, S, C, E] Router::dispatch_with_config(Self[AggregateId, S, C, E], AggregateId, @command.CommandMessage[C], (S, C) -> Result[Array[E], @command.CommandError], @event.EventApplier[S, E], S, Int64, Int) -> @monads.Reader[RouteEnv[AggregateId, S, E], Result[@aggregate.AggregateRoot[AggregateId, S, C, E], EventSourcingErr]]
+pub fn[AggregateId, S, C, E] Router::new(RouteEnv[AggregateId, S, E], CommandConfig, Map[String, (S, C) -> Result[Array[E], @command.CommandError]]) -> Self[AggregateId, S, C, E]
 
 pub(all) struct RouterBuilder[AggregateId, S, C, E] {
   env : RouteEnv[AggregateId, S, E]
   mut default_config : CommandConfig
-  handlers : Map[String, (S, C) -> Result[Array[E], CommandError]]
+  handlers : Map[String, (S, C) -> Result[Array[E], @command.CommandError]]
 }
-pub fn[AggregateId, S, C, E] RouterBuilder::add_handler(Self[AggregateId, S, C, E], String, (S, C) -> Result[Array[E], CommandError]) -> Self[AggregateId, S, C, E]
-pub fn[AggregateId, S, C, E] RouterBuilder::add_handlers(Self[AggregateId, S, C, E], String, Array[(S, C) -> Result[Array[E], CommandError]]) -> Self[AggregateId, S, C, E]
+pub fn[AggregateId, S, C, E] RouterBuilder::add_handler(Self[AggregateId, S, C, E], String, (S, C) -> Result[Array[E], @command.CommandError]) -> Self[AggregateId, S, C, E]
+pub fn[AggregateId, S, C, E] RouterBuilder::add_handlers(Self[AggregateId, S, C, E], String, Array[(S, C) -> Result[Array[E], @command.CommandError]]) -> Self[AggregateId, S, C, E]
 pub fn[AggregateId, S, C, E] RouterBuilder::build(Self[AggregateId, S, C, E]) -> Router[AggregateId, S, C, E]
 pub fn[AggregateId, S, C, E] RouterBuilder::handler_count(Self[AggregateId, S, C, E]) -> Int
 pub fn[AggregateId, S, C, E] RouterBuilder::new(RouteEnv[AggregateId, S, E]) -> Self[AggregateId, S, C, E]
@@ -227,59 +97,9 @@ pub fn[AggregateId, S, C, E] RouterBuilder::with_consistency(Self[AggregateId, S
 pub fn[AggregateId, S, C, E] RouterBuilder::with_default_retries(Self[AggregateId, S, C, E], Int) -> Self[AggregateId, S, C, E]
 pub fn[AggregateId, S, C, E] RouterBuilder::with_default_timeout(Self[AggregateId, S, C, E], Int64) -> Self[AggregateId, S, C, E]
 
-pub struct SQLiteEventStore[E] {
-  conn : @sqlite3.Connection
-  serialize : (E) -> Bytes
-  deserialize : (Bytes) -> E raise
-  get_type_name : (E) -> String
-}
-pub fn[AggregateId, E] SQLiteEventStore::append(Self[E], String, Array[EventMessage[AggregateId, E]]) -> Unit raise
-pub fn[E] SQLiteEventStore::current_version(Self[E], String) -> Int raise
-pub fn[E] SQLiteEventStore::init_schema(Self[E]) -> Unit raise
-pub fn[AggregateId : AggregateId, E] SQLiteEventStore::load(Self[E], AggregateId, Int) -> Array[EventMessage[AggregateId, E]] raise
-pub fn[E] SQLiteEventStore::new(String, (E) -> Bytes, (Bytes) -> E raise, (E) -> String) -> Self[E] raise
-pub fn[E] SQLiteEventStore::to_event_store(Self[E]) -> EventStore[String, E]
-
-pub struct Snapshot[AggregateId, S] {
-  aggregate_id : AggregateId
-  state : S
-  version : Int
-  timestamp : Int64
-}
-pub fn[AggregateId, S] Snapshot::new(AggregateId, S, Int) -> Self[AggregateId, S]
-
-pub(all) struct SnapshotStore[AggregateId, S] {
-  save : (AggregateId, S, Int, Int64) -> Unit raise SnapshotError
-  load : (AggregateId) -> (S, Int)? raise SnapshotError
-}
-
-pub(all) enum SubscriptionPosition {
-  Origin
-  Current
-  FromVersion(Int)
-}
-
 // Type aliases
-pub type CommandHandler[S, C, E] = (S, C) -> Result[Array[E], CommandError]
 
 // Traits
-pub trait AggregateId {
-  fn to_string(Self) -> String
-  fn from_string(String) -> Result[Self, EventSourcingErr]
-  fn eq(Self, Self) -> Bool
-}
-pub impl AggregateId for Int
-pub impl AggregateId for String
-
-pub trait Command {
-  fn type_name() -> String
-}
-
-pub trait Event {
-  fn version() -> Int
-  fn type_name() -> String
-}
-
 pub trait Logger {
   fn info(Self, String) -> Unit
 }

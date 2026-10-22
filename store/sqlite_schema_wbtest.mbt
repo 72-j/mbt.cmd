@@ -7,7 +7,8 @@ enum WbEvent {
 
 ///|
 fn wb_ser(_e : WbEvent) -> Bytes {
-  @utf8.encode("{}")
+  // 白盒件无 for "test" 导入面（utf8 不可达）——字节字面量直取，主包免挂 utf8
+  b"{}"
 }
 
 ///|
@@ -38,7 +39,7 @@ test "schema 钉子：UNIQUE(aggregate_id, version) 在册且 schema_version 列
   assert_true(sql.contains("UNIQUE(aggregate_id, version)"))
   assert_true(sql.contains("schema_version"))
   // schema_version 列通：落一笔读回 = 1（预留值；演进只加不改）
-  let msg = EventMessage::new(WbEvent::Wb, "wb-agg", 1)
+  let msg = @event.EventMessage::new(WbEvent::Wb, "wb-agg", 1)
   store.append("wb-agg", [msg])
   let loaded = store.load("wb-agg", 0)
   assert_eq(loaded.length(), 1)

@@ -18,10 +18,10 @@
 fn account_handler(
   state : AccountState,
   cmd : AccountCommand,
-) -> Result[Array[AccountEvent], @mooncmd.CommandError] {
+) -> Result[Array[AccountEvent], @command.CommandError] {
   match account_decide(state, cmd, account_hooks()) {
     Ok(events) => Ok(events)
-    Err(msg) => Err(@mooncmd.CommandError::InvalidCommand(msg))
+    Err(msg) => Err(@command.CommandError::InvalidCommand(msg))
   }
 }
 
@@ -99,15 +99,15 @@ fn main raise {
   let mut all_green = true
   let aggregate_id = "demo-account-001"
   // ========== ② 内存命令链：命令 → 纯事件 → EventMessage 自动包装 ==========
-  let aggregate = @mooncmd.AggregateRoot::new(
+  let aggregate = @aggregate.AggregateRoot::new(
     aggregate_id,
     account_handler,
-    @mooncmd.EventApplier::Single(account_applier),
+    @event.EventApplier::Single(account_applier),
     account_empty_state(),
   )
   let aggregate = match
     aggregate.execute(
-      @mooncmd.CommandMessage::new(CreateAccount("Demo Holder", 1000)),
+      @command.CommandMessage::new(CreateAccount("Demo Holder", 1000)),
     ) {
     Ok(agg) => agg
     Err(e) => {
@@ -116,7 +116,7 @@ fn main raise {
     }
   }
   let aggregate = match
-    aggregate.execute(@mooncmd.CommandMessage::new(DepositMoney(500))) {
+    aggregate.execute(@command.CommandMessage::new(DepositMoney(500))) {
     Ok(agg) => agg
     Err(e) => {
       println("[FAIL] 存款命令被拒：\{e.to_string()}")
@@ -124,7 +124,7 @@ fn main raise {
     }
   }
   let aggregate = match
-    aggregate.execute(@mooncmd.CommandMessage::new(WithdrawMoney(300))) {
+    aggregate.execute(@command.CommandMessage::new(WithdrawMoney(300))) {
     Ok(agg) => agg
     Err(e) => {
       println("[FAIL] 取款命令被拒：\{e.to_string()}")
@@ -154,7 +154,7 @@ fn main raise {
       "3 事件，版本 1..3，schema_version = \{uncommitted[0].schema_version}",
     )
   // ========== ③ SQLite 落库 + 重放重建 ==========
-  let store = @mooncmd.SQLiteEventStore::new(
+  let store = @store.SQLiteEventStore::new(
     ":memory:", account_serialize, account_deserialize, account_type_name,
   )
   store.append(aggregate_id, uncommitted)
@@ -162,11 +162,11 @@ fn main raise {
   let load_ok = loaded.length() == 3
   all_green = all_green &&
     check("落库读回", load_ok, "load 回 \{loaded.length()} 事件")
-  let rebuilt = @mooncmd.AggregateRoot::from_events(
+  let rebuilt = @aggregate.AggregateRoot::from_events(
     aggregate_id,
     loaded,
     account_handler,
-    @mooncmd.EventApplier::Single(account_applier),
+    @event.EventApplier::Single(account_applier),
     account_empty_state(),
   )
   let rebuilt_state = rebuilt.current_state()
@@ -184,7 +184,7 @@ fn main raise {
   store.append(aggregate_id, uncommitted) catch {
     err =>
       match err {
-        @mooncmd.EventStoreError::DuplicateVersion(current) => {
+        @store.EventStoreError::DuplicateVersion(current) => {
           println(
             "[PASS] 乐观并发拒写 — DuplicateVersion: 当前版本 \{current}",
           )
@@ -203,15 +203,15 @@ fn main raise {
       "当前版本仍 = \{version_after_reject}",
     )
   // ========== ⑤ 销户闭环：余额清零 → CloseAccount（AccountClosed 事件）==========
-  let closable = @mooncmd.AggregateRoot::from_events(
+  let closable = @aggregate.AggregateRoot::from_events(
     aggregate_id,
     store.load(aggregate_id, 0),
     account_handler,
-    @mooncmd.EventApplier::Single(account_applier),
+    @event.EventApplier::Single(account_applier),
     account_empty_state(),
   )
   let closable = match
-    closable.execute(@mooncmd.CommandMessage::new(WithdrawMoney(1200))) {
+    closable.execute(@command.CommandMessage::new(WithdrawMoney(1200))) {
     Ok(agg) => agg
     Err(e) => {
       println("[FAIL] 清零取款被拒：\{e.to_string()}")
@@ -219,7 +219,7 @@ fn main raise {
     }
   }
   let closed = match
-    closable.execute(@mooncmd.CommandMessage::new(CloseAccount)) {
+    closable.execute(@command.CommandMessage::new(CloseAccount)) {
     Ok(agg) => agg
     Err(e) => {
       println("[FAIL] 销户命令被拒：\{e.to_string()}")
@@ -236,19 +236,19 @@ fn main raise {
     )
   // ========== ⑥ 快照加速：销户事件入库；快照@v3 全量态 + 尾部 v4/v5 重放 ≡ 全量 ==========
   store.append(aggregate_id, closed.uncommitted_events())
-  let snapshottable = @mooncmd.AggregateRoot::from_events(
+  let snapshottable = @aggregate.AggregateRoot::from_events(
     aggregate_id,
     loaded,
     account_handler,
-    @mooncmd.EventApplier::Single(account_applier),
+    @event.EventApplier::Single(account_applier),
     account_empty_state(),
   )
   let snapshot = snapshottable.to_snapshot()
-  let from_snapshot = @mooncmd.AggregateRoot::from_events(
+  let from_snapshot = @aggregate.AggregateRoot::from_events(
     aggregate_id,
     store.load(aggregate_id, snapshot.version),
     account_handler,
-    @mooncmd.EventApplier::Single(account_applier),
+    @event.EventApplier::Single(account_applier),
     snapshot.state,
   )
   let snap_state = from_snapshot.current_state()
@@ -262,11 +262,11 @@ fn main raise {
       "快照@v\{snapshot.version}（balance \{snapshot.state.balance}）+ 尾部重放 → v\{from_snapshot.version()}，balance \{snap_state.balance}",
     )
   // 与全量重放对照：两径同果
-  let full_replay = @mooncmd.AggregateRoot::from_events(
+  let full_replay = @aggregate.AggregateRoot::from_events(
     aggregate_id,
     store.load(aggregate_id, 0),
     account_handler,
-    @mooncmd.EventApplier::Single(account_applier),
+    @event.EventApplier::Single(account_applier),
     account_empty_state(),
   )
   let full_state = full_replay.current_state()

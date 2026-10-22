@@ -1,7 +1,7 @@
 // ===== @mooncmd.Router 端到端契约测试（役5b 接通笔；C-06 断链清偿实证）=====
 // 真 SQLiteEventStore + 记录面适配器 + 注入桩（快照/总线）。
 // 钉A 端到端落库重放 + user_id 链 · 钉B DuplicateVersion 穿透不抹平 ·
-// 钉C @mooncmd.EventBus 接通（publish 收到同批/失败诚实且事件已落库）·
+// 钉C @event.EventBus 接通（publish 收到同批/失败诚实且事件已落库）·
 // 钉D 快照读路径（基态+尾事件,无快照读必红）· 钉E with_config 重试实装。
 // 夹具本地重定义（三手病③:跨包测试件不可见）。
 
@@ -22,11 +22,11 @@ enum E2eEvent {
 
 ///|
 // 跨跑清场(删除库文件;@fs 在 test import 块)
-fn e2e_fresh(path : String) -> @mooncmd.SQLiteEventStore[E2eEvent] raise {
+fn e2e_fresh(path : String) -> @store.SQLiteEventStore[E2eEvent] raise {
   @fs.remove_file(path) catch {
     _ => ()
   }
-  @mooncmd.SQLiteEventStore::new(
+  @store.SQLiteEventStore::new(
     path, e2e_serialize, e2e_deserialize, e2e_type_name,
   )
 }
@@ -77,11 +77,11 @@ fn int32_of_string(s : String) -> Int32? {
 fn e2e_handler(
   _state : E2eState,
   cmd : E2eCommand,
-) -> Result[Array[E2eEvent], @mooncmd.CommandError] {
+) -> Result[Array[E2eEvent], @command.CommandError] {
   match cmd {
     Add(x) =>
       if x < 0 {
-        Err(PreconditionFailed("negative amount"))
+        Err(@command.CommandError::PreconditionFailed("negative amount"))
       } else {
         Ok([Added(x)])
       }
@@ -121,7 +121,7 @@ fn mem_snapshots_new() -> MemSnapshots {
 ///|
 fn mem_snapshots_store(
   snapshots : MemSnapshots,
-) -> @mooncmd.SnapshotStore[String, E2eState] {
+) -> @store.SnapshotStore[String, E2eState] {
   {
     save: (aggregate_id, state, version, _timestamp) => {
       snapshots.by_id[aggregate_id] = (state, version)
@@ -144,14 +144,14 @@ test "router e2e: dispatch persists, replay continues, user_id chains" {
     3,
   )
   let router = @mooncmd.Router::new(env, @mooncmd.CommandConfig::new(), Map([]))
-  let cmd = @mooncmd.CommandMessage::new(Add(5))
+  let cmd = @command.CommandMessage::new(Add(5))
     .with_user("u1")
     .with_correlation("corr-1")
   let result = router.dispatch_now(
     "agg-1",
     cmd,
     e2e_handler,
-    @mooncmd.EventApplier::Single(e2e_applier),
+    @event.EventApplier::Single(e2e_applier),
     { total: 0, },
   )
   let agg = match result {
@@ -160,7 +160,7 @@ test "router e2e: dispatch persists, replay continues, user_id chains" {
   }
   assert_eq(agg.version(), 1)
   assert_eq(agg.current_state().total, 5)
-  // user_id 链:命令面 → @mooncmd.EventMessage → 落列 → 回读
+  // user_id 链:命令面 → @event.EventMessage → 落列 → 回读
   let reloaded = (env.event_store.load)(env.event_store, "agg-1", 0)
   assert_eq(reloaded.length(), 1)
   assert_eq(reloaded[0].user_id, Some("u1"))
@@ -173,9 +173,9 @@ test "router e2e: dispatch persists, replay continues, user_id chains" {
   )
   let result2 = router2.dispatch_now(
     "agg-1",
-    @mooncmd.CommandMessage::new(Add(7)),
+    @command.CommandMessage::new(Add(7)),
     e2e_handler,
-    @mooncmd.EventApplier::Single(e2e_applier),
+    @event.EventApplier::Single(e2e_applier),
     { total: 0, },
   )
   match result2 {
@@ -205,31 +205,31 @@ test "router e2e: duplicate version surfaces typed through dispatch" {
   // 种子:连续落 v1..v5(守门只认连续;断裂流即拒写——设计语义)
   for i in 1..<6 {
     (event_store.append)(event_store, "agg-2", [
-      @mooncmd.EventMessage::new(Added(i), "agg-2", i),
+      @event.EventMessage::new(Added(i), "agg-2", i),
     ]) catch {
       e => fail("seed append \{i} failed: \{e.to_string()}")
     }
   }
   // dispatch:load 回读到 v5,执行后追加 v6——不冲突(顺序径无竞态);
   // 冲突注入 = 竞态窗,单线程等价形 = 守门直证:版本 1 批写即拒
-  let stale = @mooncmd.EventMessage::new(Added(1), "agg-2", 1)
-  let failed : @mooncmd.EventStoreError? = try {
+  let stale = @event.EventMessage::new(Added(1), "agg-2", 1)
+  let failed : @store.EventStoreError? = try {
     (event_store.append)(event_store, "agg-2", [stale])
     None
   } catch {
     e => Some(e)
   }
   match failed {
-    Some(@mooncmd.EventStoreError::DuplicateVersion(current)) =>
+    Some(@store.EventStoreError::DuplicateVersion(current)) =>
       assert_eq(current, 5)
     _ => fail("expected typed DuplicateVersion")
   }
   // @mooncmd.Router 径同族:错误经 dispatch 仍可分辨(事件穿透不抹平)
   let result = router.dispatch_now(
     "agg-2",
-    @mooncmd.CommandMessage::new(Add(1)),
+    @command.CommandMessage::new(Add(1)),
     e2e_handler,
-    @mooncmd.EventApplier::Single(e2e_applier),
+    @event.EventApplier::Single(e2e_applier),
     { total: 0, },
   )
   // 顺序径:dispatch 走 v6 追加成功(状态 = 5+1)
@@ -240,7 +240,7 @@ test "router e2e: duplicate version surfaces typed through dispatch" {
 }
 
 ///|
-// 钉C·@mooncmd.EventBus 接通:publish 收到同批;publish 失败 = dispatch 失败诚实
+// 钉C·@event.EventBus 接通:publish 收到同批;publish 失败 = dispatch 失败诚实
 // 且事件已落库（盲目重试会双重作用,at-least-once 归 5c+/役6）。
 test "router e2e: event bus wired, publish failure honest with events persisted" {
   let store = e2e_fresh("/tmp/mooncmd_router_e2e_c.db")
@@ -264,9 +264,9 @@ test "router e2e: event bus wired, publish failure honest with events persisted"
   let router = @mooncmd.Router::new(env, @mooncmd.CommandConfig::new(), Map([]))
   let _ = router.dispatch_now(
     "agg-3",
-    @mooncmd.CommandMessage::new(Add(9)),
+    @command.CommandMessage::new(Add(9)),
     e2e_handler,
-    @mooncmd.EventApplier::Single(e2e_applier),
+    @event.EventApplier::Single(e2e_applier),
     { total: 0, },
   )
   assert_eq(bus.totals, [9])
@@ -278,7 +278,7 @@ test "router e2e: event bus wired, publish failure honest with events persisted"
     Some({
       publish: (_bus, _events) => {
         failing.calls = failing.calls + 1
-        raise @mooncmd.EventBusError::PublishError("downstream down")
+        raise @event.EventBusError::PublishError("downstream down")
       },
     }),
     5000L,
@@ -292,13 +292,16 @@ test "router e2e: event bus wired, publish failure honest with events persisted"
   let published_ok = match
     router_fail.dispatch_now(
       "agg-4",
-      @mooncmd.CommandMessage::new(Add(3)),
+      @command.CommandMessage::new(Add(3)),
       e2e_handler,
-      @mooncmd.EventApplier::Single(e2e_applier),
+      @event.EventApplier::Single(e2e_applier),
       { total: 0, },
     ) {
-    Err(@mooncmd.EventSourcingErr::EventBusErr(@mooncmd.PublishError(_))) =>
-      false
+    Err(
+      @mooncmd.EventSourcingErr::EventBusErr(
+        @event.EventBusError::PublishError(_)
+      )
+    ) => false
     Ok(_) => fail("publish-failure dispatch should fail")
     Err(_) => fail("expected EventBusErr variant")
   }
@@ -327,21 +330,21 @@ test "router e2e: snapshot base state loaded with tail events" {
   let event_store = store.to_event_store()
   for i in 1..<3 {
     (event_store.append)(event_store, "agg-5", [
-      @mooncmd.EventMessage::new(Added(0), "agg-5", i),
+      @event.EventMessage::new(Added(0), "agg-5", i),
     ]) catch {
       e => fail("seed append \{i} failed: \{e.to_string()}")
     }
   }
-  let tail = @mooncmd.EventMessage::new(Added(5), "agg-5", 3)
+  let tail = @event.EventMessage::new(Added(5), "agg-5", 3)
   (event_store.append)(event_store, "agg-5", [tail]) catch {
     e => fail("tail append failed: \{e.to_string()}")
   }
   let router = @mooncmd.Router::new(env, @mooncmd.CommandConfig::new(), Map([]))
   let result = router.dispatch_now(
     "agg-5",
-    @mooncmd.CommandMessage::new(Add(7)),
+    @command.CommandMessage::new(Add(7)),
     e2e_handler,
-    @mooncmd.EventApplier::Single(e2e_applier),
+    @event.EventApplier::Single(e2e_applier),
     { total: 0, },
   )
   match result {
@@ -362,11 +365,11 @@ test "router e2e: with_config retries duplicate version then succeeds" {
   // 炸一次桩:首调 append 抛 DuplicateVersion,次调委派真库
   let real = store.to_event_store()
   let mut first_append = true
-  let flaky : @mooncmd.EventStore[String, E2eEvent] = {
+  let flaky : @store.EventStore[String, E2eEvent] = {
     append: (store, aggregate_id, events) => {
       if first_append {
         first_append = false
-        raise @mooncmd.EventStoreError::DuplicateVersion(0)
+        raise @store.EventStoreError::DuplicateVersion(0)
       }
       (real.append)(store, aggregate_id, events)
     },
@@ -387,9 +390,9 @@ test "router e2e: with_config retries duplicate version then succeeds" {
   let router = @mooncmd.Router::new(env, @mooncmd.CommandConfig::new(), Map([]))
   let reader = router.dispatch_with_config(
     "agg-6",
-    @mooncmd.CommandMessage::new(Add(4)),
+    @command.CommandMessage::new(Add(4)),
     e2e_handler,
-    @mooncmd.EventApplier::Single(e2e_applier),
+    @event.EventApplier::Single(e2e_applier),
     { total: 0, },
     5000L,
     3,
@@ -405,7 +408,7 @@ test "router e2e: with_config retries duplicate version then succeeds" {
   let env0 : @mooncmd.RouteEnv[String, E2eState, E2eEvent] = @mooncmd.RouteEnv::new(
     {
       append: (store, aggregate_id, events) => {
-        raise @mooncmd.EventStoreError::DuplicateVersion(9)
+        raise @store.EventStoreError::DuplicateVersion(9)
         (real.append)(store, aggregate_id, events)
       },
       load: (store, aggregate_id, after_version) => {
@@ -427,9 +430,9 @@ test "router e2e: with_config retries duplicate version then succeeds" {
   )
   let reader0 = router0.dispatch_with_config(
     "agg-7",
-    @mooncmd.CommandMessage::new(Add(1)),
+    @command.CommandMessage::new(Add(1)),
     e2e_handler,
-    @mooncmd.EventApplier::Single(e2e_applier),
+    @event.EventApplier::Single(e2e_applier),
     { total: 0, },
     5000L,
     0,
@@ -437,7 +440,7 @@ test "router e2e: with_config retries duplicate version then succeeds" {
   let surfaced = match @mooncmd.dispatch_reader_run(reader0, env0) {
     Err(
       @mooncmd.EventSourcingErr::EventStoreErr(
-        @mooncmd.EventStoreError::DuplicateVersion(v)
+        @store.EventStoreError::DuplicateVersion(v)
       )
     ) => v
     _ => fail("expected typed DuplicateVersion")

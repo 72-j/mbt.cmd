@@ -30,23 +30,19 @@ async test "SQLiteEventStore 乐观并发：版本冲突即拒" {
   if @fs.path_exists(db_path) {
     @fs.remove_file(db_path)
   }
-  let store = @mooncmd.SQLiteEventStore::new(
+  let store = @store.SQLiteEventStore::new(
     db_path, serialize_test_event, deserialize_test_event, get_test_event_type_name,
   )
   let aggregate_id = "conflict-aggregate"
   store.append(aggregate_id, [
-    @mooncmd.EventMessage::new(TestEvent::Created("A"), aggregate_id, 1),
+    @event.EventMessage::new(TestEvent::Created("A"), aggregate_id, 1),
   ])
-  let stale = @mooncmd.EventMessage::new(
-    TestEvent::Updated("B"),
-    aggregate_id,
-    1,
-  )
+  let stale = @event.EventMessage::new(TestEvent::Updated("B"), aggregate_id, 1)
   let mut conflict = false
   store.append(aggregate_id, [stale]) catch {
     e =>
       match e {
-        @mooncmd.EventStoreError::DuplicateVersion(_) => conflict = true
+        @store.EventStoreError::DuplicateVersion(_) => conflict = true
         _ => ()
       }
   }

@@ -6,19 +6,19 @@
 pub struct AggregateState[AggregateId, S, E] {
   state : S
   version : Int32
-  uncommitted_events : Array[EventMessage[AggregateId, E]]
+  uncommitted_events : Array[@event.EventMessage[AggregateId, E]]
 }
 
 ///|
 /// 命令处理程序类型
-// pub type CommandHandler[S, C, E] = (S, C) -> Result[Array[E], CommandError]
-// pub type EventApplier[S,E] = (S, E) -> S
+// pub type @command.CommandHandler[S, C, E] = (S, C) -> Result[Array[E], @command.CommandError]
+// pub type @event.EventApplier[S,E] = (S, E) -> S
 
 ///|
 /// 聚合根
 pub struct AggregateRoot[AggregateId, S, C, E] {
-  handler : CommandHandler[S, C, E]
-  applier : EventApplier[S, E]
+  handler : @command.CommandHandler[S, C, E]
+  applier : @event.EventApplier[S, E]
   empty_state : S
   mut state : AggregateState[AggregateId, S, E]
   id : AggregateId
@@ -36,8 +36,8 @@ pub struct AggregateRoot[AggregateId, S, C, E] {
 /// 创建新的聚合根
 pub fn[AggregateId, S, C, E] AggregateRoot::new(
   id : AggregateId,
-  handler : CommandHandler[S, C, E],
-  applier : EventApplier[S, E],
+  handler : @command.CommandHandler[S, C, E],
+  applier : @event.EventApplier[S, E],
   empty_state : S,
 ) -> AggregateRoot[AggregateId, S, C, E] {
   {
@@ -53,9 +53,9 @@ pub fn[AggregateId, S, C, E] AggregateRoot::new(
 /// 从已保存的事件恢复
 pub fn[AggregateId, S, C, E] AggregateRoot::from_events(
   id : AggregateId,
-  events : Array[EventMessage[AggregateId, E]],
-  handler : CommandHandler[S, C, E],
-  applier : EventApplier[S, E],
+  events : Array[@event.EventMessage[AggregateId, E]],
+  handler : @command.CommandHandler[S, C, E],
+  applier : @event.EventApplier[S, E],
   empty_state : S,
 ) -> AggregateRoot[AggregateId, S, C, E] {
   AggregateRoot::from_snapshot(
@@ -72,14 +72,14 @@ pub fn[AggregateId, S, C, E] AggregateRoot::from_snapshot(
   empty_state : S,
   base_state : S,
   base_version : Int32,
-  events : Array[EventMessage[AggregateId, E]],
-  handler : CommandHandler[S, C, E],
-  applier : EventApplier[S, E],
+  events : Array[@event.EventMessage[AggregateId, E]],
+  handler : @command.CommandHandler[S, C, E],
+  applier : @event.EventApplier[S, E],
 ) -> AggregateRoot[AggregateId, S, C, E] {
   let final_state = events.fold(init=base_state, fn(s, e) {
     match applier {
-      EventApplier::Single(f) => f(s, e.event)
-      EventApplier::Batch(f) => f(s, [e.event])
+      @event.EventApplier::Single(f) => f(s, e.event)
+      @event.EventApplier::Batch(f) => f(s, [e.event])
     }
   })
   let version = match events.last() {
@@ -99,8 +99,8 @@ pub fn[AggregateId, S, C, E] AggregateRoot::from_snapshot(
 /// 执行命令（借鉴 Commanded 的 execute/apply 模式）
 pub fn[AggregateId, S, C, E] AggregateRoot::execute(
   self : AggregateRoot[AggregateId, S, C, E],
-  cmd : CommandMessage[C],
-) -> Result[AggregateRoot[AggregateId, S, C, E], CommandError] {
+  cmd : @command.CommandMessage[C],
+) -> Result[AggregateRoot[AggregateId, S, C, E], @command.CommandError] {
   // 1. Execute: 业务校验，产生事件
   match (self.handler)(self.state.state, cmd.command) {
     Ok(events) => {
@@ -108,11 +108,11 @@ pub fn[AggregateId, S, C, E] AggregateRoot::execute(
       let mut current_state = self.state.state
       let mut current_version = self.state.version
 
-      let event_messages : Array[EventMessage[AggregateId, E]] = []
+      let event_messages : Array[@event.EventMessage[AggregateId, E]] = []
 
       for event in events {
         current_version += 1
-        let event_msg = EventMessage::from_command(
+        let event_msg = @event.EventMessage::from_command(
           event,
           self.id,
           current_version,
@@ -120,8 +120,8 @@ pub fn[AggregateId, S, C, E] AggregateRoot::execute(
         )
         event_messages.push(event_msg)
         current_state = match self.applier {
-          EventApplier::Single(f) => f(current_state, event)
-          EventApplier::Batch(f) => f(current_state, [event])
+          @event.EventApplier::Single(f) => f(current_state, event)
+          @event.EventApplier::Batch(f) => f(current_state, [event])
         }
       }
 
@@ -155,7 +155,7 @@ pub fn[AggregateId, S, C, E] AggregateRoot::commit(
 /// 获取未提交事件
 pub fn[AggregateId, S, C, E] AggregateRoot::uncommitted_events(
   self : AggregateRoot[AggregateId, S, C, E],
-) -> Array[EventMessage[AggregateId, E]] {
+) -> Array[@event.EventMessage[AggregateId, E]] {
   self.state.uncommitted_events
 }
 
@@ -179,7 +179,7 @@ pub fn[AggregateId, S, C, E] AggregateRoot::current_state(
 /// 创建快照
 pub fn[AggregateId, S, C, E] AggregateRoot::to_snapshot(
   self : AggregateRoot[AggregateId, S, C, E],
-) -> Snapshot[AggregateId, S] {
-  Snapshot::new(self.id, self.state.state, self.state.version)
+) -> @store.Snapshot[AggregateId, S] {
+  @store.Snapshot::new(self.id, self.state.state, self.state.version)
 }
 // }

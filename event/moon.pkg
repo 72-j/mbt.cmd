@@ -1,0 +1,7 @@
+// event:事件域(役8)
+import {
+  "moonbitlang/async",
+  "f4ah6o/uuidm" @uuid,
+  "moonbitlang/core/json",
+  "thy1016/mooncmd/command",
+}

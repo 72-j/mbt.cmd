@@ -24,15 +24,15 @@ type View = Json
 /// apply 单事件演化,apply_batch 批量折叠（缺省 = 逐事件 apply）。
 pub(all) struct Projection[AggregateId, E] {
   init : () -> View
-  apply : (View, EventMessage[AggregateId, E]) -> View
-  apply_batch : (View, Array[EventMessage[AggregateId, E]]) -> View
+  apply : (View, @event.EventMessage[AggregateId, E]) -> View
+  apply_batch : (View, Array[@event.EventMessage[AggregateId, E]]) -> View
 }
 
 ///|
 pub fn[AggregateId, E] Projection::new(
   init : () -> View,
-  apply : (View, EventMessage[AggregateId, E]) -> View,
-  apply_batch : (View, Array[EventMessage[AggregateId, E]]) -> View,
+  apply : (View, @event.EventMessage[AggregateId, E]) -> View,
+  apply_batch : (View, Array[@event.EventMessage[AggregateId, E]]) -> View,
 ) -> Projection[AggregateId, E] {
   { init, apply, apply_batch, }
 }
@@ -40,8 +40,8 @@ pub fn[AggregateId, E] Projection::new(
 ///|
 /// 缺省批量折叠（逐事件 apply——多数投影够用;性能敏感可自定义）。
 pub fn[AggregateId, E] default_batch(
-  apply : (View, EventMessage[AggregateId, E]) -> View,
-) -> (View, Array[EventMessage[AggregateId, E]]) -> View {
+  apply : (View, @event.EventMessage[AggregateId, E]) -> View,
+) -> (View, Array[@event.EventMessage[AggregateId, E]]) -> View {
   fn(view, events) {
     events.fold(init=view, fn(acc, event) { apply(acc, event) })
   }
@@ -59,9 +59,9 @@ pub(all) enum SubscriptionPosition {
 /// 解析订阅位置为起始版本（Current 需 store 探版本）。
 fn[AggregateId, E] position_version(
   position : SubscriptionPosition,
-  event_store : EventStore[AggregateId, E],
+  event_store : @store.EventStore[AggregateId, E],
   aggregate_id : AggregateId,
-) -> Int32 raise EventStoreError {
+) -> Int32 raise @store.EventStoreError {
   match position {
     Origin => 0
     Current => (event_store.current_version)(event_store, aggregate_id)
@@ -75,7 +75,7 @@ pub(all) struct LiveProjection[AggregateId, E] {
   mut view : View
   mut last_version : Int32
   projection : Projection[AggregateId, E]
-  event_store : EventStore[AggregateId, E]
+  event_store : @store.EventStore[AggregateId, E]
   aggregate_id : AggregateId
 }
 
@@ -84,10 +84,10 @@ pub(all) struct LiveProjection[AggregateId, E] {
 /// 检查点 = 已折末事件版本（流空 = 起始版本）。
 pub fn[AggregateId, E] LiveProjection::new(
   aggregate_id : AggregateId,
-  event_store : EventStore[AggregateId, E],
+  event_store : @store.EventStore[AggregateId, E],
   projection : Projection[AggregateId, E],
   position : SubscriptionPosition,
-) -> LiveProjection[AggregateId, E] raise EventStoreError {
+) -> LiveProjection[AggregateId, E] raise @store.EventStoreError {
   let start_version = position_version(position, event_store, aggregate_id)
   let events = (event_store.load)(event_store, aggregate_id, start_version) catch {
     e => raise event_store_error_of(e)
@@ -104,7 +104,7 @@ pub fn[AggregateId, E] LiveProjection::new(
 /// 刷新:拉取检查点之后的事件,折入视图,推进检查点;流空 = no-op。
 pub fn[AggregateId, E] LiveProjection::refresh(
   self : LiveProjection[AggregateId, E],
-) -> Unit raise EventStoreError {
+) -> Unit raise @store.EventStoreError {
   let events = (self.event_store.load)(
     self.event_store,
     self.aggregate_id,
@@ -135,6 +135,19 @@ pub fn[AggregateId, E] LiveProjection::checkpoint(
   self : LiveProjection[AggregateId, E],
 ) -> Int32 {
   self.last_version
+}
+
+///|
+/// 错误回原族（役5b C-06 同款，役8 拆分本地化）：EventStoreError 变体原样上浮
+/// （DuplicateVersion 可分辨），非本族错才降维 StorageError 文本。
+fn event_store_error_of(e : Error) -> @store.EventStoreError {
+  match e {
+    @store.EventStoreError::DuplicateVersion(v) =>
+      @store.EventStoreError::DuplicateVersion(v)
+    @store.EventStoreError::SerializationError(m) =>
+      @store.EventStoreError::SerializationError(m)
+    _ => @store.EventStoreError::StorageError(e.to_string())
+  }
 }
 
 ///|

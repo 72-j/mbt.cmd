@@ -3,7 +3,7 @@
 
 ///|
 /// 带元数据的事件
-pub struct EventMessage[AggregateId, E] {
+pub(all) struct EventMessage[AggregateId, E] {
   event : E
   event_id : String
   aggregate_id : AggregateId
@@ -43,7 +43,7 @@ pub fn[AggregateId, E, C] EventMessage::from_command(
   event : E,
   aggregate_id : AggregateId,
   version : Int32,
-  cmd : CommandMessage[C],
+  cmd : @command.CommandMessage[C],
 ) -> EventMessage[AggregateId, E] {
   {
     event,

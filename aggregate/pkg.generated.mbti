@@ -1,0 +1,64 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "thy1016/mooncmd/aggregate"
+
+import {
+  "thy1016/mooncmd/command",
+  "thy1016/mooncmd/event",
+  "thy1016/mooncmd/store",
+}
+
+// Values
+
+// Errors
+pub(all) suberror AggregateError {
+  IdParseError(String)
+}
+
+// Types and methods
+pub struct AggUUID {
+  value : String
+}
+pub fn AggUUID::eq(Self, Self) -> Bool
+pub fn AggUUID::from_string(String) -> Result[Self, AggregateError]
+pub fn AggUUID::new() -> Self
+pub fn AggUUID::to_string(Self) -> String
+pub impl AggregateId for AggUUID
+
+pub struct AggregateRoot[AggregateId, S, C, E] {
+  handler : (S, C) -> Result[Array[E], @command.CommandError]
+  applier : @event.EventApplier[S, E]
+  empty_state : S
+  mut state : AggregateState[AggregateId, S, E]
+  id : AggregateId
+}
+pub fn[AggregateId, S, C, E] AggregateRoot::commit(Self[AggregateId, S, C, E]) -> Self[AggregateId, S, C, E]
+pub fn[AggregateId, S, C, E] AggregateRoot::current_state(Self[AggregateId, S, C, E]) -> S
+pub fn[AggregateId, S, C, E] AggregateRoot::execute(Self[AggregateId, S, C, E], @command.CommandMessage[C]) -> Result[Self[AggregateId, S, C, E], @command.CommandError]
+pub fn[AggregateId, S, C, E] AggregateRoot::from_events(AggregateId, Array[@event.EventMessage[AggregateId, E]], (S, C) -> Result[Array[E], @command.CommandError], @event.EventApplier[S, E], S) -> Self[AggregateId, S, C, E]
+pub fn[AggregateId, S, C, E] AggregateRoot::from_snapshot(AggregateId, S, S, Int, Array[@event.EventMessage[AggregateId, E]], (S, C) -> Result[Array[E], @command.CommandError], @event.EventApplier[S, E]) -> Self[AggregateId, S, C, E]
+pub fn[AggregateId, S, C, E] AggregateRoot::new(AggregateId, (S, C) -> Result[Array[E], @command.CommandError], @event.EventApplier[S, E], S) -> Self[AggregateId, S, C, E]
+pub fn[AggregateId, S, C, E] AggregateRoot::to_snapshot(Self[AggregateId, S, C, E]) -> @store.Snapshot[AggregateId, S]
+pub fn[AggregateId, S, C, E] AggregateRoot::uncommitted_events(Self[AggregateId, S, C, E]) -> Array[@event.EventMessage[AggregateId, E]]
+pub fn[AggregateId, S, C, E] AggregateRoot::version(Self[AggregateId, S, C, E]) -> Int
+
+pub struct AggregateState[AggregateId, S, E] {
+  state : S
+  version : Int
+  uncommitted_events : Array[@event.EventMessage[AggregateId, E]]
+}
+
+// Type aliases
+
+// Traits
+pub trait AggregateId {
+  fn to_string(Self) -> String
+  fn from_string(String) -> Result[Self, AggregateError]
+  fn eq(Self, Self) -> Bool
+}
+pub impl AggregateId for Int
+pub impl AggregateId for String
+
+pub trait Event {
+  fn version() -> Int
+  fn type_name() -> String
+}

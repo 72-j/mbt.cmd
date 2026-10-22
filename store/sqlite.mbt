@@ -14,6 +14,18 @@ pub struct SQLiteEventStore[E] {
 // impl[E] SQLiteEventStore[E] {
 
 ///|
+
+///|
+/// 错误回原族(役5b:DuplicateVersion 原样上浮可分辨)
+fn event_store_error_of(e : Error) -> EventStoreError {
+  match e {
+    EventStoreError::DuplicateVersion(v) => DuplicateVersion(v)
+    EventStoreError::SerializationError(m) => SerializationError(m)
+    _ => StorageError(e.to_string())
+  }
+}
+
+///|
 pub fn[E] SQLiteEventStore::new(
   db_path : String,
   serialize : (E) -> Bytes,
@@ -62,10 +74,10 @@ pub fn[E] SQLiteEventStore::init_schema(
 }
 
 ///|
-pub fn[AggregateId, E] SQLiteEventStore::append(
+pub fn[E] SQLiteEventStore::append(
   self : SQLiteEventStore[E],
   aggregate_id : String,
-  events : Array[EventMessage[AggregateId, E]],
+  events : Array[@event.EventMessage[String, E]],
 ) -> Unit raise {
   // FR-MC-1 乐观并发守门：批次首事件版本必须 = 当前版本 + 1，否则 DuplicateVersion（拒写不落脏）
   if events.length() > 0 {
@@ -99,8 +111,8 @@ pub fn[AggregateId, E] SQLiteEventStore::append(
     stmt.bind(index=5, event.aggregate_version)
     stmt.bind(index=6, event.correlation_id)
     stmt.bind(index=7, event.causation_id)
-    // user_id 列保留在 schema 里；EventMessage 不携带 user_id（命令面才有），落空串
-    // user_id 链（役5b C-06）：CommandMessage.user_id → EventMessage → 落列
+    // user_id 列保留在 schema 里；@event.EventMessage 不携带 user_id（命令面才有），落空串
+    // user_id 链（役5b C-06）：CommandMessage.user_id → @event.EventMessage → 落列
     stmt.bind(
       index=8,
       match event.user_id {
@@ -122,11 +134,11 @@ pub fn[AggregateId, E] SQLiteEventStore::append(
 }
 
 ///|
-pub fn[AggregateId : AggregateId, E] SQLiteEventStore::load(
+pub fn[E] SQLiteEventStore::load(
   self : SQLiteEventStore[E],
-  aggregate_id : AggregateId,
+  aggregate_id : String,
   after_version : Int32,
-) -> Array[EventMessage[AggregateId, E]] raise {
+) -> Array[@event.EventMessage[String, E]] raise {
   let sql =
     #| SELECT event_data, version, event_id, correlation_id, causation_id, timestamp, metadata, user_id, schema_version
     #| FROM event_stream
@@ -134,10 +146,10 @@ pub fn[AggregateId : AggregateId, E] SQLiteEventStore::load(
     #| ORDER BY version ASC
 
   let stmt = self.conn.prepare(sql)
-  stmt.bind(index=1, aggregate_id.to_string())
+  stmt.bind(index=1, aggregate_id)
   stmt.bind(index=2, after_version.to_int64())
 
-  let events : Array[EventMessage[AggregateId, E]] = []
+  let events : Array[@event.EventMessage[String, E]] = []
 
   while stmt.step() {
     let data : Bytes = stmt.column(index=0)
@@ -153,7 +165,7 @@ pub fn[AggregateId : AggregateId, E] SQLiteEventStore::load(
     let event = (self.deserialize)(data)
     let metadata = @json.parse(metadata_str)
 
-    events.push(EventMessage::{
+    events.push(@event.EventMessage::{
       event,
       event_id,
       aggregate_id,

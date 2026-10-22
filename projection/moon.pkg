@@ -1,0 +1,15 @@
+// projection:投影域(役8)——Projection/LiveProjection/PersistedProjection
+import {
+  "thy1016/mooncmd/event",
+  "thy1016/mooncmd/store",
+  "moonbitlang/core/json",
+  "moonbit-community/sqlite3",
+}
+
+import {
+  "moonbitlang/x/fs",
+  "moonbitlang/core/json",
+  "moonbitlang/core/encoding/utf8",
+  "thy1016/mooncmd/event",
+  "thy1016/mooncmd/store",
+} for "test"

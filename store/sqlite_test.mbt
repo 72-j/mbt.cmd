@@ -41,7 +41,7 @@ fn deserialize_test_event(data : Bytes) -> TestEvent raise {
 }
 
 ///|
-test "@mooncmd.SQLiteEventStore 创建和初始化" {
+test "@store.SQLiteEventStore 创建和初始化" {
   let db_path = "/tmp/test_event_store_1.db"
 
   // 删除可能存在的旧数据库文件
@@ -49,7 +49,7 @@ test "@mooncmd.SQLiteEventStore 创建和初始化" {
     @fs.remove_file(db_path)
   }
 
-  let _store = @mooncmd.SQLiteEventStore::new(
+  let _store = @store.SQLiteEventStore::new(
     db_path, serialize_test_event, deserialize_test_event, get_test_event_type_name,
   )
   assert_true(@fs.is_file(db_path))
@@ -64,7 +64,7 @@ test "@mooncmd.SQLiteEventStore 创建和初始化" {
 }
 
 ///|
-async test "@mooncmd.SQLiteEventStore 追加和加载事件" {
+async test "@store.SQLiteEventStore 追加和加载事件" {
   let db_path = "/tmp/test_event_store_2.db"
   /// 获取事件类型名称
 
@@ -73,20 +73,20 @@ async test "@mooncmd.SQLiteEventStore 追加和加载事件" {
     @fs.remove_file(db_path)
   }
 
-  let store = @mooncmd.SQLiteEventStore::new(
+  let store = @store.SQLiteEventStore::new(
     db_path, serialize_test_event, deserialize_test_event, get_test_event_type_name,
   )
 
   let aggregate_id = "test-aggregate-1"
 
   // 创建测试事件
-  let event1 = @mooncmd.EventMessage::new(
+  let event1 = @event.EventMessage::new(
     TestEvent::Created("Test Account"),
     aggregate_id,
     1,
   )
 
-  let event2 = @mooncmd.EventMessage::new(
+  let event2 = @event.EventMessage::new(
     TestEvent::Updated("Updated Account"),
     aggregate_id,
     2,
@@ -122,7 +122,7 @@ async test "@mooncmd.SQLiteEventStore 追加和加载事件" {
   }
 }
 
-// test "@mooncmd.SQLiteEventStore 加载指定版本之后的事件" {
+// test "@store.SQLiteEventStore 加载指定版本之后的事件" {
 //   let db_path = "/tmp/test_event_store_3.db"
 
 //   // 删除可能存在的旧数据库文件
@@ -132,7 +132,7 @@ async test "@mooncmd.SQLiteEventStore 追加和加载事件" {
 //     _ => ()
 //   }
 
-//   let store = comanded.@mooncmd.SQLiteEventStore::new(
+//   let store = comanded.@store.SQLiteEventStore::new(
 //     db_path,
 //     serialize_test_event,
 //     deserialize_test_event,
@@ -142,7 +142,7 @@ async test "@mooncmd.SQLiteEventStore 追加和加载事件" {
 
 //   // 创建并追加多个事件
 //   for i in 1..6 {
-//     let event = comanded.@mooncmd.EventMessage::new(
+//     let event = comanded.@event.EventMessage::new(
 //       if i % 2 ,0 {
 //         TestEvent::Updated("Version \{i}")
 //       } else {
@@ -170,7 +170,7 @@ async test "@mooncmd.SQLiteEventStore 追加和加载事件" {
 //   }
 // }
 
-// test "@mooncmd.SQLiteEventStore 获取当前版本" {
+// test "@store.SQLiteEventStore 获取当前版本" {
 //   let db_path = "/tmp/test_event_store_4.db"
 
 //   // 删除可能存在的旧数据库文件
@@ -180,7 +180,7 @@ async test "@mooncmd.SQLiteEventStore 追加和加载事件" {
 //     _ => ()
 //   }
 
-//   let store = comanded.@mooncmd.SQLiteEventStore::new(
+//   let store = comanded.@store.SQLiteEventStore::new(
 //     db_path,
 //     serialize_test_event,
 //     deserialize_test_event,
@@ -193,7 +193,7 @@ async test "@mooncmd.SQLiteEventStore 追加和加载事件" {
 //   assert_eq(initial_version ,0)
 
 //   // 追加事件
-//   let event1 = comanded.@mooncmd.EventMessage::new(
+//   let event1 = comanded.@event.EventMessage::new(
 //     TestEvent::Created("Test"),
 //     aggregate_id,
 //     1,
@@ -205,7 +205,7 @@ async test "@mooncmd.SQLiteEventStore 追加和加载事件" {
 //   assert_eq(version1 ,1)
 
 //   // 再追加一个事件
-//   let event2 = comanded.@mooncmd.EventMessage::new(
+//   let event2 = comanded.@event.EventMessage::new(
 //     TestEvent::Updated("Updated"),
 //     aggregate_id,
 //     2,
@@ -224,7 +224,7 @@ async test "@mooncmd.SQLiteEventStore 追加和加载事件" {
 //   }
 // }
 
-// test "@mooncmd.SQLiteEventStore 不同聚合体的事件隔离" {
+// test "@store.SQLiteEventStore 不同聚合体的事件隔离" {
 //   let db_path = "/tmp/test_event_store_5.db"
 
 //   // 删除可能存在的旧数据库文件
@@ -234,7 +234,7 @@ async test "@mooncmd.SQLiteEventStore 追加和加载事件" {
 //     _ => ()
 //   }
 
-//   let store = comanded.@mooncmd.SQLiteEventStore::new(
+//   let store = comanded.@store.SQLiteEventStore::new(
 //     db_path,
 //     serialize_test_event,
 //     deserialize_test_event,
@@ -244,7 +244,7 @@ async test "@mooncmd.SQLiteEventStore 追加和加载事件" {
 //   let aggregate_id_2 = "aggregate-2"
 
 //   // 为第一个聚合体追加事件
-//   let event1 = comanded.@mooncmd.EventMessage::new(
+//   let event1 = comanded.@event.EventMessage::new(
 //     TestEvent::Created("Account 1"),
 //     aggregate_id_1,
 //     1,
@@ -252,7 +252,7 @@ async test "@mooncmd.SQLiteEventStore 追加和加载事件" {
 //   store.append(aggregate_id_1, [event1])
 
 //   // 为第二个聚合体追加事件
-//   let event2 = comanded.@mooncmd.EventMessage::new(
+//   let event2 = comanded.@event.EventMessage::new(
 //     TestEvent::Created("Account 2"),
 //     aggregate_id_2,
 //     1,
@@ -285,7 +285,7 @@ async test "@mooncmd.SQLiteEventStore 追加和加载事件" {
 //   }
 // }
 
-// test "@mooncmd.SQLiteEventStore 空聚合体加载" {
+// test "@store.SQLiteEventStore 空聚合体加载" {
 //   let db_path = "/tmp/test_event_store_6.db"
 
 //   // 删除可能存在的旧数据库文件
@@ -295,7 +295,7 @@ async test "@mooncmd.SQLiteEventStore 追加和加载事件" {
 //     _ => ()
 //   }
 
-//   let store = comanded.@mooncmd.SQLiteEventStore::new(
+//   let store = comanded.@store.SQLiteEventStore::new(
 //     db_path,
 //     serialize_test_event,
 //     deserialize_test_event,
@@ -315,7 +315,7 @@ async test "@mooncmd.SQLiteEventStore 追加和加载事件" {
 //   }
 // }
 
-// test "@mooncmd.SQLiteEventStore 事务回滚测试" {
+// test "@store.SQLiteEventStore 事务回滚测试" {
 //   let db_path = "/tmp/test_event_store_7.db"
 
 //   // 删除可能存在的旧数据库文件
@@ -325,7 +325,7 @@ async test "@mooncmd.SQLiteEventStore 追加和加载事件" {
 //     _ => ()
 //   }
 
-//   let store = comanded.@mooncmd.SQLiteEventStore::new(
+//   let store = comanded.@store.SQLiteEventStore::new(
 //     db_path,
 //     serialize_test_event,
 //     deserialize_test_event,
@@ -334,7 +334,7 @@ async test "@mooncmd.SQLiteEventStore 追加和加载事件" {
 //   let aggregate_id = "test-aggregate-tx"
 
 //   // 先添加一个有效事件
-//   let event1 = comanded.@mooncmd.EventMessage::new(
+//   let event1 = comanded.@event.EventMessage::new(
 //     TestEvent::Created("Initial"),
 //     aggregate_id,
 //     1,

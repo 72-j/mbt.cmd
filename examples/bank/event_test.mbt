@@ -40,12 +40,12 @@ fn empty_account_state() -> AccountState {
 }
 
 ///|
-test "@mooncmd.AggregateRoot 提交事件" {
+test "@aggregate.AggregateRoot 提交事件" {
   let aggregate_id = "account-007"
   let handler = account_handler
-  let applier = @mooncmd.EventApplier::Single(account_applier_single)
+  let applier = @event.EventApplier::Single(account_applier_single)
 
-  let mut aggregate = @mooncmd.AggregateRoot::new(
+  let mut aggregate = @aggregate.AggregateRoot::new(
     aggregate_id,
     handler,
     applier,
@@ -53,7 +53,7 @@ test "@mooncmd.AggregateRoot 提交事件" {
   )
 
   // 执行多个命令
-  let create_cmd = @mooncmd.CommandMessage::new(
+  let create_cmd = @command.CommandMessage::new(
     AccountCommand::CreateAccount("Charlie", 500),
   )
   aggregate = match aggregate.execute(create_cmd) {
@@ -61,7 +61,7 @@ test "@mooncmd.AggregateRoot 提交事件" {
     Err(_) => panic()
   }
 
-  let deposit_cmd = @mooncmd.CommandMessage::new(
+  let deposit_cmd = @command.CommandMessage::new(
     AccountCommand::DepositMoney(300),
   )
   aggregate = match aggregate.execute(deposit_cmd) {
@@ -87,24 +87,24 @@ test "@mooncmd.AggregateRoot 提交事件" {
 }
 
 ///|
-test "@mooncmd.AggregateRoot 从事件恢复" {
+test "@aggregate.AggregateRoot 从事件恢复" {
   let aggregate_id = "account-008"
   let handler = account_handler
-  let applier = @mooncmd.EventApplier::Single(account_applier_single)
+  let applier = @event.EventApplier::Single(account_applier_single)
 
   // 创建一些历史事件
   let events = [
-    @mooncmd.EventMessage::new(
+    @event.EventMessage::new(
       AccountEvent::AccountCreated("David Brown", 1000),
       aggregate_id,
       1,
     ),
-    @mooncmd.EventMessage::new(
+    @event.EventMessage::new(
       AccountEvent::MoneyDeposited(500),
       aggregate_id,
       2,
     ),
-    @mooncmd.EventMessage::new(
+    @event.EventMessage::new(
       AccountEvent::MoneyWithdrawn(200),
       aggregate_id,
       3,
@@ -112,7 +112,7 @@ test "@mooncmd.AggregateRoot 从事件恢复" {
   ]
 
   // 从事件恢复聚合根
-  let aggregate = @mooncmd.AggregateRoot::from_events(
+  let aggregate = @aggregate.AggregateRoot::from_events(
     aggregate_id,
     events,
     handler,
@@ -134,12 +134,12 @@ test "@mooncmd.AggregateRoot 从事件恢复" {
 }
 
 ///|
-test "@mooncmd.AggregateRoot 使用批量事件应用器" {
+test "@aggregate.AggregateRoot 使用批量事件应用器" {
   let aggregate_id = "account-009"
   let handler = account_handler
-  let applier = @mooncmd.EventApplier::Batch(account_applier_batch)
+  let applier = @event.EventApplier::Batch(account_applier_batch)
 
-  let mut aggregate = @mooncmd.AggregateRoot::new(
+  let mut aggregate = @aggregate.AggregateRoot::new(
     aggregate_id,
     handler,
     applier,
@@ -147,7 +147,7 @@ test "@mooncmd.AggregateRoot 使用批量事件应用器" {
   )
 
   // 执行命令
-  let create_cmd = @mooncmd.CommandMessage::new(
+  let create_cmd = @command.CommandMessage::new(
     AccountCommand::CreateAccount("Eve", 800),
   )
   aggregate = match aggregate.execute(create_cmd) {
@@ -163,12 +163,12 @@ test "@mooncmd.AggregateRoot 使用批量事件应用器" {
 }
 
 ///|
-test "@mooncmd.AggregateRoot 关闭账户" {
+test "@aggregate.AggregateRoot 关闭账户" {
   let aggregate_id = "account-010"
   let handler = account_handler
-  let applier = @mooncmd.EventApplier::Single(account_applier_single)
+  let applier = @event.EventApplier::Single(account_applier_single)
 
-  let mut aggregate = @mooncmd.AggregateRoot::new(
+  let mut aggregate = @aggregate.AggregateRoot::new(
     aggregate_id,
     handler,
     applier,
@@ -176,7 +176,7 @@ test "@mooncmd.AggregateRoot 关闭账户" {
   )
 
   // 创建账户
-  let create_cmd = @mooncmd.CommandMessage::new(
+  let create_cmd = @command.CommandMessage::new(
     AccountCommand::CreateAccount("Frank", 0),
   )
   aggregate = match aggregate.execute(create_cmd) {
@@ -185,7 +185,7 @@ test "@mooncmd.AggregateRoot 关闭账户" {
   }
 
   // 关闭账户
-  let close_cmd = @mooncmd.CommandMessage::new(AccountCommand::CloseAccount)
+  let close_cmd = @command.CommandMessage::new(AccountCommand::CloseAccount)
   aggregate = match aggregate.execute(close_cmd) {
     Ok(agg) => agg
     Err(_) => panic()
@@ -199,12 +199,12 @@ test "@mooncmd.AggregateRoot 关闭账户" {
 }
 
 ///|
-test "@mooncmd.AggregateRoot 关闭有余额的账户失败" {
+test "@aggregate.AggregateRoot 关闭有余额的账户失败" {
   let aggregate_id = "account-011"
   let handler = account_handler
-  let applier = @mooncmd.EventApplier::Single(account_applier_single)
+  let applier = @event.EventApplier::Single(account_applier_single)
 
-  let mut aggregate = @mooncmd.AggregateRoot::new(
+  let mut aggregate = @aggregate.AggregateRoot::new(
     aggregate_id,
     handler,
     applier,
@@ -212,7 +212,7 @@ test "@mooncmd.AggregateRoot 关闭有余额的账户失败" {
   )
 
   // 创建账户并存入资金
-  let create_cmd = @mooncmd.CommandMessage::new(
+  let create_cmd = @command.CommandMessage::new(
     AccountCommand::CreateAccount("Grace", 100),
   )
   aggregate = match aggregate.execute(create_cmd) {
@@ -221,24 +221,24 @@ test "@mooncmd.AggregateRoot 关闭有余额的账户失败" {
   }
 
   // 尝试关闭有余额的账户
-  let close_cmd = @mooncmd.CommandMessage::new(AccountCommand::CloseAccount)
+  let close_cmd = @command.CommandMessage::new(AccountCommand::CloseAccount)
   let result = aggregate.execute(close_cmd)
 
   // 验证失败
   match result {
-    Err(@mooncmd.CommandError::InvalidCommand(msg)) =>
+    Err(@command.CommandError::InvalidCommand(msg)) =>
       assert_eq(msg, "Cannot close account with non-zero balance")
     _ => assert_false(false)
   }
 }
 
 ///|
-test "@mooncmd.AggregateRoot 多次执行命令累积事件" {
+test "@aggregate.AggregateRoot 多次执行命令累积事件" {
   let aggregate_id = "account-013"
   let handler = account_handler
-  let applier = @mooncmd.EventApplier::Single(account_applier_single)
+  let applier = @event.EventApplier::Single(account_applier_single)
 
-  let mut aggregate = @mooncmd.AggregateRoot::new(
+  let mut aggregate = @aggregate.AggregateRoot::new(
     aggregate_id,
     handler,
     applier,
@@ -246,7 +246,7 @@ test "@mooncmd.AggregateRoot 多次执行命令累积事件" {
   )
 
   // 创建账户
-  let create_cmd = @mooncmd.CommandMessage::new(
+  let create_cmd = @command.CommandMessage::new(
     AccountCommand::CreateAccount("Ivy", 100),
   )
   aggregate = match aggregate.execute(create_cmd) {
@@ -256,7 +256,7 @@ test "@mooncmd.AggregateRoot 多次执行命令累积事件" {
 
   // 多次存款
   for _i in 1..<4 {
-    let deposit_cmd = @mooncmd.CommandMessage::new(
+    let deposit_cmd = @command.CommandMessage::new(
       AccountCommand::DepositMoney(100),
     )
     aggregate = match aggregate.execute(deposit_cmd) {
@@ -275,13 +275,13 @@ test "@mooncmd.AggregateRoot 多次执行命令累积事件" {
 }
 
 ///|
-test "@mooncmd.AggregateRoot 空事件数组恢复" {
+test "@aggregate.AggregateRoot 空事件数组恢复" {
   let aggregate_id = "account-014"
   let handler = account_handler
-  let applier = @mooncmd.EventApplier::Single(account_applier_single)
+  let applier = @event.EventApplier::Single(account_applier_single)
 
   // 从空事件数组恢复
-  let aggregate = @mooncmd.AggregateRoot::from_events(
+  let aggregate = @aggregate.AggregateRoot::from_events(
     aggregate_id,
     [],
     handler,
@@ -298,12 +298,12 @@ test "@mooncmd.AggregateRoot 空事件数组恢复" {
 }
 
 ///|
-test "@mooncmd.AggregateRoot 命令元数据传递" {
+test "@aggregate.AggregateRoot 命令元数据传递" {
   let aggregate_id = "account-015"
   let handler = account_handler
-  let applier = @mooncmd.EventApplier::Single(account_applier_single)
+  let applier = @event.EventApplier::Single(account_applier_single)
 
-  let mut aggregate = @mooncmd.AggregateRoot::new(
+  let mut aggregate = @aggregate.AggregateRoot::new(
     aggregate_id,
     handler,
     applier,
@@ -311,7 +311,7 @@ test "@mooncmd.AggregateRoot 命令元数据传递" {
   )
 
   // 创建带元数据的命令
-  let cmd = @mooncmd.CommandMessage::new(
+  let cmd = @command.CommandMessage::new(
       AccountCommand::CreateAccount("Jack", 500),
     )
     .with_correlation("corr-123")

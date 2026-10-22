@@ -27,11 +27,11 @@ fn proj_type_name(_event : ProjEvent) -> String {
 
 ///|
 // 投影器:视图 = 已折事件计数(整数 Json);apply 纯函数禁时钟。
-fn proj_projection() -> @mooncmd.Projection[String, ProjEvent] {
-  @mooncmd.Projection::new(
+fn proj_projection() -> @projection.Projection[String, ProjEvent] {
+  @projection.Projection::new(
     fn() { @json.to_json("fresh") },
     fn(_view, _event) { @json.to_json("bumped") },
-    @mooncmd.default_batch(fn(_view, _events) { @json.to_json("bumped-batch") }),
+    @projection.default_batch(fn(_view, _events) { @json.to_json("bumped-batch") }),
   )
 }
 
@@ -39,23 +39,23 @@ fn proj_projection() -> @mooncmd.Projection[String, ProjEvent] {
 test "projection live: origin load checkpoint then refresh idempotent" {
   let db_path = "/tmp/mooncmd_proj_gate.db"
   let _ = @fs.remove_file(db_path) catch { _ => () }
-  let store = @mooncmd.SQLiteEventStore::new(
+  let store = @store.SQLiteEventStore::new(
     db_path, proj_serialize, proj_deserialize, proj_type_name,
   )
   let event_store = store.to_event_store()
   // 预置 v1..v3
   for i in 1..<4 {
     (event_store.append)(event_store, "agg-p", [
-      @mooncmd.EventMessage::new(ProjEvent::{ x: i, }, "agg-p", i),
+      @event.EventMessage::new(ProjEvent::{ x: i, }, "agg-p", i),
     ]) catch {
       e => fail("seed \{i}: \{e.to_string()}")
     }
   }
-  let live = @mooncmd.LiveProjection::new(
+  let live = @projection.LiveProjection::new(
     "agg-p",
     event_store,
     proj_projection(),
-    @mooncmd.SubscriptionPosition::Origin,
+    @projection.SubscriptionPosition::Origin,
   ) catch {
     e => fail("live new: \{e.to_string()}")
   }
@@ -68,7 +68,7 @@ test "projection live: origin load checkpoint then refresh idempotent" {
   assert_eq(live.checkpoint(), 3)
   // 追加 v4 → refresh 推进
   (event_store.append)(event_store, "agg-p", [
-    @mooncmd.EventMessage::new(ProjEvent::{ x: 4, }, "agg-p", 4),
+    @event.EventMessage::new(ProjEvent::{ x: 4, }, "agg-p", 4),
   ]) catch {
     e => fail("append 4: \{e.to_string()}")
   }

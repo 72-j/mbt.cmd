@@ -6,9 +6,9 @@
 ///|
 /// 路由环境（依赖注入容器）
 pub struct RouteEnv[AggregateId, S, E] {
-  event_store : EventStore[AggregateId, E]
-  snapshot_store : SnapshotStore[AggregateId, S]
-  event_bus : EventBus[AggregateId, E]?
+  event_store : @store.EventStore[AggregateId, E]
+  snapshot_store : @store.SnapshotStore[AggregateId, S]
+  event_bus : @event.EventBus[AggregateId, E]?
   logger : &Logger
   default_timeout : Int64
   default_retry : Int32
@@ -16,9 +16,9 @@ pub struct RouteEnv[AggregateId, S, E] {
 
 ///|
 pub fn[AggregateId, E, S] RouteEnv::new(
-  event_store : EventStore[AggregateId, E],
-  snapshot_store : SnapshotStore[AggregateId, S],
-  event_bus : EventBus[AggregateId, E]?,
+  event_store : @store.EventStore[AggregateId, E],
+  snapshot_store : @store.SnapshotStore[AggregateId, S],
+  event_bus : @event.EventBus[AggregateId, E]?,
   // logger: &Logger,
   default_timeout : Int64,
   default_retry : Int32,
@@ -76,7 +76,7 @@ pub fn CommandConfig::with_consistency(
 pub(all) struct RouterBuilder[AggregateId, S, C, E] {
   env : RouteEnv[AggregateId, S, E]
   mut default_config : CommandConfig
-  handlers : Map[String, CommandHandler[S, C, E]] // 改为 Map，key 为命令类型名
+  handlers : Map[String, @command.CommandHandler[S, C, E]] // 改为 Map，key 为命令类型名
 }
 
 ///|
@@ -90,7 +90,7 @@ pub fn[AggregateId, S, C, E] RouterBuilder::new(
 pub fn[AggregateId, S, C, E] RouterBuilder::add_handler(
   self : RouterBuilder[AggregateId, S, C, E],
   command_type : String,
-  handler : CommandHandler[S, C, E],
+  handler : @command.CommandHandler[S, C, E],
 ) -> RouterBuilder[AggregateId, S, C, E] {
   self.handlers[command_type] = handler
   self
@@ -101,7 +101,7 @@ pub fn[AggregateId, S, C, E] RouterBuilder::add_handler(
 pub fn[AggregateId, S, C, E] RouterBuilder::add_handlers(
   self : RouterBuilder[AggregateId, S, C, E],
   command_type : String,
-  handlers : Array[CommandHandler[S, C, E]],
+  handlers : Array[@command.CommandHandler[S, C, E]],
 ) -> RouterBuilder[AggregateId, S, C, E] {
   for handler in handlers {
     self.handlers[command_type] = handler
@@ -225,14 +225,14 @@ pub struct Router[AggregateId, S, C, E] {
   // handlers : Map[String, AnyHandler[AggregateId, S, E]]
   env : RouteEnv[AggregateId, S, E]
   default_config : CommandConfig
-  handlers : Map[String, CommandHandler[S, C, E]] // 改为 Map，key 为命令类型名
+  handlers : Map[String, @command.CommandHandler[S, C, E]] // 改为 Map，key 为命令类型名
 }
 
 ///|
 pub fn[AggregateId, S, C, E] Router::new(
   env : RouteEnv[AggregateId, S, E],
   default_config : CommandConfig,
-  handlers : Map[String, CommandHandler[S, C, E]], // 改为 Map，key 为命令类型名
+  handlers : Map[String, @command.CommandHandler[S, C, E]], // 改为 Map，key 为命令类型名
 ) -> Router[AggregateId, S, C, E] {
   { handlers, env, default_config, }
 
@@ -242,30 +242,35 @@ pub fn[AggregateId, S, C, E] Router::new(
 }
 
 ///|
-/// 错误回原族（役5b C-06 错误穿透不抹平）：EventStoreError 变体原样上浮
+/// 错误回原族（役5b C-06 错误穿透不抹平）：@store.EventStoreError 变体原样上浮
 /// （DuplicateVersion 可分辨），非本族错才降维 StorageError 文本。
-fn event_store_error_of(e : Error) -> EventStoreError {
+fn event_store_error_of(e : Error) -> @store.EventStoreError {
   match e {
-    EventStoreError::DuplicateVersion(v) => DuplicateVersion(v)
-    EventStoreError::SerializationError(m) => SerializationError(m)
-    _ => StorageError(e.to_string())
+    @store.EventStoreError::DuplicateVersion(v) =>
+      @store.EventStoreError::DuplicateVersion(v)
+    @store.EventStoreError::SerializationError(m) =>
+      @store.EventStoreError::SerializationError(m)
+    _ => @store.EventStoreError::StorageError(e.to_string())
   }
 }
 
 ///|
-fn snapshot_error_of(e : Error) -> SnapshotError {
+fn snapshot_error_of(e : Error) -> @store.SnapshotError {
   match e {
-    SnapshotError::StorageError(m) => StorageError(m)
-    SnapshotError::SerializationError(m) => SerializationError(m)
-    _ => StorageError(e.to_string())
+    @store.SnapshotError::StorageError(m) =>
+      @store.SnapshotError::StorageError(m)
+    @store.SnapshotError::SerializationError(m) =>
+      @store.SnapshotError::SerializationError(m)
+    _ => @store.SnapshotError::StorageError(e.to_string())
   }
 }
 
 ///|
-fn event_bus_error_of(e : Error) -> EventBusError {
+fn event_bus_error_of(e : Error) -> @event.EventBusError {
   match e {
-    EventBusError::PublishError(m) => PublishError(m)
-    _ => PublishError(e.to_string())
+    @event.EventBusError::PublishError(m) =>
+      @event.EventBusError::PublishError(m)
+    _ => @event.EventBusError::PublishError(e.to_string())
   }
 }
 
@@ -279,11 +284,11 @@ fn event_bus_error_of(e : Error) -> EventBusError {
 fn[AggregateId, S, C, E] Router::dispatch_once(
   env : RouteEnv[AggregateId, S, E],
   aggregate_id : AggregateId,
-  cmd : CommandMessage[C],
-  handler : CommandHandler[S, C, E],
-  applier : EventApplier[S, E],
+  cmd : @command.CommandMessage[C],
+  handler : @command.CommandHandler[S, C, E],
+  applier : @event.EventApplier[S, E],
   empty_state : S,
-) -> Result[AggregateRoot[AggregateId, S, C, E], EventSourcingErr] {
+) -> Result[@aggregate.AggregateRoot[AggregateId, S, C, E], EventSourcingErr] {
   // ========== Step 0: 快照基态 ==========
   let base = (env.snapshot_store.load)(aggregate_id) catch {
     e => return Err(EventSourcingErr::SnapshotErr(snapshot_error_of(e)))
@@ -301,7 +306,7 @@ fn[AggregateId, S, C, E] Router::dispatch_once(
     e => return Err(EventSourcingErr::EventStoreErr(event_store_error_of(e)))
   }
   // ========== Step 2: 快照态 + 尾事件重建聚合根 ==========
-  let aggregate = AggregateRoot::from_snapshot(
+  let aggregate = @aggregate.AggregateRoot::from_snapshot(
     aggregate_id, empty_state, base_state, base_version, events, handler, applier,
   )
   // ========== Step 3: 执行命令 ==========
@@ -345,15 +350,15 @@ fn[AggregateId, S, C, E] Router::dispatch_once(
 pub fn[AggregateId, S, C, E] Router::dispatch(
   _self : Router[AggregateId, S, C, E],
   aggregate_id : AggregateId,
-  cmd : CommandMessage[C],
-  handler : CommandHandler[S, C, E],
-  applier : EventApplier[S, E],
+  cmd : @command.CommandMessage[C],
+  handler : @command.CommandHandler[S, C, E],
+  applier : @event.EventApplier[S, E],
   empty_state : S,
 ) -> DispatchReader[
   AggregateId,
   S,
   E,
-  Result[AggregateRoot[AggregateId, S, C, E], EventSourcingErr],
+  Result[@aggregate.AggregateRoot[AggregateId, S, C, E], EventSourcingErr],
 ] {
   dispatch_reader_new(env => {
     Router::dispatch_once(env, aggregate_id, cmd, handler, applier, empty_state)
@@ -365,11 +370,11 @@ pub fn[AggregateId, S, C, E] Router::dispatch(
 pub fn[AggregateId, S, C, E] Router::dispatch_now(
   self : Router[AggregateId, S, C, E],
   aggregate_id : AggregateId,
-  cmd : CommandMessage[C],
-  handler : CommandHandler[S, C, E],
-  applier : EventApplier[S, E],
+  cmd : @command.CommandMessage[C],
+  handler : @command.CommandHandler[S, C, E],
+  applier : @event.EventApplier[S, E],
   empty_state : S,
-) -> Result[AggregateRoot[AggregateId, S, C, E], EventSourcingErr] {
+) -> Result[@aggregate.AggregateRoot[AggregateId, S, C, E], EventSourcingErr] {
   // let reader = self.dispatch_typed(cmd, command_type)
   let reader = self.dispatch(aggregate_id, cmd, handler, applier, empty_state)
 
@@ -384,9 +389,9 @@ pub fn[AggregateId, S, C, E] Router::dispatch_now(
 pub fn[AggregateId, S, C, E] Router::dispatch_with_config(
   self : Router[AggregateId, S, C, E],
   aggregate_id : AggregateId,
-  cmd : CommandMessage[C],
-  handler : CommandHandler[S, C, E],
-  applier : EventApplier[S, E],
+  cmd : @command.CommandMessage[C],
+  handler : @command.CommandHandler[S, C, E],
+  applier : @event.EventApplier[S, E],
   empty_state : S,
   timeout_ms : Int64,
   max_retries : Int32,
@@ -394,7 +399,7 @@ pub fn[AggregateId, S, C, E] Router::dispatch_with_config(
   AggregateId,
   S,
   E,
-  Result[AggregateRoot[AggregateId, S, C, E], EventSourcingErr],
+  Result[@aggregate.AggregateRoot[AggregateId, S, C, E], EventSourcingErr],
 ] {
   ignore(timeout_ms)
   ignore(self)
@@ -410,19 +415,22 @@ pub fn[AggregateId, S, C, E] Router::dispatch_with_config(
 fn[AggregateId, S, C, E] Router::dispatch_with_retry(
   env : RouteEnv[AggregateId, S, E],
   aggregate_id : AggregateId,
-  cmd : CommandMessage[C],
-  handler : CommandHandler[S, C, E],
-  applier : EventApplier[S, E],
+  cmd : @command.CommandMessage[C],
+  handler : @command.CommandHandler[S, C, E],
+  applier : @event.EventApplier[S, E],
   empty_state : S,
   max_retries : Int32,
-) -> Result[AggregateRoot[AggregateId, S, C, E], EventSourcingErr] {
+) -> Result[@aggregate.AggregateRoot[AggregateId, S, C, E], EventSourcingErr] {
   let mut attempts = 0
   let mut result = Router::dispatch_once(
     env, aggregate_id, cmd, handler, applier, empty_state,
   )
   let mut retry = match result {
-    Err(EventSourcingErr::EventStoreErr(EventStoreError::DuplicateVersion(_))) =>
-      attempts < max_retries
+    Err(
+      EventSourcingErr::EventStoreErr(
+        @store.EventStoreError::DuplicateVersion(_)
+      )
+    ) => attempts < max_retries
     _ => false
   }
   while retry {
@@ -431,8 +439,11 @@ fn[AggregateId, S, C, E] Router::dispatch_with_retry(
       env, aggregate_id, cmd, handler, applier, empty_state,
     )
     retry = match result {
-      Err(EventSourcingErr::EventStoreErr(EventStoreError::DuplicateVersion(_))) =>
-        attempts < max_retries
+      Err(
+        EventSourcingErr::EventStoreErr(
+          @store.EventStoreError::DuplicateVersion(_)
+        )
+      ) => attempts < max_retries
       _ => false
     }
   }
@@ -443,18 +454,21 @@ fn[AggregateId, S, C, E] Router::dispatch_with_retry(
 /// 所有命令要么全部成功，要么全部失败
 pub fn[AggregateId, S, C, E] Router::dispatch_batch(
   self : Router[AggregateId, S, C, E],
-  commands : Array[(AggregateId, CommandMessage[C])],
-  handler : CommandHandler[S, C, E],
-  applier : EventApplier[S, E],
+  commands : Array[(AggregateId, @command.CommandMessage[C])],
+  handler : @command.CommandHandler[S, C, E],
+  applier : @event.EventApplier[S, E],
   empty_state : S,
 ) -> DispatchReader[
   AggregateId,
   S,
   E,
-  Result[Array[AggregateRoot[AggregateId, S, C, E]], EventSourcingErr],
+  Result[
+    Array[@aggregate.AggregateRoot[AggregateId, S, C, E]],
+    EventSourcingErr,
+  ],
 ] {
   dispatch_reader_new(fn(env) {
-    let results : Array[AggregateRoot[AggregateId, S, C, E]] = []
+    let results : Array[@aggregate.AggregateRoot[AggregateId, S, C, E]] = []
     for item in commands {
       let id = item.0
       let cmd = item.1
@@ -470,15 +484,15 @@ pub fn[AggregateId, S, C, E] Router::dispatch_batch(
 
 // pub fn[AggregateId, S, C, E] Router::dispatch_batch_parallel(
 //   self : Router[AggregateId, S, C, E],
-//   commands : Array[(AggregateId, CommandMessage[C])],
-//   handler : CommandHandler[S, C, E],
-//   applier : EventApplier[S, E],
+//   commands : Array[(AggregateId, @command.CommandMessage[C])],
+//   handler : @command.CommandHandler[S, C, E],
+//   applier : @event.EventApplier[S, E],
 //   empty_state : S,
 // ) -> DispatchReader[
 //   AggregateId,
 //   S,
 //   E,
-//   Result[Array[AggregateRoot[AggregateId, S, C, E]], EventSourcingErr],
+//   Result[Array[@aggregate.AggregateRoot[AggregateId, S, C, E]], EventSourcingErr],
 // ] {
 //   @monads.Reader::new_async(async fn(env) raise {
 //     let results = Ref::new(Array::new())
@@ -521,14 +535,14 @@ pub fn[AggregateId, S, C, E] Router::dispatch_batch(
 pub fn[AggregateId, S, C, E] Router::dispatch_default(
   self : Router[AggregateId, S, C, E],
   aggregate_id : AggregateId,
-  cmd : CommandMessage[C],
-  applier : EventApplier[S, E],
+  cmd : @command.CommandMessage[C],
+  applier : @event.EventApplier[S, E],
   empty_state : S,
-) -> Result[AggregateRoot[AggregateId, S, C, E], EventSourcingErr] {
+) -> Result[@aggregate.AggregateRoot[AggregateId, S, C, E], EventSourcingErr] {
   if self.handlers.is_empty() {
     return Err(
       EventSourcingErr::CommandErr(
-        CommandError::UnregisteredCommand("No handlers registered"),
+        @command.CommandError::UnregisteredCommand("No handlers registered"),
       ),
     )
   }
@@ -540,7 +554,7 @@ pub fn[AggregateId, S, C, E] Router::dispatch_default(
     None =>
       return Err(
         EventSourcingErr::CommandErr(
-          CommandError::UnregisteredCommand("No handlers registered"),
+          @command.CommandError::UnregisteredCommand("No handlers registered"),
         ),
       )
   }
