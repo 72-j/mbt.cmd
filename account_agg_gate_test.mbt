@@ -4,12 +4,12 @@
 
 ///|
 test "account aggregate golden gate: emit byte-equal to committed product" {
-  let toml_text = @fs.read_file_to_string("examples/account_agg.toml")
+  let toml_text = @fs.read_file_to_string("examples/bank/account_agg.toml")
   let def = match @skelschema.parse_mooncmd_agg(toml_text) {
     Ok(def) => def
     Err(msg) => fail(msg)
   }
   let emitted = @skelschema.emit_mooncmd_agg(def)
-  let committed = @fs.read_file_to_string("examples/account_gen.mbt")
+  let committed = @fs.read_file_to_string("examples/bank/account_gen.mbt")
   assert_eq(emitted, committed)
 }

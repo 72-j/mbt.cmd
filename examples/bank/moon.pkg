@@ -1,0 +1,11 @@
+// bank:银行业务账户聚合完整示例包(役7 转正定名)——词表 account_agg.toml
+// + gen 产物 account_gen.mbt(黄金门逐字节,门住主包 account_agg_gate_test)
+// + 策略钩子 account_policy.mbt(红线7 手写)+ main.mbt 十查链(EXAMPLE:PASS)。
+import {
+  "moonbitlang/core/encoding/utf8",
+  "thy1016/mooncmd",
+}
+
+pkgtype(kind: "executable")
+
+supported_targets = "native"

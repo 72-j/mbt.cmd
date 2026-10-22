@@ -11,7 +11,7 @@
 
 schema_version = "1.0"
 generator = "mooncmd_agg_gen"
-target_package = "mooncmd/examples"
+target_package = "mooncmd/examples/bank"
 
 [aggregate]
 name = "account"

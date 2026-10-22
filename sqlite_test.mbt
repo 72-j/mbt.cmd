@@ -45,9 +45,9 @@ test "@mooncmd.SQLiteEventStore 创建和初始化" {
   let db_path = "/tmp/test_event_store_1.db"
 
   // 删除可能存在的旧数据库文件
-  @fs.remove_file(db_path) catch {
-    _ => ()
-  }
+  if @fs.path_exists(db_path) {
+      @fs.remove_file(db_path)
+    }
 
   let _store = @mooncmd.SQLiteEventStore::new(
     db_path, serialize_test_event, deserialize_test_event, get_test_event_type_name,
@@ -58,9 +58,9 @@ test "@mooncmd.SQLiteEventStore 创建和初始化" {
   // assert_eq(store , true)
 
   // 清理
-  @fs.remove_file(db_path) catch {
-    _ => ()
-  }
+  if @fs.path_exists(db_path) {
+      @fs.remove_file(db_path)
+    }
 }
 
 ///|
@@ -69,9 +69,9 @@ async test "@mooncmd.SQLiteEventStore 追加和加载事件" {
   /// 获取事件类型名称
 
   // 删除可能存在的旧数据库文件
-  @fs.remove_file(db_path) catch {
-    _ => ()
-  }
+  if @fs.path_exists(db_path) {
+      @fs.remove_file(db_path)
+    }
 
   let store = @mooncmd.SQLiteEventStore::new(
     db_path, serialize_test_event, deserialize_test_event, get_test_event_type_name,
@@ -117,9 +117,9 @@ async test "@mooncmd.SQLiteEventStore 追加和加载事件" {
   }
 
   // 清理
-  @fs.remove_file(db_path) catch {
-    _ => ()
-  }
+  if @fs.path_exists(db_path) {
+      @fs.remove_file(db_path)
+    }
 }
 
 // test "@mooncmd.SQLiteEventStore 加载指定版本之后的事件" {

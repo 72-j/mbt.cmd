@@ -1,5 +1,5 @@
 // ===== GENERATED FILE — DO NOT EDIT =====
-// 源表：mooncmd/examples/account_agg.toml（schema 1.0）
+// 源表：mooncmd/examples/bank/account_agg.toml（schema 1.0）
 // 绑定器：skelschema/mooncmd_agg_toml_gen.mbt（聚合方言;gen 骨架+机械演化,
 // 裁决 = 策略件手写钩子——mooncmd const.md 红线7-9）
 // 再生：改表 → 黄金门测试重生成逐字节对拍
@@ -13,7 +13,7 @@ pub(all) struct AccountState {
 
 ///|
 pub fn AccountState::init() -> AccountState {
-  { name: "", balance: 0, is_active: false }
+  { name: "", balance: 0, is_active: false,  }
 }
 
 ///|
@@ -25,12 +25,18 @@ pub(all) enum AccountEvent {
 } derive(Eq)
 
 ///|
+pub extend AccountEvent with Eq::{not_equal, equal}
+
+///|
 pub(all) enum AccountCommand {
   CreateAccount(String, Int32)
   DepositMoney(Int32)
   WithdrawMoney(Int32)
   CloseAccount
 } derive(Eq)
+
+///|
+pub extend AccountCommand with Eq::{not_equal, equal}
 
 ///|
 /// 事件演化（机械:evolve 指令逐条链式;同字段后写覆前写）
@@ -63,10 +69,22 @@ pub fn AccountEvent::apply(
 ///|
 /// 裁决钩子（记录型函数面,ADR-MC-003 同族;策略件手写实现——红线7 裁决不入表）
 pub(all) struct AccountDecideHooks {
-  create_account : (AccountState, String, Int32) -> Result[Array[AccountEvent], String]
-  deposit_money : (AccountState, Int32) -> Result[Array[AccountEvent], String]
-  withdraw_money : (AccountState, Int32) -> Result[Array[AccountEvent], String]
-  close_account : (AccountState) -> Result[Array[AccountEvent], String]
+  create_account : (AccountState, String, Int32) -> Result[
+    Array[AccountEvent],
+    String,
+  ]
+  deposit_money : (AccountState, Int32) -> Result[
+    Array[AccountEvent],
+    String,
+  ]
+  withdraw_money : (AccountState, Int32) -> Result[
+    Array[AccountEvent],
+    String,
+  ]
+  close_account : (AccountState) -> Result[
+    Array[AccountEvent],
+    String,
+  ]
 }
 
 ///|

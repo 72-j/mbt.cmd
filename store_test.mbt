@@ -27,8 +27,8 @@ fn get_test_event_type_name(event : TestEvent) -> String {
 /// 役5（FR-MC-1）：乐观并发金样——批次首事件版本 ≠ 当前版本 + 1 ⇒ DuplicateVersion，拒写不落脏
 async test "SQLiteEventStore 乐观并发：版本冲突即拒" {
   let db_path = "/tmp/test_event_store_conflict.db"
-  @fs.remove_file(db_path) catch {
-    _ => ()
+  if @fs.path_exists(db_path) {
+    @fs.remove_file(db_path)
   }
   let store = @mooncmd.SQLiteEventStore::new(
     db_path, serialize_test_event, deserialize_test_event, get_test_event_type_name,
@@ -53,7 +53,7 @@ async test "SQLiteEventStore 乐观并发：版本冲突即拒" {
   assert_true(conflict)
   // 拒写后不落脏：当前版本仍是 1
   assert_eq(store.current_version(aggregate_id), 1)
-  @fs.remove_file(db_path) catch {
-    _ => ()
+  if @fs.path_exists(db_path) {
+    @fs.remove_file(db_path)
   }
 }

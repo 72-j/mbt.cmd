@@ -146,6 +146,8 @@ State Monad（`State[S, V]`，三法则注记在案）· Writer Monad（`Writer[
 
 ## 10. 变更记录
 
+| v0.2.0 | 2026-10-22 | **役5c 契约清债笔**:投影契约成文(FR-MC-3——拉取非推送/检查点即版本/apply 纯函数禁时钟/持久化可选,吸收 commanded checkpoint·ack 语义)/LiveProjection 实装(new·refresh·checkpoint 拉取形)/PersistedProjection 修通(SQL 首字符引号 bug+panic 吞错→errdefer·自然上抛)/ADR-MC-001..006 签发/役6 挂起(WVGEN 卷不存在,锚=世界卷生成需求真立项;moonrdb ES 同挂锚=审计回放需求)/proj 测试双偏差修复。 |
+
 | v0.1.9 | 2026-10-22 | **役5b 接通笔**：EventMessage +user_id 链（§3.1）/ Router dispatch_once 重构（快照读路径 + EventBus 接通 + 错误穿透不抹平）/ with_config 重试实装（timeout 降级声明）/ SQLiteEventStore::to_event_store 适配器 / from_snapshot 聚合形——C-06 断链九项清七，余二归 5c。46/46（native+wasm 双跑）· deny 0 · EXAMPLE:PASS。 |
 
 | v0.1.8 | 2026-10-22 | **目标定位翻转（用户拍「原生 wasm 加支持 native」）**：moon.mod preferred_target native→wasm + 包级 supported_targets 序 wasm+native；裸跑即 wasm（_build 单 wasm 实证）41/41，native 矩阵 41/41 守恒，examples 门改显式 `--target native`（native-only 包不随模块默认）。 |

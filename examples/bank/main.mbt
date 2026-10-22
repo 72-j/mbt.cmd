@@ -6,103 +6,38 @@
 
 ///|
 /// ① 聚合三件套（消费方自定义）：状态 / 命令 / 事件
-struct DemoAccountState {
-  name : String
-  balance : Int32
-  is_active : Bool
-}
 
 ///|
-enum DemoCommand {
-  CreateAccount(String, Int32)
-  DepositMoney(Int32)
-  WithdrawMoney(Int32)
-  CloseAccount
-}
+/// ① 聚合三件套（役7 转正:词表 gen 形）——类型/apply/分派 = account_gen.mbt
+/// （源表 account_agg.toml,黄金门逐字节）;裁决 = account_policy.mbt 手写钩子
+/// （红线7）。金样对照 = 行为金锚 + EXAMPLE:PASS 续绿（account_gate_wbtest）。
 
 ///|
-enum DemoEvent {
-  AccountCreated(String, Int32)
-  MoneyDeposited(Int32)
-  MoneyWithdrawn(Int32)
-  AccountClosed
-}
-
-///|
-/// 命令处理器：纯函数——只做业务裁决，返回纯事件，不碰元数据不碰存储
-fn demo_handler(
-  state : DemoAccountState,
-  cmd : DemoCommand,
-) -> Result[Array[DemoEvent], @mooncmd.CommandError] {
-  match cmd {
-    CreateAccount(name, initial_balance) =>
-      if state.is_active {
-        Err(@mooncmd.CommandError::InvalidCommand("Account already exists"))
-      } else if initial_balance < 0 {
-        Err(
-          @mooncmd.CommandError::InvalidCommand(
-            "Initial balance cannot be negative",
-          ),
-        )
-      } else {
-        Ok([AccountCreated(name, initial_balance)])
-      }
-    DepositMoney(amount) =>
-      if !state.is_active {
-        Err(@mooncmd.CommandError::InvalidCommand("Account is not active"))
-      } else if amount <= 0 {
-        Err(
-          @mooncmd.CommandError::InvalidCommand(
-            "Deposit amount must be positive",
-          ),
-        )
-      } else {
-        Ok([MoneyDeposited(amount)])
-      }
-    WithdrawMoney(amount) =>
-      if !state.is_active {
-        Err(@mooncmd.CommandError::InvalidCommand("Account is not active"))
-      } else if amount > state.balance {
-        Err(@mooncmd.CommandError::InvalidCommand("Insufficient funds"))
-      } else {
-        Ok([MoneyWithdrawn(amount)])
-      }
-    CloseAccount =>
-      if state.balance != 0 {
-        Err(
-          @mooncmd.CommandError::InvalidCommand(
-            "Cannot close account with non-zero balance",
-          ),
-        )
-      } else {
-        Ok([AccountClosed])
-      }
+/// 桥接:gen 分派（String 错域）→ 框架命令错误（InvalidCommand 同界,
+/// demo 守卫语义原样——策略件四钩子升级为 demo 守卫,错误串逐字保留）
+fn account_handler(
+  state : AccountState,
+  cmd : AccountCommand,
+) -> Result[Array[AccountEvent], @mooncmd.CommandError] {
+  match account_decide(state, cmd, account_hooks()) {
+    Ok(events) => Ok(events)
+    Err(msg) => Err(@mooncmd.CommandError::InvalidCommand(msg))
   }
 }
 
 ///|
-/// 事件应用器：纯函数——事件是事实，应用即演进状态
-fn demo_applier(
-  state : DemoAccountState,
-  event : DemoEvent,
-) -> DemoAccountState {
-  match event {
-    AccountCreated(name, initial_balance) =>
-      { name, balance: initial_balance, is_active: true, }
-    MoneyDeposited(amount) => { ..state, balance: state.balance + amount, }
-    MoneyWithdrawn(amount) => { ..state, balance: state.balance - amount, }
-    AccountClosed => { ..state, is_active: false, }
-  }
+fn account_applier(state : AccountState, event : AccountEvent) -> AccountState {
+  event.apply(state)
 }
 
 ///|
-fn demo_empty_state() -> DemoAccountState {
-  { name: "", balance: 0, is_active: false, }
+fn account_empty_state() -> AccountState {
+  AccountState::init()
 }
 
 ///|
-/// 事件序列化（演示用最简手写形；消费方可换 json/protobuf）
-fn demo_serialize(event : DemoEvent) -> Bytes {
+/// 事件序列化（演示用最简手写形;消费方可换 json/protobuf）
+fn account_serialize(event : AccountEvent) -> Bytes {
   let text = match event {
     AccountCreated(name, amount) => "created:\{name}:\{amount}"
     MoneyDeposited(amount) => "deposited:\{amount}"
@@ -113,7 +48,7 @@ fn demo_serialize(event : DemoEvent) -> Bytes {
 }
 
 ///|
-fn demo_deserialize(data : Bytes) -> DemoEvent raise {
+fn account_deserialize(data : Bytes) -> AccountEvent raise {
   let text = @utf8.decode(data)
   let parts = text.split(":").collect()
   if parts.length() == 3 && parts[0] == "created" {
@@ -132,7 +67,7 @@ fn demo_deserialize(data : Bytes) -> DemoEvent raise {
 }
 
 ///|
-fn demo_type_name(event : DemoEvent) -> String {
+fn account_type_name(event : AccountEvent) -> String {
   match event {
     AccountCreated(_, _) => "AccountCreated"
     MoneyDeposited(_) => "MoneyDeposited"
@@ -166,9 +101,9 @@ fn main raise {
   // ========== ② 内存命令链：命令 → 纯事件 → EventMessage 自动包装 ==========
   let aggregate = @mooncmd.AggregateRoot::new(
     aggregate_id,
-    demo_handler,
-    @mooncmd.EventApplier::Single(demo_applier),
-    demo_empty_state(),
+    account_handler,
+    @mooncmd.EventApplier::Single(account_applier),
+    account_empty_state(),
   )
   let aggregate = match
     aggregate.execute(
@@ -220,7 +155,7 @@ fn main raise {
     )
   // ========== ③ SQLite 落库 + 重放重建 ==========
   let store = @mooncmd.SQLiteEventStore::new(
-    ":memory:", demo_serialize, demo_deserialize, demo_type_name,
+    ":memory:", account_serialize, account_deserialize, account_type_name,
   )
   store.append(aggregate_id, uncommitted)
   let loaded = store.load(aggregate_id, 0)
@@ -230,9 +165,9 @@ fn main raise {
   let rebuilt = @mooncmd.AggregateRoot::from_events(
     aggregate_id,
     loaded,
-    demo_handler,
-    @mooncmd.EventApplier::Single(demo_applier),
-    demo_empty_state(),
+    account_handler,
+    @mooncmd.EventApplier::Single(account_applier),
+    account_empty_state(),
   )
   let rebuilt_state = rebuilt.current_state()
   let rebuild_ok = rebuilt.version() == aggregate.version() &&
@@ -271,9 +206,9 @@ fn main raise {
   let closable = @mooncmd.AggregateRoot::from_events(
     aggregate_id,
     store.load(aggregate_id, 0),
-    demo_handler,
-    @mooncmd.EventApplier::Single(demo_applier),
-    demo_empty_state(),
+    account_handler,
+    @mooncmd.EventApplier::Single(account_applier),
+    account_empty_state(),
   )
   let closable = match
     closable.execute(@mooncmd.CommandMessage::new(WithdrawMoney(1200))) {
@@ -304,16 +239,16 @@ fn main raise {
   let snapshottable = @mooncmd.AggregateRoot::from_events(
     aggregate_id,
     loaded,
-    demo_handler,
-    @mooncmd.EventApplier::Single(demo_applier),
-    demo_empty_state(),
+    account_handler,
+    @mooncmd.EventApplier::Single(account_applier),
+    account_empty_state(),
   )
   let snapshot = snapshottable.to_snapshot()
   let from_snapshot = @mooncmd.AggregateRoot::from_events(
     aggregate_id,
     store.load(aggregate_id, snapshot.version),
-    demo_handler,
-    @mooncmd.EventApplier::Single(demo_applier),
+    account_handler,
+    @mooncmd.EventApplier::Single(account_applier),
     snapshot.state,
   )
   let snap_state = from_snapshot.current_state()
@@ -330,9 +265,9 @@ fn main raise {
   let full_replay = @mooncmd.AggregateRoot::from_events(
     aggregate_id,
     store.load(aggregate_id, 0),
-    demo_handler,
-    @mooncmd.EventApplier::Single(demo_applier),
-    demo_empty_state(),
+    account_handler,
+    @mooncmd.EventApplier::Single(account_applier),
+    account_empty_state(),
   )
   let full_state = full_replay.current_state()
   let equiv_ok = full_replay.version() == from_snapshot.version() &&
