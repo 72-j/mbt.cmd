@@ -1,0 +1,54 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "thy1016/mooncmd/event"
+
+import {
+  "thy1016/mooncmd/command",
+}
+
+// Values
+
+// Errors
+pub(all) suberror EventBusError {
+  PublishError(String)
+}
+pub fn EventBusError::to_string(Self) -> String
+
+// Types and methods
+pub(all) enum EventApplier[S, E] {
+  Single((S, E) -> S)
+  Batch((S, Array[E]) -> S)
+}
+
+pub(all) struct EventBus[AggregateId, E] {
+  publish : (EventBus[AggregateId, E], Array[EventMessage[AggregateId, E]]) -> Unit raise EventBusError
+}
+
+pub(all) struct EventMessage[AggregateId, E] {
+  event : E
+  event_id : String
+  aggregate_id : AggregateId
+  aggregate_version : Int
+  correlation_id : String
+  causation_id : String
+  user_id : String?
+  timestamp : Int64
+  metadata : Json
+  schema_version : Int
+}
+pub fn[AggregateId, E, C] EventMessage::from_command(E, AggregateId, Int, @command.CommandMessage[C]) -> Self[AggregateId, E]
+pub fn[AggregateId, E] EventMessage::new(E, AggregateId, Int) -> Self[AggregateId, E]
+
+pub(all) enum EventStream[AggregateId, E] {
+  Nil
+  Cons(EventMessage[AggregateId, E], EventStream[AggregateId, E])
+}
+pub fn[AggregateId, E] EventStream::length(Self[AggregateId, E]) -> Int
+pub fn[AggregateId, E] EventStream::to_array(Self[AggregateId, E]) -> Array[EventMessage[AggregateId, E]]
+
+// Type aliases
+
+// Traits
+pub trait Event {
+  fn version() -> Int
+  fn type_name() -> String
+}

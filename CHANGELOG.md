@@ -5,7 +5,9 @@
 - **Effect 重试状态机**：`RetryMachine` 协议面（`EffectErrorKind` 四类封闭集 +
   纯裁决 decide）+ `AggregateRoot::exec_with_effect`（错误分类 → 钩子覆写 →
   退避/熔断内算，wait 注入无时钟）；`account_retry.toml` 词表 → gen 产物
-  （黄金门逐字节）+ 手写策略钩子（重试策略 = Policy，红线7）
+  （黄金门逐字节）+ 手写策略钩子（重试策略 = Policy，红线7）；
+  Router `dispatch_with_config` 重试裁决迁移同协议（总错误五臂分类 +
+  `store_retry_machine`，API 不变）
 - **聚合 gen 上手面**（役7+）：wire 映射随 gen 出（`to_wire`/`from_wire`，
   行格式 v1 首列 schema_version 预留位）+ 契约门脚手架（init 值契约 +
   wire roundtrip 每事件恒等，`<name>_contract_wbtest.mbt` 随件免费）+

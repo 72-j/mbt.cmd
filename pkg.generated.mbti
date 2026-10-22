@@ -22,6 +22,8 @@ pub fn[AggregateId, S, E, R] dispatch_reader_new((RouteEnv[AggregateId, S, E]) -
 
 pub fn[AggregateId, S, E, R] dispatch_reader_run(@monads.Reader[RouteEnv[AggregateId, S, E], R], RouteEnv[AggregateId, S, E]) -> R
 
+pub fn effect_kind_of_sourcing_err(EventSourcingErr) -> @aggregate.EffectErrorKind
+
 pub fn log_warn(String) -> Unit
 
 pub fn make_console_logger() -> ConsoleLogger

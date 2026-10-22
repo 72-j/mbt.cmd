@@ -382,10 +382,13 @@ pub fn[AggregateId, S, C, E] Router::dispatch_now(
 }
 
 ///|
-/// 带配置的命令分发（役5b 实装降级声明）：**max_retries 生效** =
-/// DuplicateVersion 乐观并发重试（重载→重执行→重追加，ES 正统重试语义——
-/// 命令对最新态重新裁决）；**timeout_ms 降级声明** = MVP 同步径无定时器，
-/// 随 async dispatch 面另役。dispatch_with_config 与 dispatch 的差别仅此。
+/// 带配置的命令分发（役5b 实装；役8 续重试裁决迁移 Effect 协议）：
+/// **max_retries 生效** = Duplicate 族乐观并发重试（重载→重执行→重追加，
+/// ES 正统重试语义——命令对最新态重新裁决），裁决走 RetryMachine 记录面
+/// （effect_kind_of_sourcing_err 分类 + 机器 decide 上限门——分类/动作/上限
+/// 全机器面，与 aggregate/effect 协议同源）；**timeout_ms 降级声明** = MVP
+/// 同步径无定时器，退避时长同步径忽略（WaitRetry → 立即重试），随 async
+/// dispatch 面另役。dispatch_with_config 与 dispatch 的差别仅此。
 pub fn[AggregateId, S, C, E] Router::dispatch_with_config(
   self : Router[AggregateId, S, C, E],
   aggregate_id : AggregateId,
@@ -403,15 +406,55 @@ pub fn[AggregateId, S, C, E] Router::dispatch_with_config(
 ] {
   ignore(timeout_ms)
   ignore(self)
+  let machine = Router::store_retry_machine(max_retries)
   dispatch_reader_new(env => {
     Router::dispatch_with_retry(
-      env, aggregate_id, cmd, handler, applier, empty_state, max_retries,
+      env, aggregate_id, cmd, handler, applier, empty_state, machine,
     )
   })
 }
 
 ///|
-/// 乐观并发重试循环（DuplicateVersion → 重载重执行重追加；其余错不重试）
+/// 总错误分类（役8 续；Effect 协议结构知识面——分类固定非裁决）：
+/// 命令/存储族各归各分类器；快照故障归 Storage；聚合 id 解析形归 Other。
+pub fn effect_kind_of_sourcing_err(
+  err : EventSourcingErr,
+) -> @aggregate.EffectErrorKind {
+  match err {
+    CommandErr(e) => @aggregate.effect_kind_of_command_error(e)
+    EventStoreErr(e) => @aggregate.effect_kind_of_store_error(e)
+    SnapshotErr(_) => @aggregate.Storage
+    EventBusErr(_) => @aggregate.Storage
+    AggregateErr(_) => @aggregate.Other
+  }
+}
+
+///|
+/// 分发重试机（router 径词表：Duplicate 族 retry，余 exhausted；上限 =
+/// max_retries；WaitRetry(0) = 同步径立即重试，退避随 async 面接入）
+fn Router::store_retry_machine(
+  max_retries : Int32,
+) -> @aggregate.RetryMachine {
+  {
+    default_action: fn(kind) {
+      match kind {
+        @aggregate.Duplicate => @aggregate.ActionRetry
+        _ => @aggregate.ActionExhausted
+      }
+    },
+    decide: fn(attempt, _failures, _kind) {
+      if attempt > max_retries {
+        @aggregate.GiveUpRaise
+      } else {
+        @aggregate.WaitRetry(wait_ms=0L)
+      }
+    },
+  }
+}
+
+///|
+/// 乐观并发重试循环（役8 续协议形：分类 → 机器默认分派 → decide 门；
+/// 无手写错误硬匹配。WaitRetry 同步径立即重试——退避时长随 async 面接入）
 fn[AggregateId, S, C, E] Router::dispatch_with_retry(
   env : RouteEnv[AggregateId, S, E],
   aggregate_id : AggregateId,
@@ -419,32 +462,39 @@ fn[AggregateId, S, C, E] Router::dispatch_with_retry(
   handler : @command.CommandHandler[S, C, E],
   applier : @event.EventApplier[S, E],
   empty_state : S,
-  max_retries : Int32,
+  machine : @aggregate.RetryMachine,
 ) -> Result[@aggregate.AggregateRoot[AggregateId, S, C, E], EventSourcingErr] {
   let mut attempts = 0
+  let mut consecutive_failures = 0
   let mut result = Router::dispatch_once(
     env, aggregate_id, cmd, handler, applier, empty_state,
   )
-  let mut retry = match result {
-    Err(
-      EventSourcingErr::EventStoreErr(
-        @store.EventStoreError::DuplicateVersion(_)
-      )
-    ) => attempts < max_retries
-    _ => false
-  }
-  while retry {
-    attempts += 1
-    result = Router::dispatch_once(
-      env, aggregate_id, cmd, handler, applier, empty_state,
-    )
-    retry = match result {
-      Err(
-        EventSourcingErr::EventStoreErr(
-          @store.EventStoreError::DuplicateVersion(_)
-        )
-      ) => attempts < max_retries
-      _ => false
+  let mut running = result is Err(_)
+  while running {
+    let err = match result {
+      Err(e) => e
+      Ok(_) => return result
+    }
+    consecutive_failures += 1
+    let kind = effect_kind_of_sourcing_err(err)
+    match (machine.default_action)(kind) {
+      @aggregate.ActionExhausted => {
+        running = false
+        return Err(err)
+      }
+      @aggregate.ActionRetry => {
+        attempts += 1
+        match (machine.decide)(attempts, consecutive_failures, kind) {
+          @aggregate.WaitRetry(_) =>
+            result = Router::dispatch_once(
+              env, aggregate_id, cmd, handler, applier, empty_state,
+            )
+          @aggregate.GiveUpRaise => {
+            running = false
+            return Err(err)
+          }
+        }
+      }
     }
   }
   result

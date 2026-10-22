@@ -1,0 +1,37 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "thy1016/mooncmd/command"
+
+// Values
+
+// Errors
+pub(all) suberror CommandError {
+  InvalidCommand(String)
+  UnregisteredCommand(String)
+  Unauthorized(String)
+  PreconditionFailed(String)
+  NotFound(String)
+  Conflict(Int, Int)
+}
+pub fn CommandError::to_string(Self) -> String
+
+// Types and methods
+pub struct CommandMessage[C] {
+  command : C
+  command_id : String
+  mut correlation_id : String
+  causation_id : String
+  mut user_id : String?
+  timestamp : Int64
+  metadata : Json
+}
+pub fn[C] CommandMessage::new(C) -> Self[C]
+pub fn[C] CommandMessage::with_correlation(Self[C], String) -> Self[C]
+pub fn[C] CommandMessage::with_user(Self[C], String) -> Self[C]
+
+// Type aliases
+pub type CommandHandler[S, C, E] = (S, C) -> Result[Array[E], CommandError]
+
+// Traits
+pub trait Command {
+  fn type_name() -> String
+}

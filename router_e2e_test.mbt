@@ -447,3 +447,47 @@ test "router e2e: with_config retries duplicate version then succeeds" {
   }
   assert_eq(surfaced, 9)
 }
+
+// 钉F·役8 续协议迁移:Validation 族（PreconditionFailed）→ 分类 Exhausted
+// → with_config 零重试单次执行（分类面回归钉——裁决走 RetryMachine 协议）。
+test "router e2e: with_config does not retry validation errors" {
+  let store = e2e_fresh("/tmp/mooncmd_router_e2e_f.db")
+  let snapshots = mem_snapshots_new()
+  let mut handler_calls = 0
+  let counting : @command.CommandHandler[E2eState, E2eCommand, E2eEvent] = fn(
+    state,
+    cmd,
+  ) {
+    handler_calls += 1
+    e2e_handler(state, cmd)
+  }
+  let env : @mooncmd.RouteEnv[String, E2eState, E2eEvent] = @mooncmd.RouteEnv::new(
+    store.to_event_store(),
+    mem_snapshots_store(snapshots),
+    None,
+    5000L,
+    3,
+  )
+  let router = @mooncmd.Router::new(env, @mooncmd.CommandConfig::new(), Map([]))
+  let reader = router.dispatch_with_config(
+    "agg-7",
+    @command.CommandMessage::new(Add(-1)),
+    counting,
+    @event.EventApplier::Single(e2e_applier),
+    { total: 0, },
+    5000L,
+    3,
+  )
+  let mut rejected = false
+  match @mooncmd.dispatch_reader_run(reader, env) {
+    Err(EventSourcingErr::CommandErr(cmd_err)) =>
+      match cmd_err {
+        @command.CommandError::PreconditionFailed(_) => rejected = true
+        _ => fail("expected precondition failure")
+      }
+    _ => fail("expected validation rejection")
+  }
+  assert_true(rejected)
+  // 零重试:业务拒重放同结果,单次执行即上抛
+  assert_eq(handler_calls, 1)
+}
