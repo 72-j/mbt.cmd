@@ -242,6 +242,106 @@ pub fn[AggregateId, S, C, E] Router::new(
 }
 
 ///|
+/// 错误回原族（役5b C-06 错误穿透不抹平）：EventStoreError 变体原样上浮
+/// （DuplicateVersion 可分辨），非本族错才降维 StorageError 文本。
+fn event_store_error_of(e : Error) -> EventStoreError {
+  match e {
+    EventStoreError::DuplicateVersion(v) => DuplicateVersion(v)
+    EventStoreError::SerializationError(m) => SerializationError(m)
+    _ => StorageError(e.to_string())
+  }
+}
+
+///|
+fn snapshot_error_of(e : Error) -> SnapshotError {
+  match e {
+    SnapshotError::StorageError(m) => StorageError(m)
+    SnapshotError::SerializationError(m) => SerializationError(m)
+    _ => StorageError(e.to_string())
+  }
+}
+
+///|
+fn event_bus_error_of(e : Error) -> EventBusError {
+  match e {
+    EventBusError::PublishError(m) => PublishError(m)
+    _ => PublishError(e.to_string())
+  }
+}
+
+///|
+/// 单次分发（役5b 重构）：
+/// Step 0 快照基态（快照只写不读断链消除）→ Step 1 尾事件（after_version =
+/// 快照版本）→ Step 2 from_snapshot 重建 → Step 3 执行 → Step 4 append
+/// （错误穿透不抹平）→ Step 4.5 EventBus 发布（死挂点接通；失败 = Failed
+/// 诚实——事件已持久，盲目重试 dispatch 会双重作用，at-least-once 投递归
+/// 5c+/役6）→ Step 5 快照（每 100 版）→ Step 6 commit。
+fn[AggregateId, S, C, E] Router::dispatch_once(
+  env : RouteEnv[AggregateId, S, E],
+  aggregate_id : AggregateId,
+  cmd : CommandMessage[C],
+  handler : CommandHandler[S, C, E],
+  applier : EventApplier[S, E],
+  empty_state : S,
+) -> Result[AggregateRoot[AggregateId, S, C, E], EventSourcingErr] {
+  // ========== Step 0: 快照基态 ==========
+  let base = (env.snapshot_store.load)(aggregate_id) catch {
+    e => return Err(EventSourcingErr::SnapshotErr(snapshot_error_of(e)))
+  }
+  let (base_state, base_version) = match base {
+    Some((state, version)) => (state, version)
+    None => (empty_state, 0)
+  }
+  // ========== Step 1: 加载快照后的尾事件 ==========
+  let events = (env.event_store.load)(
+    env.event_store,
+    aggregate_id,
+    base_version,
+  ) catch {
+    e => return Err(EventSourcingErr::EventStoreErr(event_store_error_of(e)))
+  }
+  // ========== Step 2: 快照态 + 尾事件重建聚合根 ==========
+  let aggregate = AggregateRoot::from_snapshot(
+    aggregate_id, empty_state, base_state, base_version, events, handler, applier,
+  )
+  // ========== Step 3: 执行命令 ==========
+  let aggregate = match aggregate.execute(cmd) {
+    Ok(agg) => agg
+    Err(e) => return Err(EventSourcingErr::CommandErr(e))
+  }
+  let uncommitted_events = aggregate.uncommitted_events()
+  // ========== Step 4: 保存事件（错误穿透）==========
+  if !uncommitted_events.is_empty() {
+    (env.event_store.append)(env.event_store, aggregate_id, uncommitted_events) catch {
+      e => return Err(EventSourcingErr::EventStoreErr(event_store_error_of(e)))
+    }
+  }
+  // ========== Step 4.5: EventBus 发布（役5b 接通）==========
+  match env.event_bus {
+    Some(bus) =>
+      (bus.publish)(bus, uncommitted_events) catch {
+        e => return Err(EventSourcingErr::EventBusErr(event_bus_error_of(e)))
+      }
+    None => ()
+  }
+  // ========== Step 5: 保存快照（每 100 个事件）==========
+  let version = aggregate.version()
+  if version > 0 && version % 100 == 0 {
+    let snapshot = aggregate.to_snapshot()
+    (env.snapshot_store.save)(
+      snapshot.aggregate_id,
+      snapshot.state,
+      snapshot.version,
+      snapshot.timestamp,
+    ) catch {
+      e => return Err(EventSourcingErr::SnapshotErr(snapshot_error_of(e)))
+    }
+  }
+  // ========== Step 6: 提交并返回 ==========
+  Ok(aggregate.commit())
+}
+
+///|
 pub fn[AggregateId, S, C, E] Router::dispatch(
   _self : Router[AggregateId, S, C, E],
   aggregate_id : AggregateId,
@@ -256,72 +356,7 @@ pub fn[AggregateId, S, C, E] Router::dispatch(
   Result[AggregateRoot[AggregateId, S, C, E], EventSourcingErr],
 ] {
   dispatch_reader_new(env => {
-    // ========== Step 1: 加载历史事件 ==========
-    let events = (env.event_store.load)(env.event_store, aggregate_id, 0) catch {
-      e =>
-        return Err(EventSourcingErr::EventStoreErr(StorageError(e.to_string())))
-    }
-
-    // ========== Step 2: 重建聚合根 ==========
-    // from_events 会重放所有历史事件，恢复到最后的状态
-    let aggregate = AggregateRoot::from_events(
-      aggregate_id, events, // 如果没有事件，使用空数组
-       handler, applier, empty_state,
-    )
-
-    // ========== Step 3: 执行命令 ==========
-    // execute 是 async 函数，会：
-    // 1. 调用 handler(state, cmd.command) → 返回 Array[E]
-    // 2. 对每个 E，创建 EventMessage::from_command → Array[EventMessage[E]]
-    // 3. 调用 applier 应用事件到新状态
-    // 4. 更新 aggregate.state.uncommitted_events
-    let aggregate = aggregate.execute(cmd)
-    // let aggregate = match (aggregate.execute_sync(cmd)) {
-    //   Ok(agg) => agg
-    //   Err(e) => return Err(e)
-    // }
-    let aggregate = match aggregate {
-      Ok(agg) => agg
-      Err(e) => return Err(EventSourcingErr::CommandErr(e))
-    }
-    // ========== Step 4: 获取未提交事件 ==========
-    // 这些事件已经是 EventMessage[E] 类型，包含完整的元数据
-    let uncommitted_events = aggregate.uncommitted_events()
-
-    // ========== Step 5: 保存事件到存储 ==========
-    if !uncommitted_events.is_empty() {
-      (env.event_store.append)(
-        env.event_store,
-        aggregate_id,
-        uncommitted_events,
-      ) catch {
-        e =>
-          return Err(
-            EventSourcingErr::EventStoreErr(StorageError(e.to_string())),
-          )
-      }
-    }
-
-    // ========== Step 6: 保存快照（每 100 个事件）==========
-    let version = aggregate.version()
-    if version > 0 && version % 100 == 0 {
-      let snapshot = aggregate.to_snapshot()
-      (env.snapshot_store.save)(
-        snapshot.aggregate_id,
-        snapshot.state,
-        snapshot.version,
-        snapshot.timestamp,
-      ) catch {
-        e =>
-          return Err(
-            EventSourcingErr::EventStoreErr(StorageError(e.to_string())),
-          )
-      }
-    }
-
-    // ========== Step 7: 提交并返回 ==========
-    // commit 会清空 uncommitted_events
-    Ok(aggregate.commit())
+    Router::dispatch_once(env, aggregate_id, cmd, handler, applier, empty_state)
   })
 }
 
@@ -342,9 +377,10 @@ pub fn[AggregateId, S, C, E] Router::dispatch_now(
 }
 
 ///|
-/// 带配置的命令分发（高级用法）
-/// 
-/// 支持自定义超时、重试等配置
+/// 带配置的命令分发（役5b 实装降级声明）：**max_retries 生效** =
+/// DuplicateVersion 乐观并发重试（重载→重执行→重追加，ES 正统重试语义——
+/// 命令对最新态重新裁决）；**timeout_ms 降级声明** = MVP 同步径无定时器，
+/// 随 async dispatch 面另役。dispatch_with_config 与 dispatch 的差别仅此。
 pub fn[AggregateId, S, C, E] Router::dispatch_with_config(
   self : Router[AggregateId, S, C, E],
   aggregate_id : AggregateId,
@@ -360,15 +396,47 @@ pub fn[AggregateId, S, C, E] Router::dispatch_with_config(
   E,
   Result[AggregateRoot[AggregateId, S, C, E], EventSourcingErr],
 ] {
-  // TODO: 实现超时和重试逻辑
-  // 可以使用 @async.timeout 和重试循环
-  let _config = {
-    timeout_ms,
-    max_retries,
-    consistency: self.default_config.consistency,
-  }
+  ignore(timeout_ms)
+  ignore(self)
+  dispatch_reader_new(env => {
+    Router::dispatch_with_retry(
+      env, aggregate_id, cmd, handler, applier, empty_state, max_retries,
+    )
+  })
+}
 
-  self.dispatch(aggregate_id, cmd, handler, applier, empty_state)
+///|
+/// 乐观并发重试循环（DuplicateVersion → 重载重执行重追加；其余错不重试）
+fn[AggregateId, S, C, E] Router::dispatch_with_retry(
+  env : RouteEnv[AggregateId, S, E],
+  aggregate_id : AggregateId,
+  cmd : CommandMessage[C],
+  handler : CommandHandler[S, C, E],
+  applier : EventApplier[S, E],
+  empty_state : S,
+  max_retries : Int32,
+) -> Result[AggregateRoot[AggregateId, S, C, E], EventSourcingErr] {
+  let mut attempts = 0
+  let mut result = Router::dispatch_once(
+    env, aggregate_id, cmd, handler, applier, empty_state,
+  )
+  let mut retry = match result {
+    Err(EventSourcingErr::EventStoreErr(EventStoreError::DuplicateVersion(_))) =>
+      attempts < max_retries
+    _ => false
+  }
+  while retry {
+    attempts += 1
+    result = Router::dispatch_once(
+      env, aggregate_id, cmd, handler, applier, empty_state,
+    )
+    retry = match result {
+      Err(EventSourcingErr::EventStoreErr(EventStoreError::DuplicateVersion(_))) =>
+        attempts < max_retries
+      _ => false
+    }
+  }
+  result
 }
 
 ///|

@@ -11,9 +11,10 @@ import {
   "moonbitlang/x/fs",
   "moonbitlang/core/json",
   "moonbitlang/core/encoding/utf8",
+  "thy1016/skelschema",
 } for "test"
 
-supported_targets = "native+wasm"
+supported_targets = "wasm+native"
 
 options(
   "is-main": false,

@@ -2,6 +2,8 @@
 
 ## 0.1.0 (2026-10-21)
 
+- **2026-10-22** 目标定位翻转:preferred_target = **wasm**(原生 wasm,native 同支持);examples 门改显式 `--target native`。
+
 首次成模（独立模块化，moonspace 范式；代码自 2026-10-08 起在主仓演进）：
 
 - 主包 `mooncmd`：命令 → 纯事件 → `EventMessage` 自动包装（correlation/causation/

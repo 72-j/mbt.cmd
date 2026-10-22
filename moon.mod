@@ -26,10 +26,11 @@ description = "Command-side event sourcing kernel for MoonBit: pure command hand
 
 readme = "README.md"
 
-preferred_target = "native"
+preferred_target = "wasm"
 
 import {
   "moonbitlang/async@0.22.4",
+  "thy1016/skelschema@0.1.0",
   "moonbitlang/x@0.5.5",
   "moonbit-community/sqlite3@0.2.3",
   "f4ah6o/uuidm@0.2.1",

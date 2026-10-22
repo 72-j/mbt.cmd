@@ -58,20 +58,34 @@ pub fn[AggregateId, S, C, E] AggregateRoot::from_events(
   applier : EventApplier[S, E],
   empty_state : S,
 ) -> AggregateRoot[AggregateId, S, C, E] {
-  let final_state = events.fold(init=empty_state, fn(s, e) {
-    // applier.apply(s, e.event)
-    // Batch 与 execute 路径同构：逐事件单批应用（Batch applier 内部自行折叠）
+  AggregateRoot::from_snapshot(
+    id, empty_state, empty_state, 0, events, handler, applier,
+  )
+}
+
+///|
+/// 从快照基态 + 尾事件恢复（役5b 快照读路径）：base = 快照态/版本，尾事件
+/// 折入；尾空 = 版本取快照版本（非 0）。from_events = 本形特例
+/// （base = 空态/0，委托）。
+pub fn[AggregateId, S, C, E] AggregateRoot::from_snapshot(
+  id : AggregateId,
+  empty_state : S,
+  base_state : S,
+  base_version : Int32,
+  events : Array[EventMessage[AggregateId, E]],
+  handler : CommandHandler[S, C, E],
+  applier : EventApplier[S, E],
+) -> AggregateRoot[AggregateId, S, C, E] {
+  let final_state = events.fold(init=base_state, fn(s, e) {
     match applier {
       EventApplier::Single(f) => f(s, e.event)
       EventApplier::Batch(f) => f(s, [e.event])
     }
   })
-  let version = if events.is_empty() {
-    0
-  } else {
-    events[events.length() - 1].aggregate_version
+  let version = match events.last() {
+    Some(last) => last.aggregate_version
+    None => base_version
   }
-
   {
     handler,
     applier,

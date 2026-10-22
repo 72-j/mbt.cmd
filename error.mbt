@@ -3,6 +3,7 @@
 pub(all) suberror EventSourcingErr {
   CommandErr(CommandError)
   EventStoreErr(EventStoreError)
+  EventBusErr(EventBusError)
   SnapshotErr(SnapshotError)
   AggregateErr(AggregateError)
 }

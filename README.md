@@ -37,7 +37,8 @@ Monad 基础设施（State / Writer / Reader / EventWriter），不含事件溯�
 ## 使用
 
 ```sh
-moon run examples   # 全链自证：聚合定义→命令链→落库→重放→并发拒写→销户→快照
+moon run examples --target native   # 全链自证（可执行包 native）：聚合→命令链→落库→重放→并发拒写→销户→快照
+moon test             # wasm 原生：41/41（preferred_target = wasm；native 同支持）
 ```
 
 `examples/main.mbt` 即接入范文：定义状态/命令/事件三件套 → 纯函数 handler 与

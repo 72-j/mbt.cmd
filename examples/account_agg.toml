@@ -1,0 +1,75 @@
+# account_agg.toml —— 聚合词表（人维护面；役7 D-MG 试点金样）
+#
+# 形状区（本表全部 = 形状；裁决 = 策略件手写钩子，红线7 裁决不入表）：
+#   [aggregate.state] 字段 / [[aggregate.events]] 事件+演化指令 /
+#   [[aggregate.commands]] 命令词形。演化指令封闭集 = set/add/append/remove
+#   （const.md 红线8）；指令形 = "<op> <state_field>=<operand>"，operand =
+#   事件载荷字段引用（可 "-" 前缀取负）或字面量（true/false/整数）。
+# 类型封闭集：string / int / bool（扩类型 = 词表拍改）。
+# 生成物禁手写（生成红线9）；绑定器 skelschema/mooncmd_agg_toml_gen.mbt；
+# 黄金门 = mooncmd 侧重生成逐字节对拍。表头三件 = gen 体例键，非协议字段。
+
+schema_version = "1.0"
+generator = "mooncmd_agg_gen"
+target_package = "mooncmd/examples"
+
+[aggregate]
+name = "account"
+id = "string"
+
+[aggregate.state]
+fields = [
+  { name = "name", type = "string", init = '""' },
+  { name = "balance", type = "int", init = "0" },
+  { name = "is_active", type = "bool", init = "false" },
+]
+
+[[aggregate.events]]
+name = "AccountCreated"
+fields = [
+  { name = "name", type = "string" },
+  { name = "initial", type = "int" },
+]
+evolve = ["set name=name", "set balance=initial", "set is_active=true"]
+
+[[aggregate.events]]
+name = "MoneyDeposited"
+fields = [
+  { name = "amount", type = "int" },
+]
+evolve = ["add balance=amount"]
+
+[[aggregate.events]]
+name = "MoneyWithdrawn"
+fields = [
+  { name = "amount", type = "int" },
+]
+evolve = ["add balance=-amount"]
+
+[[aggregate.events]]
+name = "AccountClosed"
+fields = []
+evolve = ["set is_active=false"]
+
+[[aggregate.commands]]
+name = "CreateAccount"
+fields = [
+  { name = "name", type = "string" },
+  { name = "initial", type = "int" },
+]
+
+[[aggregate.commands]]
+name = "DepositMoney"
+fields = [
+  { name = "amount", type = "int" },
+]
+
+[[aggregate.commands]]
+name = "WithdrawMoney"
+fields = [
+  { name = "amount", type = "int" },
+]
+
+[[aggregate.commands]]
+name = "CloseAccount"
+fields = []

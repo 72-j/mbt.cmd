@@ -19,7 +19,7 @@
 | 测试依赖 | `moonbitlang/x@0.5.5`（fs；`for "test"`，黑盒测试包专用） |
 | 模块账 | moon.mod 独立在盘（uuidm 随迁自主仓，根仓无其它用户）；脚手架 = `proj_dialect.toml` 方言件 + `moonxr/ops_projgen.mbtx`；发布元数据变更须经 `moonxr/release_review.mbtx`（独立 clone 真路径） |
 | 入库状态 | 独立仓 gitlink `thy7/mbt.cmd`（master；首推 2026-10-21，用户令）；主仓侧 untrack + .gitignore 止蚀 |
-| 目标声明 | 包级 `supported_targets = "native+wasm"`（已拍 2026-10-08，循 sqlite3 逐字）；模块级 `preferred_target = "native"` |
+| 目标声明 | 包级 `supported_targets = "wasm+native"`（2026-10-22 用户拍**原生 wasm 加支持 native**——序随定位；2026-10-08 原形 native+wasm 循 sqlite3 逐字，沿革在案）；模块级 `preferred_target = "wasm"`（moon.mod，裸跑即 wasm；examples 可执行包仍 native-only,门 = `moon run examples --target native`） |
 
 ## 2. 主链（结构事实；成文自 `cmd.md` 注记）
 
@@ -44,7 +44,7 @@ Command → CommandMessage（correlation_id / causation_id / user_id）
 
 | 类型 | 形状 | 备注 |
 |---|---|---|
-| `EventMessage[AggregateId, E]` | `event` · `event_id`（uuid v4）· `aggregate_id` · `aggregate_version : Int` · `correlation_id : String` · `causation_id : String` · `timestamp : Int64` · `metadata : Json` · `schema_version : Int`（役5 落，默认 1，只预留不演进） | `from_command` 复制 CommandMessage 元数据；逐字段以 `.mbti` 收口为准 |
+| `EventMessage[AggregateId, E]` | `event` · `event_id`（uuid v4）· `aggregate_id` · `aggregate_version : Int` · `correlation_id : String` · `causation_id : String` · `timestamp : Int64` · `metadata : Json` · `schema_version : Int`（役5 落，默认 1，只预留不演进）· `user_id : String?`（役5b 落，承自 CommandMessage 链至落列） | `from_command` 复制 CommandMessage 元数据；逐字段以 `.mbti` 收口为准 |
 | `CommandMessage[C]` | 含 `correlation_id`（实测引用）；全形状 `[待勘]` | sqlite 侧有 `user_id` 列与之对应 |
 
 ### 3.2 存储与总线（记录型函数面，struct-of-functions）
@@ -145,6 +145,10 @@ State Monad（`State[S, V]`，三法则注记在案）· Writer Monad（`Writer[
 - 引用本卷须带节号；本卷换版必须同步所有引用方（world const §5.1 `spec` 行效力纪律）。
 
 ## 10. 变更记录
+
+| v0.1.9 | 2026-10-22 | **役5b 接通笔**：EventMessage +user_id 链（§3.1）/ Router dispatch_once 重构（快照读路径 + EventBus 接通 + 错误穿透不抹平）/ with_config 重试实装（timeout 降级声明）/ SQLiteEventStore::to_event_store 适配器 / from_snapshot 聚合形——C-06 断链九项清七，余二归 5c。46/46（native+wasm 双跑）· deny 0 · EXAMPLE:PASS。 |
+
+| v0.1.8 | 2026-10-22 | **目标定位翻转（用户拍「原生 wasm 加支持 native」）**：moon.mod preferred_target native→wasm + 包级 supported_targets 序 wasm+native；裸跑即 wasm（_build 单 wasm 实证）41/41，native 矩阵 41/41 守恒，examples 门改显式 `--target native`（native-only 包不随模块默认）。 |
 
 | 版本 | 日期 | 变更 |
 |---|---|---|

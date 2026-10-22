@@ -47,6 +47,7 @@ pub(all) suberror EventBusError {
 pub(all) suberror EventSourcingErr {
   CommandErr(CommandError)
   EventStoreErr(EventStoreError)
+  EventBusErr(EventBusError)
   SnapshotErr(SnapshotError)
   AggregateErr(AggregateError)
 }
@@ -85,6 +86,7 @@ pub fn[AggregateId, S, C, E] AggregateRoot::commit(Self[AggregateId, S, C, E]) -
 pub fn[AggregateId, S, C, E] AggregateRoot::current_state(Self[AggregateId, S, C, E]) -> S
 pub fn[AggregateId, S, C, E] AggregateRoot::execute(Self[AggregateId, S, C, E], CommandMessage[C]) -> Result[Self[AggregateId, S, C, E], CommandError]
 pub fn[AggregateId, S, C, E] AggregateRoot::from_events(AggregateId, Array[EventMessage[AggregateId, E]], (S, C) -> Result[Array[E], CommandError], EventApplier[S, E], S) -> Self[AggregateId, S, C, E]
+pub fn[AggregateId, S, C, E] AggregateRoot::from_snapshot(AggregateId, S, S, Int, Array[EventMessage[AggregateId, E]], (S, C) -> Result[Array[E], CommandError], EventApplier[S, E]) -> Self[AggregateId, S, C, E]
 pub fn[AggregateId, S, C, E] AggregateRoot::new(AggregateId, (S, C) -> Result[Array[E], CommandError], EventApplier[S, E], S) -> Self[AggregateId, S, C, E]
 pub fn[AggregateId, S, C, E] AggregateRoot::to_snapshot(Self[AggregateId, S, C, E]) -> Snapshot[AggregateId, S]
 pub fn[AggregateId, S, C, E] AggregateRoot::uncommitted_events(Self[AggregateId, S, C, E]) -> Array[EventMessage[AggregateId, E]]
@@ -144,6 +146,7 @@ pub struct EventMessage[AggregateId, E] {
   aggregate_version : Int
   correlation_id : String
   causation_id : String
+  user_id : String?
   timestamp : Int64
   metadata : Json
   schema_version : Int
@@ -235,6 +238,7 @@ pub fn[E] SQLiteEventStore::current_version(Self[E], String) -> Int raise
 pub fn[E] SQLiteEventStore::init_schema(Self[E]) -> Unit raise
 pub fn[AggregateId : AggregateId, E] SQLiteEventStore::load(Self[E], AggregateId, Int) -> Array[EventMessage[AggregateId, E]] raise
 pub fn[E] SQLiteEventStore::new(String, (E) -> Bytes, (Bytes) -> E raise, (E) -> String) -> Self[E] raise
+pub fn[E] SQLiteEventStore::to_event_store(Self[E]) -> EventStore[String, E]
 
 pub struct Snapshot[AggregateId, S] {
   aggregate_id : AggregateId

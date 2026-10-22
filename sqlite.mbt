@@ -1,3 +1,7 @@
+// 存量库 schema 迁移策略(役5b 降级声明):init_schema = IF NOT EXISTS 幂等建;
+// 列变更策略 = user_version 逐版迁移(moonrdb K1 同款形),首个 schema 变更需求
+// 触发实装;schema_version 列 = 事件 schema 版本(只预留,役5 C-03)。
+
 ///|
 /// SQLite 实现
 pub struct SQLiteEventStore[E] {
@@ -96,7 +100,14 @@ pub fn[AggregateId, E] SQLiteEventStore::append(
     stmt.bind(index=6, event.correlation_id)
     stmt.bind(index=7, event.causation_id)
     // user_id 列保留在 schema 里；EventMessage 不携带 user_id（命令面才有），落空串
-    stmt.bind(index=8, "")
+    // user_id 链（役5b C-06）：CommandMessage.user_id → EventMessage → 落列
+    stmt.bind(
+      index=8,
+      match event.user_id {
+        Some(u) => u
+        None => ""
+      },
+    )
     stmt.bind(index=9, event.timestamp)
     stmt.bind(index=10, event.metadata.stringify())
     stmt.bind(index=11, event.schema_version)
@@ -136,29 +147,28 @@ pub fn[AggregateId : AggregateId, E] SQLiteEventStore::load(
     let causation_id : String = stmt.column(index=4)
     let timestamp : Int64 = stmt.column(index=5)
     let metadata_str : String = stmt.column(index=6)
+    let user_id : String = stmt.column(index=7)
     let schema_version : Int64 = stmt.column(index=8)
-    // let user_id : String = stmt.column(index=7)
 
     let event = (self.deserialize)(data)
     let metadata = @json.parse(metadata_str)
 
     events.push(EventMessage::{
-        event,
-        event_id,
-        aggregate_id,
-        aggregate_version: version.to_int(),
-        correlation_id,
-        causation_id,
-        timestamp,
-        metadata,
-        schema_version: schema_version.to_int(),
+      event,
+      event_id,
+      aggregate_id,
+      aggregate_version: version.to_int(),
+      correlation_id,
+      causation_id,
+      timestamp,
+      metadata,
+      schema_version: schema_version.to_int(),
+      user_id: if user_id == "" {
+        None
+      } else {
+        Some(user_id)
       },
-      // user_id: if user_id == "" {
-      //   None
-      // } else {
-      //   Some(user_id)
-      // },
-    )
+    })
   }
 
   stmt.finalize()
@@ -186,4 +196,29 @@ pub fn[E] SQLiteEventStore::current_version(
 
   version
 }
-// }
+
+///|
+/// EventStore 记录面适配器（役5b C-06①）：SQLite 实现接入记录型函数面——
+/// 错误穿透不抹平（EventStoreError 变体原样上浮，DuplicateVersion 可分辨）。
+/// 聚合 id 域 = String（event_stream.aggregate_id 列 TEXT）。
+pub fn[E] SQLiteEventStore::to_event_store(
+  self : SQLiteEventStore[E],
+) -> EventStore[String, E] {
+  {
+    append: (_store, aggregate_id, events) => {
+      self.append(aggregate_id, events) catch {
+        e => raise event_store_error_of(e)
+      }
+    },
+    load: (_store, aggregate_id, after_version) => {
+      self.load(aggregate_id, after_version) catch {
+        e => raise event_store_error_of(e)
+      }
+    },
+    current_version: (_store, aggregate_id) => {
+      self.current_version(aggregate_id) catch {
+        e => raise event_store_error_of(e)
+      }
+    },
+  }
+}

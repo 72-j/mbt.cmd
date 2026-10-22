@@ -10,6 +10,7 @@ pub struct EventMessage[AggregateId, E] {
   aggregate_version : Int32
   correlation_id : String
   causation_id : String
+  user_id : String?
   timestamp : Int64
   metadata : Json
   schema_version : Int32
@@ -30,6 +31,7 @@ pub fn[AggregateId, E] EventMessage::new(
     aggregate_version: version,
     correlation_id: @uuid.v4().to_string(),
     causation_id: "",
+    user_id: None,
     timestamp: @async.now(),
     metadata: @json.to_json("{}"),
     schema_version: 1,
@@ -50,6 +52,7 @@ pub fn[AggregateId, E, C] EventMessage::from_command(
     aggregate_version: version,
     correlation_id: cmd.correlation_id,
     causation_id: cmd.command_id,
+    user_id: cmd.user_id,
     timestamp: @async.now(),
     metadata: cmd.metadata,
     schema_version: 1,
