@@ -480,7 +480,7 @@ test "router e2e: with_config does not retry validation errors" {
   )
   let mut rejected = false
   match @mooncmd.dispatch_reader_run(reader, env) {
-    Err(EventSourcingErr::CommandErr(cmd_err)) =>
+    Err(@mooncmd.EventSourcingErr::CommandErr(cmd_err)) =>
       match cmd_err {
         @command.CommandError::PreconditionFailed(_) => rejected = true
         _ => fail("expected precondition failure")
