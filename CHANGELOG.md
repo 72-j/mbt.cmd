@@ -11,8 +11,9 @@
 - **聚合 gen 上手面**（役7+）：wire 映射随 gen 出（`to_wire`/`from_wire`，
   行格式 v1 首列 schema_version 预留位）+ 契约门脚手架（init 值契约 +
   wire roundtrip 每事件恒等，`<name>_contract_wbtest.mbt` 随件免费）+
-  再生入口 `moon run skelschema/cmd --target native`；README「从零定义
-  一个聚合」五步上手节
+  再生入口双形：模块内 `moon run cmd --target native`（消费方一等 CLI，
+  扫词表目录按内容识别聚合/重试，`AGG-REGEN:PASS` 尾判）+ binder 侧
+  `moon run skelschema/cmd`；README「从零定义一个聚合」五步上手节
 - 聚合 TOML 大gen 金样转正（役7）：`account_agg.toml` → `account_gen.mbt`
   （类型/apply/分派骨架）+ 黄金门 + 行为金锚
 - 六包布局 + monads（原 mystate）改名；Router `dispatch_once` 端到端接通

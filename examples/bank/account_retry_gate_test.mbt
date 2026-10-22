@@ -9,6 +9,6 @@ test "account retry golden gate: emit byte-equal to committed product" {
     Err(msg) => fail(msg)
   }
   let emitted = @skelschema.emit_mooncmd_retry(def)
-  let committed = @fs.read_file_to_string("examples/bank/retry_gen.mbt")
+  let committed = @fs.read_file_to_string("examples/bank/account_retry_gen.mbt")
   assert_eq(emitted, committed)
 }

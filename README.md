@@ -43,10 +43,13 @@ Monad 基础设施（State / Writer / Reader / EventWriter），不含事件溯�
    `[aggregate.state]` 字段（名/类型/init 值区）、`[[aggregate.events]]`
    事件（载荷字段 + `evolve` 机械演化指令，封闭集 `set/add/append/remove`）、
    `[[aggregate.commands]]` 命令词形。类型封闭集：`string / int / bool`。
-2. **再生产物**：`moon run skelschema/cmd --target native`（再生入口，锚点双路探测）
-   —— 产 `<name>_gen.mbt`（state/init/事件与命令枚举/apply 演化链/decide 分派/
+2. **再生产物**：词表放 `examples/bank/`（或你的包目录），然后
+   `moon run cmd --target native`（模块根）/ `moon run mooncmd/cmd --target native`
+   （workspace 仓根，双路锚点）—— 扫 `*.toml` 按内容识别（聚合/重试），
+   产 `<name>_gen.mbt`（state/init/事件与命令枚举/apply 演化链/decide 分派/
    wire 映射）+ `<name>_contract_wbtest.mbt`（免费契约门：init 值契约 +
-   wire roundtrip 每事件恒等）。产物禁手写（红线9），黄金门逐字节钉死。
+   wire roundtrip 每事件恒等）+ `<name>_retry_gen.mbt`（重试词表时）。
+   尾判 `AGG-REGEN:PASS`；产物禁手写（红线9），黄金门逐字节钉死。
 3. **写裁决钩子**：`<name>_policy.mbt` 实现 `<Name>DecideHooks`——每命令一个
    `(state, 载荷...) -> Result[Array[Event], String]` 纯函数；重试策略等
    Policy 同理归钩子件（参考 `account_retry_policy.mbt`）。
