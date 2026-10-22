@@ -6,6 +6,11 @@
   纯裁决 decide）+ `AggregateRoot::exec_with_effect`（错误分类 → 钩子覆写 →
   退避/熔断内算，wait 注入无时钟）；`account_retry.toml` 词表 → gen 产物
   （黄金门逐字节）+ 手写策略钩子（重试策略 = Policy，红线7）
+- **聚合 gen 上手面**（役7+）：wire 映射随 gen 出（`to_wire`/`from_wire`，
+  行格式 v1 首列 schema_version 预留位）+ 契约门脚手架（init 值契约 +
+  wire roundtrip 每事件恒等，`<name>_contract_wbtest.mbt` 随件免费）+
+  再生入口 `moon run skelschema/cmd --target native`；README「从零定义
+  一个聚合」五步上手节
 - 聚合 TOML 大gen 金样转正（役7）：`account_agg.toml` → `account_gen.mbt`
   （类型/apply/分派骨架）+ 黄金门 + 行为金锚
 - 六包布局 + monads（原 mystate）改名；Router `dispatch_once` 端到端接通

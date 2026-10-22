@@ -13,3 +13,17 @@ test "account aggregate golden gate: emit byte-equal to committed product" {
   let committed = @fs.read_file_to_string("examples/bank/account_gen.mbt")
   assert_eq(emitted, committed)
 }
+
+///|
+test "account contract scaffold golden gate: emit byte-equal to committed file" {
+  let toml_text = @fs.read_file_to_string("examples/bank/account_agg.toml")
+  let def = match @skelschema.parse_mooncmd_agg(toml_text) {
+    Ok(found) => found
+    Err(msg) => fail(msg)
+  }
+  let emitted = @skelschema.emit_mooncmd_agg_contract_tests(def)
+  let committed = @fs.read_file_to_string(
+    "examples/bank/account_contract_wbtest.mbt",
+  )
+  assert_eq(emitted, committed)
+}

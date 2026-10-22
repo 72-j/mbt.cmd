@@ -34,15 +34,30 @@ Monad 基础设施（State / Writer / Reader / EventWriter），不含事件溯�
 - **Monad 注入面**：`mystate` 子包 State/Writer/Reader 三法则注记在案，
   Router 分发以 `DispatchReader` 组合子暴露。
 
-## 使用
+## 从零定义一个聚合（上手路径）
 
-```sh
-moon run examples --target native   # 全链自证（可执行包 native）：聚合→命令链→落库→重放→并发拒写→销户→快照
-moon test             # wasm 原生：41/41（preferred_target = wasm；native 同支持）
-```
+消费方只需两件：**词表 TOML**（声明）+ **裁决钩子**（业务语义，红线7）。
+以 `examples/bank` 为活模板：
 
-`examples/main.mbt` 即接入范文：定义状态/命令/事件三件套 → 纯函数 handler 与
-applier → `AggregateRoot` 命令链 → `SQLiteEventStore` 落库与重放重建。
+1. **写词表**：复制 `examples/bank/account_agg.toml`，改三段——
+   `[aggregate.state]` 字段（名/类型/init 值区）、`[[aggregate.events]]`
+   事件（载荷字段 + `evolve` 机械演化指令，封闭集 `set/add/append/remove`）、
+   `[[aggregate.commands]]` 命令词形。类型封闭集：`string / int / bool`。
+2. **再生产物**：`moon run skelschema/cmd --target native`（再生入口，锚点双路探测）
+   —— 产 `<name>_gen.mbt`（state/init/事件与命令枚举/apply 演化链/decide 分派/
+   wire 映射）+ `<name>_contract_wbtest.mbt`（免费契约门：init 值契约 +
+   wire roundtrip 每事件恒等）。产物禁手写（红线9），黄金门逐字节钉死。
+3. **写裁决钩子**：`<name>_policy.mbt` 实现 `<Name>DecideHooks`——每命令一个
+   `(state, 载荷...) -> Result[Array[Event], String]` 纯函数；重试策略等
+   Policy 同理归钩子件（参考 `account_retry_policy.mbt`）。
+4. **接线**：`AggregateRoot::new(id, handler 桥, applier, <Name>State::init())`
+   → `exec` 链；落库 `SQLiteEventStore::new(path, to_wire/from_wire 包装,
+   type_name)`（wire 序列化已随 gen 出，`schema_version` 预留位在首列）。
+5. **跑门**：`moon test`（黄金门 + 契约门）与
+   `moon run examples/bank --target native`（EXAMPLE:PASS 全链自证）。
+
+事件命名/粒度/归并属通用语言决策，人供（词表）；机械演化与序列化归 gen——
+语义归人、机械归机器。
 
 ## 许可证
 

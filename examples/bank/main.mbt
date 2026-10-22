@@ -36,34 +36,18 @@ fn account_empty_state() -> AccountState {
 }
 
 ///|
-/// 事件序列化（演示用最简手写形;消费方可换 json/protobuf）
+/// 事件序列化 = gen 产物流 wire（役7+ D-MG-6;格式契约见 account_contract_wbtest roundtrip 钉）
 fn account_serialize(event : AccountEvent) -> Bytes {
-  let text = match event {
-    AccountCreated(name, amount) => "created:\{name}:\{amount}"
-    MoneyDeposited(amount) => "deposited:\{amount}"
-    MoneyWithdrawn(amount) => "withdrawn:\{amount}"
-    AccountClosed => "closed"
-  }
-  @utf8.encode(text)
+  @utf8.encode(event.to_wire())
 }
 
 ///|
 fn account_deserialize(data : Bytes) -> AccountEvent raise {
   let text = @utf8.decode(data)
-  let parts = text.split(":").collect()
-  if parts.length() == 3 && parts[0] == "created" {
-    return AccountCreated(parts[1].to_owned(), parse_int(parts[2].to_owned()))
+  match AccountEvent::from_wire(text) {
+    Some(event) => event
+    None => abort("bad event wire payload: \{text}")
   }
-  if parts.length() == 2 && parts[0] == "deposited" {
-    return MoneyDeposited(parse_int(parts[1].to_owned()))
-  }
-  if parts.length() == 2 && parts[0] == "withdrawn" {
-    return MoneyWithdrawn(parse_int(parts[1].to_owned()))
-  }
-  if text == "closed" {
-    return AccountClosed
-  }
-  abort("bad event payload: \{text}")
 }
 
 ///|
@@ -74,17 +58,6 @@ fn account_type_name(event : AccountEvent) -> String {
     MoneyWithdrawn(_) => "MoneyWithdrawn"
     AccountClosed => "AccountClosed"
   }
-}
-
-///|
-fn parse_int(text : String) -> Int32 {
-  let mut value = 0
-  for byte in text.iter() {
-    if byte >= '0' && byte <= '9' {
-      value = value * 10 + (byte.to_int() - 48)
-    }
-  }
-  value
 }
 
 ///|
@@ -185,7 +158,7 @@ fn main raise {
   let mut effect_calls = 0
   let effect_handler = fn(
     state : AccountState,
-    cmd : AccountCommand,
+    _cmd : AccountCommand,
   ) -> Result[Array[AccountEvent], @command.CommandError] {
     effect_calls = effect_calls + 1
     if effect_calls <= 2 {
