@@ -12,6 +12,9 @@ pub(all) struct AccountState {
 } derive(Eq)
 
 ///|
+pub extend AccountState with Eq::{not_equal, equal}
+
+///|
 pub fn AccountState::init() -> AccountState {
   { name: "", balance: 0, is_active: false,  }
 }
@@ -46,21 +49,21 @@ pub fn AccountEvent::apply(
 ) -> AccountState {
   match self {
     AccountCreated(name, initial) => {
-      let s0 = { ..state, name: name }
-      let s1 = { ..s0, balance: initial }
-      let s2 = { ..s1, is_active: true }
+      let s0 = { ..state, name: name, }
+      let s1 = { ..s0, balance: initial, }
+      let s2 = { ..s1, is_active: true, }
       s2
     }
     MoneyDeposited(amount) => {
-      let s0 = { ..state, balance: state.balance + amount }
+      let s0 = { ..state, balance: state.balance + amount, }
       s0
     }
     MoneyWithdrawn(amount) => {
-      let s0 = { ..state, balance: state.balance - amount }
+      let s0 = { ..state, balance: state.balance - amount, }
       s0
     }
     AccountClosed => {
-      let s0 = { ..state, is_active: false }
+      let s0 = { ..state, is_active: false, }
       s0
     }
   }

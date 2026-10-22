@@ -1,5 +1,5 @@
 import {
-  "thy1016/mooncmd/mystate",
+  "thy1016/mooncmd/monads",
   "moonbitlang/async",
   "moonbitlang/core/encoding/utf8",
   "moonbitlang/core/json",
