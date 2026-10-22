@@ -28,4 +28,3 @@ impl Show for CommandError with fn output(self, buf) {
     // StorageError(msg) => buf.write_string("StorageError: \{msg}")
   }
 }
-

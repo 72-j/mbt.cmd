@@ -1,5 +1,17 @@
 # CHANGELOG
 
+## Unreleased（役8 续，2026-10-22）
+
+- **Effect 重试状态机**：`RetryMachine` 协议面（`EffectErrorKind` 四类封闭集 +
+  纯裁决 decide）+ `AggregateRoot::exec_with_effect`（错误分类 → 钩子覆写 →
+  退避/熔断内算，wait 注入无时钟）；`account_retry.toml` 词表 → gen 产物
+  （黄金门逐字节）+ 手写策略钩子（重试策略 = Policy，红线7）
+- 聚合 TOML 大gen 金样转正（役7）：`account_agg.toml` → `account_gen.mbt`
+  （类型/apply/分派骨架）+ 黄金门 + 行为金锚
+- 六包布局 + monads（原 mystate）改名；Router `dispatch_once` 端到端接通
+  （快照基态/尾事件/EventBus publish/user_id 链）；投影契约成文 +
+  LiveProjection 实装
+
 ## 0.1.0 (2026-10-21)
 
 - **2026-10-22** 目标定位翻转:preferred_target = **wasm**(原生 wasm,native 同支持);examples 门改显式 `--target native`。

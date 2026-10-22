@@ -8,6 +8,9 @@ import {
 }
 
 // Values
+pub fn effect_kind_of_command_error(@command.CommandError) -> EffectErrorKind
+
+pub fn effect_kind_of_store_error(@store.EventStoreError) -> EffectErrorKind
 
 // Errors
 pub(all) suberror AggregateError {
@@ -33,6 +36,8 @@ pub struct AggregateRoot[AggregateId, S, C, E] {
 }
 pub fn[AggregateId, S, C, E] AggregateRoot::commit(Self[AggregateId, S, C, E]) -> Self[AggregateId, S, C, E]
 pub fn[AggregateId, S, C, E] AggregateRoot::current_state(Self[AggregateId, S, C, E]) -> S
+pub fn[AggregateId, S, C, E] AggregateRoot::exec(Self[AggregateId, S, C, E], C) -> Self[AggregateId, S, C, E] raise @command.CommandError
+pub fn[AggregateId, S, C, E] AggregateRoot::exec_with_effect(Self[AggregateId, S, C, E], C, RetryMachine, RetryHooks, (Int64) -> Unit) -> Self[AggregateId, S, C, E] raise @command.CommandError
 pub fn[AggregateId, S, C, E] AggregateRoot::execute(Self[AggregateId, S, C, E], @command.CommandMessage[C]) -> Result[Self[AggregateId, S, C, E], @command.CommandError]
 pub fn[AggregateId, S, C, E] AggregateRoot::from_events(AggregateId, Array[@event.EventMessage[AggregateId, E]], (S, C) -> Result[Array[E], @command.CommandError], @event.EventApplier[S, E], S) -> Self[AggregateId, S, C, E]
 pub fn[AggregateId, S, C, E] AggregateRoot::from_snapshot(AggregateId, S, S, Int, Array[@event.EventMessage[AggregateId, E]], (S, C) -> Result[Array[E], @command.CommandError], @event.EventApplier[S, E]) -> Self[AggregateId, S, C, E]
@@ -45,6 +50,33 @@ pub struct AggregateState[AggregateId, S, E] {
   state : S
   version : Int
   uncommitted_events : Array[@event.EventMessage[AggregateId, E]]
+}
+
+pub(all) enum EffectErrorKind {
+  Duplicate
+  Validation
+  Storage
+  Other
+}
+
+pub(all) enum RetryAction {
+  ActionRetry
+  ActionExhausted
+}
+
+pub(all) struct RetryHooks {
+  override_action : (EffectErrorKind) -> RetryAction?
+}
+pub fn RetryHooks::none() -> Self
+
+pub(all) struct RetryMachine {
+  default_action : (EffectErrorKind) -> RetryAction
+  decide : (Int, Int, EffectErrorKind) -> RetryVerdict
+}
+
+pub(all) enum RetryVerdict {
+  WaitRetry(wait_ms~ : Int64)
+  GiveUpRaise
 }
 
 // Type aliases

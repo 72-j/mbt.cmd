@@ -31,7 +31,9 @@ fn proj_projection() -> @projection.Projection[String, ProjEvent] {
   @projection.Projection::new(
     fn() { @json.to_json("fresh") },
     fn(_view, _event) { @json.to_json("bumped") },
-    @projection.default_batch(fn(_view, _events) { @json.to_json("bumped-batch") }),
+    @projection.default_batch(fn(_view, _events) {
+      @json.to_json("bumped-batch")
+    }),
   )
 }
 

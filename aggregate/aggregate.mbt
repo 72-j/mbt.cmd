@@ -183,3 +183,18 @@ pub fn[AggregateId, S, C, E] AggregateRoot::to_snapshot(
   @store.Snapshot::new(self.id, self.state.state, self.state.version)
 }
 // }
+
+///|
+/// 形态 A 流式执行(役7 转正拍定案):命令自动包装 CommandMessage,
+/// 错误 raise 上抛,返回 Self 链式。
+/// 用法:root.exec(CreateAccount("main", 100)).exec(DepositMoney(50))
+pub fn[AggregateId, S, C, E] AggregateRoot::exec(
+  self : AggregateRoot[AggregateId, S, C, E],
+  cmd : C,
+) -> AggregateRoot[AggregateId, S, C, E] raise @command.CommandError {
+  let msg = @command.CommandMessage::new(cmd)
+  match self.execute(msg) {
+    Ok(agg) => agg
+    Err(e) => raise e
+  }
+}

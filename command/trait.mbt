@@ -9,5 +9,3 @@ pub trait Command {
   /// 这是业务校验的地方，不修改状态
   // execute(state : S, cmd : C) -> Result[Array[E], CommandError]
 }
-
-

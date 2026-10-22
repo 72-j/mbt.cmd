@@ -99,16 +99,8 @@ test "@aggregate.AggregateRoot 从事件恢复" {
       aggregate_id,
       1,
     ),
-    @event.EventMessage::new(
-      AccountEvent::MoneyDeposited(500),
-      aggregate_id,
-      2,
-    ),
-    @event.EventMessage::new(
-      AccountEvent::MoneyWithdrawn(200),
-      aggregate_id,
-      3,
-    ),
+    @event.EventMessage::new(AccountEvent::MoneyDeposited(500), aggregate_id, 2),
+    @event.EventMessage::new(AccountEvent::MoneyWithdrawn(200), aggregate_id, 3),
   ]
 
   // 从事件恢复聚合根

@@ -2,8 +2,5 @@
 
 ///|
 pub(all) struct EventBus[AggregateId, E] {
-  publish : (
-    EventBus[AggregateId, E],
-    Array[EventMessage[AggregateId, E]],
-  ) -> Unit raise EventBusError
+  publish : (EventBus[AggregateId, E], Array[EventMessage[AggregateId, E]]) -> Unit raise EventBusError
 }

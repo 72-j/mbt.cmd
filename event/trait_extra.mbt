@@ -32,5 +32,3 @@ pub trait Event {
 //   /// 从快照恢复
 //   from_snapshot(state : S, version : Int) -> Self
 // }
-
-

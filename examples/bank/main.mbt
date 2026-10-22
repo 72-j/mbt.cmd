@@ -100,37 +100,14 @@ fn main raise {
   let aggregate_id = "demo-account-001"
   // ========== ② 内存命令链：命令 → 纯事件 → EventMessage 自动包装 ==========
   let aggregate = @aggregate.AggregateRoot::new(
-    aggregate_id,
-    account_handler,
-    @event.EventApplier::Single(account_applier),
-    account_empty_state(),
-  )
-  let aggregate = match
-    aggregate.execute(
-      @command.CommandMessage::new(CreateAccount("Demo Holder", 1000)),
-    ) {
-    Ok(agg) => agg
-    Err(e) => {
-      println("[FAIL] 开户命令被拒：\{e.to_string()}")
-      return
-    }
-  }
-  let aggregate = match
-    aggregate.execute(@command.CommandMessage::new(DepositMoney(500))) {
-    Ok(agg) => agg
-    Err(e) => {
-      println("[FAIL] 存款命令被拒：\{e.to_string()}")
-      return
-    }
-  }
-  let aggregate = match
-    aggregate.execute(@command.CommandMessage::new(WithdrawMoney(300))) {
-    Ok(agg) => agg
-    Err(e) => {
-      println("[FAIL] 取款命令被拒：\{e.to_string()}")
-      return
-    }
-  }
+      aggregate_id,
+      account_handler,
+      @event.EventApplier::Single(account_applier),
+      account_empty_state(),
+    )
+    .exec(CreateAccount("Demo Holder", 1000))
+    .exec(DepositMoney(500))
+    .exec(WithdrawMoney(300))
   let chain_ok = aggregate.version() == 3
   all_green = all_green &&
     check("内存命令链", chain_ok, "版本 = \{aggregate.version()}")
@@ -202,6 +179,84 @@ fn main raise {
       clean_ok,
       "当前版本仍 = \{version_after_reject}",
     )
+  // ========== ④b Effect 重试状态机（役8 续）：两败后成走机；Validation 直上抛 ==========
+  // 演示 1：FailTwiceThenOk——前两次 Conflict（Duplicate 族→词表 retry），第三次成。
+  // wait = 打印型假钟（真钟 = async sleep，宿主接）;词表 fixed interval=100。
+  let mut effect_calls = 0
+  let effect_handler = fn(
+    state : AccountState,
+    cmd : AccountCommand,
+  ) -> Result[Array[AccountEvent], @command.CommandError] {
+    effect_calls = effect_calls + 1
+    if effect_calls <= 2 {
+      // 模拟瞬时乐观并发冲突（同类：另一写者抢先）——Duplicate 族，词表 retry
+      ignore(state)
+      Err(@command.CommandError::Conflict(1, 2))
+    } else {
+      // 冲突消除，业务裁决放行（等价 deposit_money 守卫通过形）
+      ignore(state)
+      Ok([MoneyDeposited(700)])
+    }
+  }
+  let retry_root = @aggregate.AggregateRoot::new(
+    "demo-effect-1",
+    effect_handler,
+    @event.EventApplier::Single(account_applier),
+    AccountState::init(),
+  )
+  let effect_done = retry_root.exec_with_effect(
+    DepositMoney(700),
+    account_retry_machine(),
+    account_retry_hooks_pure(),
+    fn(ms) { println("    [effect] 冲突，固定退避 \{ms}ms 后重试") },
+  )
+  let effect1_ok = effect_calls == 3 &&
+    effect_done.version() == 1 &&
+    effect_done.current_state().balance == 700
+  all_green = all_green &&
+    check(
+      "Effect 重试两败后成",
+      effect1_ok,
+      "3 次执行（2 冲突 1 成），版本 \{effect_done.version()}，balance \{effect_done.current_state().balance}",
+    )
+  // 演示 2：Validation（业务拒）——词表 exhausted，零重试直上抛（重放同结果）。
+  let mut invalid_calls = 0
+  let invalid_watcher = fn(
+    state : AccountState,
+    cmd : AccountCommand,
+  ) -> Result[Array[AccountEvent], @command.CommandError] {
+    invalid_calls = invalid_calls + 1
+    account_handler(state, cmd)
+  }
+  let invalid_root = @aggregate.AggregateRoot::new(
+    "demo-effect-2",
+    invalid_watcher,
+    @event.EventApplier::Single(account_applier),
+    AccountState::init(),
+  )
+  let mut effect2_rejected = false
+  try {
+    // 未激活户取款 = 业务拒（Validation 族）→ 状态机不重试，原错上抛
+    let _ = invalid_root.exec_with_effect(
+      WithdrawMoney(100),
+      account_retry_machine(),
+      account_retry_hooks_pure(),
+      fn(_ms) { () },
+    )
+  } catch {
+    e =>
+      effect2_rejected = match e {
+        @command.CommandError::InvalidCommand(_) => true
+        _ => false
+      }
+  }
+  let effect2_ok = effect2_rejected && invalid_calls == 1
+  all_green = all_green &&
+    check(
+      "Effect Validation 直上抛",
+      effect2_ok,
+      "业务拒零重试（执行 \{invalid_calls} 次，重放同结果）",
+    )
   // ========== ⑤ 销户闭环：余额清零 → CloseAccount（AccountClosed 事件）==========
   let closable = @aggregate.AggregateRoot::from_events(
     aggregate_id,
@@ -210,19 +265,15 @@ fn main raise {
     @event.EventApplier::Single(account_applier),
     account_empty_state(),
   )
-  let closable = match
-    closable.execute(@command.CommandMessage::new(WithdrawMoney(1200))) {
-    Ok(agg) => agg
-    Err(e) => {
-      println("[FAIL] 清零取款被拒：\{e.to_string()}")
+  let closable = closable.exec(WithdrawMoney(1200)) catch {
+    err => {
+      println("[FAIL] 清零取款被拒：\{err.to_string()}")
       return
     }
   }
-  let closed = match
-    closable.execute(@command.CommandMessage::new(CloseAccount)) {
-    Ok(agg) => agg
-    Err(e) => {
-      println("[FAIL] 销户命令被拒：\{e.to_string()}")
+  let closed = closable.exec(CloseAccount) catch {
+    err => {
+      println("[FAIL] 销户命令被拒：\{err.to_string()}")
       return
     }
   }

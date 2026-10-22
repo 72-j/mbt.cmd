@@ -1,0 +1,28 @@
+# account_retry.toml —— Effect 重试词表（役8 续；人维护面）
+#
+# 重试语义 = 形状数据（可枚举分派，宪法 §1 纯翻译）；业务裁决 =
+# account_retry_policy.mbt 手写钩子（红线7 裁决不入表）。
+# 错误类型分派 = 框架分类封闭集（duplicate/validation/storage/other），
+# 非业务条件（红线8 同源护栏：封闭集外一律判红）。
+# 生成物禁手写（生成红线9）；绑定器 skelschema/retry_toml_gen.mbt；
+# 黄金门 = mooncmd 侧 parse→emit ≡ retry_gen.mbt 逐字节。表头三件 = gen 体例键。
+
+schema_version = "1.0"
+generator = "mooncmd_retry_gen"
+target_package = "mooncmd/examples/bank"
+
+[retry]
+name = "account"
+max = 3
+backoff = "fixed"
+interval = 100
+
+[retry.on_error]
+duplicate = "retry"       # 乐观并发冲突——重载重执行同命令（幂等前提：execute Err 不改态）
+validation = "exhausted"  # 业务拒——重放同结果，永不重试
+storage = "retry"
+other = "exhausted"
+
+[circuit]
+threshold = 5
+cooldown = 30000
