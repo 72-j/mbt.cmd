@@ -1,6 +1,6 @@
 # CHANGELOG
 
-## Unreleased（役8 续，2026-10-22）
+## 0.1.1 (2026-10-24)
 
 - **Effect 重试状态机**：`RetryMachine` 协议面（`EffectErrorKind` 四类封闭集 +
   纯裁决 decide）+ `AggregateRoot::exec_with_effect`（错误分类 → 钩子覆写 →
