@@ -450,6 +450,8 @@ test "router e2e: with_config retries duplicate version then succeeds" {
 
 // 钉F·役8 续协议迁移:Validation 族（PreconditionFailed）→ 分类 Exhausted
 // → with_config 零重试单次执行（分类面回归钉——裁决走 RetryMachine 协议）。
+
+///|
 test "router e2e: with_config does not retry validation errors" {
   let store = e2e_fresh("/tmp/mooncmd_router_e2e_f.db")
   let snapshots = mem_snapshots_new()
@@ -494,6 +496,8 @@ test "router e2e: with_config does not retry validation errors" {
 
 // 钉G·dispatch 门面（役9 编排层）:Strong 一致性——投影检查点追上目标版本
 // 才返回;预算超 = ConsistencyErr。Eventual 默认径不等待（钉E 已覆盖落库）。
+
+///|
 test "router e2e: dispatch facade strong consistency waits projection checkpoint" {
   let store = e2e_fresh("/tmp/mooncmd_router_e2e_g.db")
   let records = store.to_event_store()
@@ -549,7 +553,7 @@ test "router e2e: dispatch facade strong consistency waits projection checkpoint
   } catch {
     e =>
       match e {
-        EventSourcingErr::ConsistencyErr(_) => timed_out = true
+        @mooncmd.EventSourcingErr::ConsistencyErr(_) => timed_out = true
         _ => fail("expected consistency timeout")
       }
   }

@@ -13,3 +13,6 @@ import {
   "thy1016/mooncmd/event",
   "thy1016/mooncmd/store",
 } for "test"
+
+// supported_targets 随依赖支持域钉(store = native+wasm)
+supported_targets = "native+wasm"

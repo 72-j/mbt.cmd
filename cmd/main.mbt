@@ -69,7 +69,9 @@ fn main raise {
     }
   }
   if regenerated > 0 {
-    println("AGG-REGEN:PASS（\{regenerated} 张词表重生成完毕;黄金门由消费方测试兜底）")
+    println(
+      "AGG-REGEN:PASS（\{regenerated} 张词表重生成完毕;黄金门由消费方测试兜底）",
+    )
   } else {
     println("AGG-REGEN:FAIL: 未发现词表（扫 \{dir}）")
   }

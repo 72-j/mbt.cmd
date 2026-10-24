@@ -239,7 +239,12 @@ fn main raise {
     account_empty_state(),
   )
   let records = store.to_event_store()
-  let after_withdraw = @mooncmd.dispatch(records, None, closable, WithdrawMoney(1200))
+  let after_withdraw = @mooncmd.dispatch(
+    records,
+    None,
+    closable,
+    WithdrawMoney(1200),
+  )
   let closed = @mooncmd.dispatch(records, None, after_withdraw, CloseAccount)
   let closed_state = closed.current_state()
   let close_ok = closed_state.balance == 0 && !closed_state.is_active

@@ -433,9 +433,7 @@ pub fn effect_kind_of_sourcing_err(
 ///|
 /// 分发重试机（router 径词表：Duplicate 族 retry，余 exhausted；上限 =
 /// max_retries；WaitRetry(0) = 同步径立即重试，退避随 async 面接入）
-fn Router::store_retry_machine(
-  max_retries : Int32,
-) -> @aggregate.RetryMachine {
+fn Router::store_retry_machine(max_retries : Int32) -> @aggregate.RetryMachine {
   {
     default_action: fn(kind) {
       match kind {

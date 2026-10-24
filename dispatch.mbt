@@ -26,15 +26,10 @@ pub fn[Id, S, C, E] dispatch(
   projections~ : Array[@projection.LiveProjection[Id, E]] = [],
   consistency~ : Consistency = Eventual,
   poll_wait~ : (Int64) -> Unit = fn(_ms) { () },
-  poll_budget~ : Int = 100,
+  poll_budget~ : Int32 = 100,
 ) -> @aggregate.AggregateRoot[Id, S, C, E] raise EventSourcingErr {
   // ① 纯裁决（业务拒 → CommandErr，不产出事件）
-  let committed = match
-    (try {
-      Ok(aggregate.exec(cmd))
-    } catch {
-      e => Err(e)
-    }) {
+  let committed = match (Ok(aggregate.exec(cmd)) catch { e => Err(e) }) {
     Ok(next) => next
     Err(e) => raise EventSourcingErr::CommandErr(e)
   }

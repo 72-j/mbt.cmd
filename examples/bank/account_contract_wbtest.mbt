@@ -12,7 +12,12 @@ test "account init contract: fields equal declared inits" {
 ///|
 /// wire roundtrip 契约:每事件样本 to_wire→from_wire 恒等（Eq）
 test "account wire contract: roundtrip identity per event" {
-  let samples : Array[AccountEvent] = [AccountCreated("contract", 1), MoneyDeposited(1), MoneyWithdrawn(1), AccountClosed]
+  let samples : Array[AccountEvent] = [
+    AccountCreated("contract", 1),
+    MoneyDeposited(1),
+    MoneyWithdrawn(1),
+    AccountClosed,
+  ]
   for sample in samples {
     match AccountEvent::from_wire(sample.to_wire()) {
       Some(back) => assert_true(back.to_wire() == sample.to_wire())

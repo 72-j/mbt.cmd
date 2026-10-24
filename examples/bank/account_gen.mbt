@@ -16,7 +16,7 @@ pub extend AccountState with Eq::{not_equal, equal}
 
 ///|
 pub fn AccountState::init() -> AccountState {
-  { name: "", balance: 0, is_active: false,  }
+  { name: "", balance: 0, is_active: false, }
 }
 
 ///|
@@ -49,7 +49,7 @@ pub fn AccountEvent::apply(
 ) -> AccountState {
   match self {
     AccountCreated(name, initial) => {
-      let s0 = { ..state, name: name, }
+      let s0 = { ..state, name, }
       let s1 = { ..s0, balance: initial, }
       let s2 = { ..s1, is_active: true, }
       s2
@@ -76,18 +76,9 @@ pub(all) struct AccountDecideHooks {
     Array[AccountEvent],
     String,
   ]
-  deposit_money : (AccountState, Int32) -> Result[
-    Array[AccountEvent],
-    String,
-  ]
-  withdraw_money : (AccountState, Int32) -> Result[
-    Array[AccountEvent],
-    String,
-  ]
-  close_account : (AccountState) -> Result[
-    Array[AccountEvent],
-    String,
-  ]
+  deposit_money : (AccountState, Int32) -> Result[Array[AccountEvent], String]
+  withdraw_money : (AccountState, Int32) -> Result[Array[AccountEvent], String]
+  close_account : (AccountState) -> Result[Array[AccountEvent], String]
 }
 
 ///|
@@ -127,7 +118,9 @@ pub fn AccountEvent::from_wire(text : String) -> AccountEvent? {
     return None
   }
   if parts[1] == "AccountCreated" && parts.length() == 4 {
-    return Some(AccountCreated(parts[2].to_owned(), account_wire_int(parts[3].to_owned())))
+    return Some(
+      AccountCreated(parts[2].to_owned(), account_wire_int(parts[3].to_owned())),
+    )
   }
   if parts[1] == "MoneyDeposited" && parts.length() == 3 {
     return Some(MoneyDeposited(account_wire_int(parts[2].to_owned())))
