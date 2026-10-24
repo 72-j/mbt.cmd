@@ -1,5 +1,5 @@
 // effect.mbt
-//! Effect 重试状态机库缝（役8 续，spec §2.1）：
+//! Effect 重试状态机库缝（spec §2.1）：
 //! exec(命令) --raise--> 状态机裁决（重试/放行/熔断）--> 调用方。
 //! 状态机自身 = gen 产物（词表 TOML → skelschema/retry_toml_gen → 骨架 +
 //! 手写钩子）；本件只定协议面与 runner，不含任何策略裁决。
@@ -65,7 +65,7 @@ pub fn effect_kind_of_command_error(
 }
 
 ///|
-/// 存储错误分类（dispatch 层迁移用，役5b with_config 迁移笔挂钩）
+/// 存储错误分类（dispatch 层 with_config 挂钩用）
 pub fn effect_kind_of_store_error(
   err : @store.EventStoreError,
 ) -> EffectErrorKind {

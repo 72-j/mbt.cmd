@@ -15,4 +15,5 @@ import {
 } for "test"
 
 // supported_targets 随依赖支持域钉(store = native+wasm)
+
 supported_targets = "native+wasm"

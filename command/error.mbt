@@ -1,4 +1,4 @@
-// ===== 命令错误族(役8 拆分自 error.mbt)=====
+// ===== 命令错误族 =====
 
 ///|
 pub(all) suberror CommandError {

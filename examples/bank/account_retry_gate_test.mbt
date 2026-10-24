@@ -1,4 +1,4 @@
-// ===== Effect 重试 gen 黄金门（役8 续；源表 account_retry.toml）=====
+// ===== Effect 重试 gen 黄金门（源表 account_retry.toml）=====
 // parse → emit ≡ 入库产物逐字节（生成红线9）。
 
 ///|

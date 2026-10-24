@@ -1,4 +1,4 @@
-// ===== 投影契约测试(役5c FR-MC-3;真 SQLiteEventStore + 检查点拉取形)=====
+// ===== 投影契约测试(FR-MC-3;真 SQLiteEventStore + 检查点拉取形)=====
 // 钉1·装载:Origin 全量折入,checkpoint = 末事件版本 ·
 // 钉2·refresh:拉新推进检查点,流空 no-op(幂等)。
 // 夹具本地重定义(三手病③);视图 = 已折事件数(Json 数);事件载荷不进视图

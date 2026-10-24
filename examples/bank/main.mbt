@@ -36,7 +36,7 @@ fn account_empty_state() -> AccountState {
 }
 
 ///|
-/// 事件序列化 = gen 产物流 wire（役7+ D-MG-6;格式契约见 account_contract_wbtest roundtrip 钉）
+/// 事件序列化 = gen 产物流 wire（D-MG-6;格式契约见 account_contract_wbtest roundtrip 钉）
 fn account_serialize(event : AccountEvent) -> Bytes {
   @utf8.encode(event.to_wire())
 }
@@ -152,7 +152,7 @@ fn main raise {
       clean_ok,
       "当前版本仍 = \{version_after_reject}",
     )
-  // ========== ④b Effect 重试状态机（役8 续）：两败后成走机；Validation 直上抛 ==========
+  // ========== ④b Effect 重试状态机：两败后成走机；Validation 直上抛 ==========
   // 演示 1：FailTwiceThenOk——前两次 Conflict（Duplicate 族→词表 retry），第三次成。
   // wait = 打印型假钟（真钟 = async sleep，宿主接）;词表 fixed interval=100。
   let mut effect_calls = 0
@@ -230,7 +230,7 @@ fn main raise {
       effect2_ok,
       "业务拒零重试（执行 \{invalid_calls} 次，重放同结果）",
     )
-  // ========== ⑤ 销户闭环（dispatch 门面:执行+落库+提交一步——役9 编排层）==========
+  // ========== ⑤ 销户闭环（dispatch 门面:执行+落库+提交一步）==========
   let closable = @aggregate.AggregateRoot::from_events(
     aggregate_id,
     store.load(aggregate_id, 0),

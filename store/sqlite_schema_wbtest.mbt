@@ -1,5 +1,5 @@
 ///|
-/// 役5（FR-MC-4/FR-MC-2 白盒钉子）：UNIQUE(aggregate_id, version) 在册 + schema_version 列通
+/// FR-MC-4/FR-MC-2 白盒钉子：UNIQUE(aggregate_id, version) 在册 + schema_version 列通
 /// 白盒原因：`conn` 为包内私有面，黑盒不可达；自带最小事件夹具（黑盒测试包互不可见）。
 enum WbEvent {
   Wb

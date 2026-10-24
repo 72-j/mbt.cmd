@@ -1,6 +1,6 @@
-// 存量库 schema 迁移策略(役5b 降级声明):init_schema = IF NOT EXISTS 幂等建;
+// 存量库 schema 迁移策略:init_schema = IF NOT EXISTS 幂等建;
 // 列变更策略 = user_version 逐版迁移(moonrdb K1 同款形),首个 schema 变更需求
-// 触发实装;schema_version 列 = 事件 schema 版本(只预留,役5 C-03)。
+// 触发实现;schema_version 列 = 事件 schema 版本(只预留)。
 
 ///|
 /// SQLite 实现
@@ -16,7 +16,7 @@ pub struct SQLiteEventStore[E] {
 ///|
 
 ///|
-/// 错误回原族(役5b:DuplicateVersion 原样上浮可分辨)
+/// 错误回原族(DuplicateVersion 原样上浮可分辨)
 fn event_store_error_of(e : Error) -> EventStoreError {
   match e {
     EventStoreError::DuplicateVersion(v) => DuplicateVersion(v)
@@ -112,7 +112,7 @@ pub fn[E] SQLiteEventStore::append(
     stmt.bind(index=6, event.correlation_id)
     stmt.bind(index=7, event.causation_id)
     // user_id 列保留在 schema 里；@event.EventMessage 不携带 user_id（命令面才有），落空串
-    // user_id 链（役5b C-06）：CommandMessage.user_id → @event.EventMessage → 落列
+    // user_id 链：CommandMessage.user_id → @event.EventMessage → 落列
     stmt.bind(
       index=8,
       match event.user_id {
@@ -210,7 +210,7 @@ pub fn[E] SQLiteEventStore::current_version(
 }
 
 ///|
-/// EventStore 记录面适配器（役5b C-06①）：SQLite 实现接入记录型函数面——
+/// EventStore 记录面适配器：SQLite 实现接入记录型函数面——
 /// 错误穿透不抹平（EventStoreError 变体原样上浮，DuplicateVersion 可分辨）。
 /// 聚合 id 域 = String（event_stream.aggregate_id 列 TEXT）。
 pub fn[E] SQLiteEventStore::to_event_store(

@@ -1,4 +1,4 @@
-// bus.mbt —— 事件总线(役8 归位自旧根 store.mbt)
+// bus.mbt —— 事件总线
 
 ///|
 pub(all) struct EventBus[AggregateId, E] {

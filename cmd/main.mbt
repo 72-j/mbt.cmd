@@ -1,4 +1,4 @@
-// ===== cmd —— 聚合词表再生命令（役7+ 上手面;胶水脚本,moonrdb jelly/cmd 同款）=====
+// ===== cmd —— 聚合词表再生命令（上手面;胶水脚本,moonrdb jelly/cmd 同款）=====
 // 用法：模块根 `moon run cmd --target native` 或 workspace 仓根
 // `moon run mooncmd/cmd --target native`（双路锚点探测）。
 // 流程：扫 examples/bank/*.toml → 按内容识别（[aggregate]/[retry]）→

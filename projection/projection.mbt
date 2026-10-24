@@ -1,5 +1,5 @@
 // projection.mbt
-//! 投影：从事件构建读模型（FR-MC-3 投影契约,役5c 成文）
+//! 投影：从事件构建读模型（FR-MC-3 投影契约）
 //!
 //! 契约（吸收 commanded 检查点语义,MoonBit 形）：
 //! 1. **拉取非推送**：投影是 EventStore 的订阅方——只认
@@ -70,7 +70,7 @@ fn[AggregateId, E] position_version(
 }
 
 ///|
-/// 实时投影（内存视图 + 检查点;拉取刷新形——FR-MC-3 参考实装）。
+/// 实时投影（内存视图 + 检查点;拉取刷新形——FR-MC-3 参考实现）。
 pub(all) struct LiveProjection[AggregateId, E] {
   mut view : View
   mut last_version : Int32
@@ -138,7 +138,7 @@ pub fn[AggregateId, E] LiveProjection::checkpoint(
 }
 
 ///|
-/// 错误回原族（役5b C-06 同款，役8 拆分本地化）：EventStoreError 变体原样上浮
+/// 错误回原族：EventStoreError 变体原样上浮
 /// （DuplicateVersion 可分辨），非本族错才降维 StorageError 文本。
 fn event_store_error_of(e : Error) -> @store.EventStoreError {
   match e {

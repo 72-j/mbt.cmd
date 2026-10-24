@@ -1,8 +1,8 @@
-// ===== @mooncmd.Router 端到端契约测试（役5b 接通笔；C-06 断链清偿实证）=====
+// ===== @mooncmd.Router 端到端契约测试（钉A–钉G）=====
 // 真 SQLiteEventStore + 记录面适配器 + 注入桩（快照/总线）。
 // 钉A 端到端落库重放 + user_id 链 · 钉B DuplicateVersion 穿透不抹平 ·
-// 钉C @event.EventBus 接通（publish 收到同批/失败诚实且事件已落库）·
-// 钉D 快照读路径（基态+尾事件,无快照读必红）· 钉E with_config 重试实装。
+// 钉C @event.EventBus 发布（publish 收到同批/失败诚实且事件已落库）·
+// 钉D 快照读路径（基态+尾事件,无快照读必红）· 钉E with_config 重试。
 // 夹具本地重定义（三手病③:跨包测试件不可见）。
 
 ///|
@@ -240,8 +240,8 @@ test "router e2e: duplicate version surfaces typed through dispatch" {
 }
 
 ///|
-// 钉C·@event.EventBus 接通:publish 收到同批;publish 失败 = dispatch 失败诚实
-// 且事件已落库（盲目重试会双重作用,at-least-once 归 5c+/役6）。
+// 钉C·@event.EventBus 发布:publish 收到同批;publish 失败 = dispatch 失败诚实
+// 且事件已落库（盲目重试会双重作用,at-least-once 投递归后续裁定）。
 test "router e2e: event bus wired, publish failure honest with events persisted" {
   let store = e2e_fresh("/tmp/mooncmd_router_e2e_c.db")
   let snapshots = mem_snapshots_new()
@@ -357,7 +357,7 @@ test "router e2e: snapshot base state loaded with tail events" {
 }
 
 ///|
-// 钉E·with_config 重试实装:首炸 DuplicateVersion → 重试成功;max_retries=0
+// 钉E·with_config 重试:首炸 DuplicateVersion → 重试成功;max_retries=0
 // → 不重试直接失败。
 test "router e2e: with_config retries duplicate version then succeeds" {
   let store = e2e_fresh("/tmp/mooncmd_router_e2e_e.db")
@@ -448,7 +448,7 @@ test "router e2e: with_config retries duplicate version then succeeds" {
   assert_eq(surfaced, 9)
 }
 
-// 钉F·役8 续协议迁移:Validation 族（PreconditionFailed）→ 分类 Exhausted
+// 钉F·协议迁移:Validation 族（PreconditionFailed）→ 分类 Exhausted
 // → with_config 零重试单次执行（分类面回归钉——裁决走 RetryMachine 协议）。
 
 ///|
@@ -494,7 +494,7 @@ test "router e2e: with_config does not retry validation errors" {
   assert_eq(handler_calls, 1)
 }
 
-// 钉G·dispatch 门面（役9 编排层）:Strong 一致性——投影检查点追上目标版本
+// 钉G·dispatch 门面:Strong 一致性——投影检查点追上目标版本
 // 才返回;预算超 = ConsistencyErr。Eventual 默认径不等待（钉E 已覆盖落库）。
 
 ///|

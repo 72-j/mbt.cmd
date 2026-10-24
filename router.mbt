@@ -242,7 +242,7 @@ pub fn[AggregateId, S, C, E] Router::new(
 }
 
 ///|
-/// 错误回原族（役5b C-06 错误穿透不抹平）：@store.EventStoreError 变体原样上浮
+/// 错误回原族（错误穿透不抹平）：@store.EventStoreError 变体原样上浮
 /// （DuplicateVersion 可分辨），非本族错才降维 StorageError 文本。
 fn event_store_error_of(e : Error) -> @store.EventStoreError {
   match e {
@@ -275,12 +275,12 @@ fn event_bus_error_of(e : Error) -> @event.EventBusError {
 }
 
 ///|
-/// 单次分发（役5b 重构）：
-/// Step 0 快照基态（快照只写不读断链消除）→ Step 1 尾事件（after_version =
+/// 单次分发：
+/// Step 0 快照基态（快照读路径）→ Step 1 尾事件（after_version =
 /// 快照版本）→ Step 2 from_snapshot 重建 → Step 3 执行 → Step 4 append
-/// （错误穿透不抹平）→ Step 4.5 EventBus 发布（死挂点接通；失败 = Failed
-/// 诚实——事件已持久，盲目重试 dispatch 会双重作用，at-least-once 投递归
-/// 5c+/役6）→ Step 5 快照（每 100 版）→ Step 6 commit。
+/// （错误穿透不抹平）→ Step 4.5 EventBus 发布（失败 = Failed
+/// 诚实——事件已持久，盲目重试 dispatch 会双重作用，at-least-once 投递
+/// 归后续裁定）→ Step 5 快照（每 100 版）→ Step 6 commit。
 fn[AggregateId, S, C, E] Router::dispatch_once(
   env : RouteEnv[AggregateId, S, E],
   aggregate_id : AggregateId,
@@ -321,7 +321,7 @@ fn[AggregateId, S, C, E] Router::dispatch_once(
       e => return Err(EventSourcingErr::EventStoreErr(event_store_error_of(e)))
     }
   }
-  // ========== Step 4.5: EventBus 发布（役5b 接通）==========
+  // ========== Step 4.5: EventBus 发布 ==========
   match env.event_bus {
     Some(bus) =>
       (bus.publish)(bus, uncommitted_events) catch {
@@ -382,7 +382,7 @@ pub fn[AggregateId, S, C, E] Router::dispatch_now(
 }
 
 ///|
-/// 带配置的命令分发（役5b 实装；役8 续重试裁决迁移 Effect 协议）：
+/// 带配置的命令分发（重试裁决走 Effect 协议）：
 /// **max_retries 生效** = Duplicate 族乐观并发重试（重载→重执行→重追加，
 /// ES 正统重试语义——命令对最新态重新裁决），裁决走 RetryMachine 记录面
 /// （effect_kind_of_sourcing_err 分类 + 机器 decide 上限门——分类/动作/上限
@@ -415,7 +415,7 @@ pub fn[AggregateId, S, C, E] Router::dispatch_with_config(
 }
 
 ///|
-/// 总错误分类（役8 续；Effect 协议结构知识面——分类固定非裁决）：
+/// 总错误分类（Effect 协议结构知识面——分类固定非裁决）：
 /// 命令/存储族各归各分类器；快照故障归 Storage；聚合 id 解析形归 Other。
 pub fn effect_kind_of_sourcing_err(
   err : EventSourcingErr,
@@ -452,7 +452,7 @@ fn Router::store_retry_machine(max_retries : Int32) -> @aggregate.RetryMachine {
 }
 
 ///|
-/// 乐观并发重试循环（役8 续协议形：分类 → 机器默认分派 → decide 门；
+/// 乐观并发重试循环（协议形：分类 → 机器默认分派 → decide 门；
 /// 无手写错误硬匹配。WaitRetry 同步径立即重试——退避时长随 async 面接入）
 fn[AggregateId, S, C, E] Router::dispatch_with_retry(
   env : RouteEnv[AggregateId, S, E],

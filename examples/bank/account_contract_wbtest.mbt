@@ -1,4 +1,4 @@
-// ===== account 聚合契约门（役7+ D-MG-5 脚手架;源表 mooncmd/examples/bank/account_agg.toml;生成物禁手写,regen 刷新;白盒件——同包命名空间,夹具/黑盒本地型零遮蔽）=====
+// ===== account 聚合契约门（D-MG-5 脚手架;源表 mooncmd/examples/bank/account_agg.toml;生成物禁手写,regen 刷新;白盒件——同包命名空间,夹具/黑盒本地型零遮蔽）=====
 
 ///|
 /// init 契约:字段初值 = 词表值区声明（形状即契约）

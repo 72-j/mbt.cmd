@@ -16,7 +16,7 @@ fn get_test_event_type_name(event : TestEvent) -> String {
 }
 
 ///|
-/// 役5（FR-MC-3）：投影契约钉——apply_batch ≡ fold(apply)（结构性合同）；同输入同输出（确定性）
+/// FR-MC-3：投影契约钉——apply_batch ≡ fold(apply)（结构性合同）；同输入同输出（确定性）
 fn proj_apply(v : Json, e : @event.EventMessage[String, TestEvent]) -> Json {
   let s = match v {
     String(s) => s

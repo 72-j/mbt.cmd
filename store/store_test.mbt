@@ -24,7 +24,7 @@ fn get_test_event_type_name(event : TestEvent) -> String {
 ///|
 
 ///|
-/// 役5（FR-MC-1）：乐观并发金样——批次首事件版本 ≠ 当前版本 + 1 ⇒ DuplicateVersion，拒写不落脏
+/// FR-MC-1：乐观并发金样——批次首事件版本 ≠ 当前版本 + 1 ⇒ DuplicateVersion，拒写不落脏
 async test "SQLiteEventStore 乐观并发：版本冲突即拒" {
   let db_path = "/tmp/test_event_store_conflict.db"
   if @fs.path_exists(db_path) {

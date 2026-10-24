@@ -64,7 +64,7 @@ pub fn[AggregateId, S, C, E] AggregateRoot::from_events(
 }
 
 ///|
-/// 从快照基态 + 尾事件恢复（役5b 快照读路径）：base = 快照态/版本，尾事件
+/// 从快照基态 + 尾事件恢复（快照读路径）：base = 快照态/版本，尾事件
 /// 折入；尾空 = 版本取快照版本（非 0）。from_events = 本形特例
 /// （base = 空态/0，委托）。
 pub fn[AggregateId, S, C, E] AggregateRoot::from_snapshot(
@@ -185,7 +185,7 @@ pub fn[AggregateId, S, C, E] AggregateRoot::to_snapshot(
 // }
 
 ///|
-/// 形态 A 流式执行(役7 转正拍定案):命令自动包装 CommandMessage,
+/// 形态 A 流式执行:命令自动包装 CommandMessage,
 /// 错误 raise 上抛,返回 Self 链式。
 /// 用法:root.exec(CreateAccount("main", 100)).exec(DepositMoney(50))
 pub fn[AggregateId, S, C, E] AggregateRoot::exec(

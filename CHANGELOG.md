@@ -22,6 +22,9 @@
 - 六包布局 + monads（原 mystate）改名；Router `dispatch_once` 端到端接通
   （快照基态/尾事件/EventBus publish/user_id 链）；投影契约成文 +
   LiveProjection 实装
+- **注释简洁化（黑话表 v1.7 同笔）**：役史切口出码——头注/钉注/门件注改正式
+  简明形（钉A–钉G 与 D-MG-\*/FR-MC-\*/ADR-MC-\* 编号体系保留）；gen 产物头注
+  经发射器模板拨正（`役7+ D-MG-5 脚手架` → `D-MG-5 脚手架`）+ regen 刷新。
 
 ## 0.1.0 (2026-10-21)
 

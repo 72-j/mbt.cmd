@@ -1,4 +1,4 @@
-// error.mbt —— 总线错误族(役8 归位自旧根 error.mbt)
+// error.mbt —— 总线错误族
 
 ///|
 pub(all) suberror EventBusError {

@@ -1,4 +1,4 @@
-// ===== AggregateError 错误族(役8 拆分)=====
+// ===== AggregateError 错误族 =====
 
 ///|
 pub(all) suberror AggregateError {

@@ -1,4 +1,4 @@
-// ===== Command trait(役8 拆分自 core.mbt)=====
+// ===== Command trait =====
 
 ///|
 /// 命令：用户意图，可失败

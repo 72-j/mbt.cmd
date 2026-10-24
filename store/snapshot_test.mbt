@@ -1,5 +1,5 @@
 ///|
-/// 役8 拆分注记：快照等价夹具本地化——bank 业务夹具住 examples/bank 测试包
+/// 快照等价夹具本地化——bank 业务夹具住 examples/bank 测试包
 /// （跨包不可见，AGENTS 测试件三手病③），此处按等价语义取最小账户夹具；
 /// 业务全形版（含命令校验）仍归 bank。
 
@@ -59,7 +59,7 @@ fn snap_account_handler(
 }
 
 ///|
-/// 役5（FR-MC-5）：快照等价——快照态起跑 + 尾部重放 ≡ 全量重放
+/// FR-MC-5：快照等价——快照态起跑 + 尾部重放 ≡ 全量重放
 test "快照等价：快照态起跑 + 尾部重放 ≡ 全量重放" {
   let handler = snap_account_handler
   let applier = @event.EventApplier::Single(snap_account_applier)
@@ -110,7 +110,7 @@ test "快照等价：快照态起跑 + 尾部重放 ≡ 全量重放" {
 }
 
 ///|
-/// 役5（FR-MC-5）：快照存储记录面 roundtrip（测试内内存实现，不新增生产后端——ADR-MC-004）
+/// FR-MC-5：快照存储记录面 roundtrip（测试内内存实现，不新增生产后端——ADR-MC-004）
 test "快照存储记录面 roundtrip（内存实现）" {
   let saved : Array[@store.Snapshot[String, SnapAccountState]] = []
   let store : @store.SnapshotStore[String, SnapAccountState] = {

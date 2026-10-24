@@ -1,4 +1,4 @@
-// ===== EventStoreError 错误族(役8 拆分自 error.mbt)=====
+// ===== EventStoreError 错误族 =====
 
 ///|
 pub(all) suberror EventStoreError {

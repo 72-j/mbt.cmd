@@ -1,4 +1,4 @@
-// ===== SnapshotError 错误族(役8 拆分)=====
+// ===== SnapshotError 错误族 =====
 
 ///|
 pub(all) suberror SnapshotError {
