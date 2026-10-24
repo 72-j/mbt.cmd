@@ -1,4 +1,4 @@
-// ===== cmd —— 聚合词表再生命令（役7+ 上手面;moonrdb jelly/cmd 胶水同款）=====
+// ===== cmd —— 聚合词表再生命令（上手面;胶水脚本）=====
 import {
   "moonbitlang/x/fs",
   "thy1016/skelschema",

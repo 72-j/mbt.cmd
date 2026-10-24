@@ -6,6 +6,7 @@ correlation / causation 追溯链、时间戳、schema 版本），Router 作为
 写入口；内置乐观并发守门、SQLite 事件存储、拉取式投影、快照加速、Effect
 重试状态机，以及聚合词表（TOML）代码生成。
 
+
 ## 特性
 
 - 纯事件主链：命令处理器为纯函数
@@ -39,7 +40,8 @@ correlation / causation 追溯链、时间戳、schema 版本），Router 作为
 moon add thy1016/mooncmd
 ```
 
-（模块源码同托管于 gitlink `thy7/mbt.cmd`；工作区多模块场景可直接以
+（模块源码正式地址：gitlink <https://gitlink.org.cn/thy7/mbt.cmd> 与
+GitHub 镜像 <https://github.com/72-j/mbt.cmd>；工作区多模块场景可直接以
 本地树路径引用。）
 
 框架按域分包，在用到它的包的 `moon.pkg` `import` 块中按需添加：
@@ -143,7 +145,7 @@ evolve = ["add balance=amount"]
 
 ```bash
 moon run cmd --target native        # 扫描词表 → 生成产物 → AGG-REGEN:PASS
-moon test                           # 黄金门（逐字节）+ 契约门 + 行为金锚
+moon test                           # 生成产物逐字节比对 + 契约测试 + 已知答案校验
 ```
 
 生成物包含：状态结构与初值、事件 / 命令枚举、apply 演化链、命令分派
@@ -167,8 +169,8 @@ wire 往返恒等）。事件命名与粒度属通用语言决策，由词表声
 
 ## 错误面
 
-总错误 `EventSourcingErr` 五臂：`CommandErr` / `EventStoreErr` /
-`SnapshotErr` / `EventBusErr` / `AggregateErr`，另含 `ConsistencyErr`
+总错误 `EventSourcingErr` 六臂：`CommandErr` / `EventStoreErr` /
+`SnapshotErr` / `EventBusErr` / `AggregateErr` / `ConsistencyErr`
 （Strong 一致性轮询超预算）。常用变体：`CommandError` 六变体
 （`InvalidCommand` / `Unauthorized` / `PreconditionFailed` / `NotFound` /
 `Conflict` / `UnregisteredCommand`）；`EventStoreError` 三变体
@@ -190,13 +192,19 @@ wire 往返恒等）。事件命名与粒度属通用语言决策，由词表声
 ## 测试与验证
 
 ```bash
-moon test                               # 全模块（wasm / native 双支持）
+moon test --target native               # 全模块测试（wasm 同支持）
 moon run examples/bank --target native  # 全链自证，终行 EXAMPLE:PASS
 ```
 
-测试面构成：单元与端到端钉（聚合生命周期、乐观并发、投影契约、Router
-分发全流程）、聚合词表黄金门（生成产物逐字节比对）、行为金锚（命令脚本
-→ 事件流 / 终态已知答案）与免费契约门（init 值契约 + wire 往返恒等）。
+运行时输出各测试面的计数行（下表实测于 2026-10-24；分包读数，合计
+63 / 63）：
+
+| 面 | 读数 |
+|---|---|
+| 单元与端到端测试（主包 + 各域子包：聚合生命周期、乐观并发、投影契约、Router 分发全流程） | 45 / 45 |
+| 词表生成门与契约测试（`examples/bank`：生成产物逐字节比对、已知答案、init 值契约 + wire 往返恒等） | 18 / 18 |
+| 示例全链自证（`moon run examples/bank`） | 终行 `EXAMPLE:PASS` |
+
 版本沿革见 `CHANGELOG.md`。
 
 ## 许可证

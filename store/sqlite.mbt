@@ -1,5 +1,5 @@
 // 存量库 schema 迁移策略:init_schema = IF NOT EXISTS 幂等建;
-// 列变更策略 = user_version 逐版迁移(moonrdb K1 同款形),首个 schema 变更需求
+// 列变更策略 = user_version 逐版迁移,首个 schema 变更需求
 // 触发实现;schema_version 列 = 事件 schema 版本(只预留)。
 
 ///|

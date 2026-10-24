@@ -1,5 +1,5 @@
-// store:事件存储域(役8)——EventStore/SnapshotStore 记录面 + SQLiteEventStore
-// supported_targets 随依赖支持域钉(sqlite3 = native+wasm;moonrdb/graph 同款)
+// store:事件存储域——EventStore/SnapshotStore 记录面 + SQLiteEventStore
+// supported_targets 随依赖支持域钉(sqlite3 = native+wasm)
 supported_targets = "native+wasm"
 
 import {

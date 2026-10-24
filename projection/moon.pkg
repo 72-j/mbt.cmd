@@ -1,4 +1,4 @@
-// projection:投影域(役8)——Projection/LiveProjection/PersistedProjection
+// projection:投影域——Projection/LiveProjection/PersistedProjection
 import {
   "thy1016/mooncmd/event",
   "thy1016/mooncmd/store",

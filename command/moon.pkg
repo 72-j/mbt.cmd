@@ -1,4 +1,4 @@
-// command:命令域类型(役8)
+// command:命令域类型
 import {
   "moonbitlang/async",
   "f4ah6o/uuidm" @uuid,

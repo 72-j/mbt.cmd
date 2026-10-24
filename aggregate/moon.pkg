@@ -1,4 +1,4 @@
-// aggregate:聚合根生命周期(役8)——AggregateRoot/AggregateState/from_snapshot
+// aggregate:聚合根生命周期——AggregateRoot/AggregateState/from_snapshot
 // supported_targets 随依赖支持域钉(store = native+wasm)
 supported_targets = "native+wasm"
 
