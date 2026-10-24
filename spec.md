@@ -13,11 +13,11 @@
 | 项 | 事实 |
 |---|---|
 | 目录形态 | **六包布局**（役8 ff9ce54）：根包（router + 总错误 + logger）+ `aggregate/` + `command/` + `event/` + `monads/`（原 mystate，ab230a5 改名）+ `projection/` + `store/`；每包独立 `moon.pkg` + `.mbti`；测试命名循 moonttl 标准（黑盒 `*_test.mbt` / 白盒 `*_wbtest.mbt`） |
-| 示例面 | `examples/bank`（可执行自证包，native-only）：`main.mbt` 全链演示 + 聚合 gen 五件（`account_agg.toml` 词表 / `account_gen.mbt` 产物含 wire 映射 / `account_policy.mbt` + `account_retry_policy.mbt` 手写钩子 / `account_contract_wbtest.mbt` 免费契约门）+ 黄金门 ×2（产物/契约件逐字节）+ 夹具；再生入口 = `moon run skelschema/cmd --target native` |
+| 示例面 | `examples/bank`（可执行自证包，native-only）：`main.mbt` 全链演示 + 聚合 gen 五件（`account_agg.toml` 词表 / `account_gen.mbt` 产物含 wire 映射 / `account_policy.mbt` + `account_retry_policy.mbt` 手写钩子 / `account_contract_wbtest.mbt` 免费契约门）+ 产物结构钉（自足零依赖，known-answer 形）+ 夹具；词表再生 = 维护侧骨架生成器（独立仓，`moon run skelschema/cmd --target native`） |
 | 模块形态 | **独立模块** `thy1016/mooncmd`（moon.mod 在盘，moonspace 范式；ADR-MC-007）；主仓树内在存但主仓不跟踪（主仓 .gitignore 止蚀） |
 | 包路径 | 根包 `thy1016/mooncmd`（router/总错误/logger）；分包 `thy1016/mooncmd/{aggregate,command,event,monads,projection,store}`；示例 `thy1016/mooncmd/examples/bank` |
 | 运行时依赖 | 包间：aggregate→command/event/store 等（见各 moon.pkg）；外部：`moonbitlang/async@0.22.4` · `moonbit-community/sqlite3@0.2.3` · `f4ah6o/uuidm@0.2.1`；core（utf8/json）内置 |
-| 测试依赖 | `moonbitlang/x@0.5.5`（fs）+ `thy1016/skelschema@0.1.0`（黄金门 for-test，随 bank 拆分迁 examples/bank；moon.work 本地树覆盖） |
+| 测试依赖 | `moonbitlang/x@0.5.5`（fs）——产物门 = 自足结构钉，无外部依赖 |
 | 模块账 | moon.mod 独立在盘（uuidm 随迁自主仓，根仓无其它用户）；脚手架 = `proj_dialect.toml` 方言件 + `moonxr/ops_projgen.mbtx`；发布元数据变更须经 `moonxr/release_review.mbtx`（独立 clone 真路径） |
 | 入库状态 | 独立仓 gitlink `thy7/mbt.cmd`（master；首推 2026-10-21，用户令）；主仓侧 untrack + .gitignore 止蚀 |
 | 目标声明 | 包级 `supported_targets = "wasm+native"`（2026-10-22 用户拍**原生 wasm 加支持 native**——序随定位；2026-10-08 原形 native+wasm 循 sqlite3 逐字，沿革在案）；模块级 `preferred_target = "wasm"`（moon.mod，裸跑即 wasm；examples 可执行包仍 native-only,门 = `moon run examples --target native`） |

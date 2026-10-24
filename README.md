@@ -141,12 +141,14 @@ fields = [{ name = "amount", type = "int" }]
 evolve = ["add balance=amount"]
 ```
 
-再生成与校验：
+校验（自足，克隆即可跑）：
 
 ```bash
-moon run cmd --target native        # 扫描词表 → 生成产物 → AGG-REGEN:PASS
-moon test                           # 生成产物逐字节比对 + 契约测试 + 已知答案校验
+moon test                           # 生成产物结构钉 + 契约测试 + 已知答案校验
 ```
+
+词表再生成属维护侧工具链（骨架生成器独立仓，不随本模块发布）：改动
+`account_agg.toml` 等词表后由生成器刷新产物，**生成物禁手写**。
 
 生成物包含：状态结构与初值、事件 / 命令枚举、apply 演化链、命令分派
 骨架、wire 序列化（含 schema 版本预留位）、契约测试门（init 值契约 +

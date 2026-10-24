@@ -1,7 +1,7 @@
 // effect.mbt
 //! Effect 重试状态机库缝（spec §2.1）：
 //! exec(命令) --raise--> 状态机裁决（重试/放行/熔断）--> 调用方。
-//! 状态机自身 = gen 产物（词表 TOML → skelschema/retry_toml_gen → 骨架 +
+//! 状态机自身 = gen 产物（词表 TOML 经骨架生成器产骨架 +
 //! 手写钩子）；本件只定协议面与 runner，不含任何策略裁决。
 
 ///|

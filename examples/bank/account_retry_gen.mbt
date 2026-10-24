@@ -1,4 +1,4 @@
-// 生成物禁手写（生成红线9）——绑定器 skelschema/retry_toml_gen.mbt；黄金门 = mooncmd 侧 parse→emit ≡ 本件逐字节。
+// 生成物禁手写（生成纪律）——绑定器 skelschema/retry_toml_gen.mbt；词表改动经再生成刷新本件。
 // 源词表：account_retry.toml（[retry] max=3 backoff=fixed interval=100 + [retry.on_error] + [circuit]?）
 // 业务裁决 = account_retry_policy.mbt 手写钩子（红线7：裁决不入表）。
 
