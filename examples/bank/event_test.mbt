@@ -56,18 +56,12 @@ test "@aggregate.AggregateRoot 提交事件" {
   let create_cmd = @command.CommandMessage::new(
     AccountCommand::CreateAccount("Charlie", 500),
   )
-  aggregate = match aggregate.execute(create_cmd) {
-    Ok(agg) => agg
-    Err(_) => panic()
-  }
+  aggregate = aggregate.execute(create_cmd) catch { _ => panic() }
 
   let deposit_cmd = @command.CommandMessage::new(
     AccountCommand::DepositMoney(300),
   )
-  aggregate = match aggregate.execute(deposit_cmd) {
-    Ok(agg) => agg
-    Err(_) => panic()
-  }
+  aggregate = aggregate.execute(deposit_cmd) catch { _ => panic() }
 
   // 验证有未提交事件
   assert_eq(aggregate.uncommitted_events().length(), 2)
@@ -142,10 +136,7 @@ test "@aggregate.AggregateRoot 使用批量事件应用器" {
   let create_cmd = @command.CommandMessage::new(
     AccountCommand::CreateAccount("Eve", 800),
   )
-  aggregate = match aggregate.execute(create_cmd) {
-    Ok(agg) => agg
-    Err(_) => panic()
-  }
+  aggregate = aggregate.execute(create_cmd) catch { _ => panic() }
 
   // 验证状态
   let state = aggregate.current_state()
@@ -171,17 +162,11 @@ test "@aggregate.AggregateRoot 关闭账户" {
   let create_cmd = @command.CommandMessage::new(
     AccountCommand::CreateAccount("Frank", 0),
   )
-  aggregate = match aggregate.execute(create_cmd) {
-    Ok(agg) => agg
-    Err(_) => panic()
-  }
+  aggregate = aggregate.execute(create_cmd) catch { _ => panic() }
 
   // 关闭账户
   let close_cmd = @command.CommandMessage::new(AccountCommand::CloseAccount)
-  aggregate = match aggregate.execute(close_cmd) {
-    Ok(agg) => agg
-    Err(_) => panic()
-  }
+  aggregate = aggregate.execute(close_cmd) catch { _ => panic() }
 
   // 验证状态
   let state = aggregate.current_state()
@@ -207,14 +192,11 @@ test "@aggregate.AggregateRoot 关闭有余额的账户失败" {
   let create_cmd = @command.CommandMessage::new(
     AccountCommand::CreateAccount("Grace", 100),
   )
-  aggregate = match aggregate.execute(create_cmd) {
-    Ok(agg) => agg
-    Err(_) => panic()
-  }
+  aggregate = aggregate.execute(create_cmd) catch { _ => panic() }
 
   // 尝试关闭有余额的账户
   let close_cmd = @command.CommandMessage::new(AccountCommand::CloseAccount)
-  let result = aggregate.execute(close_cmd)
+  let result = Ok(aggregate.execute(close_cmd)) catch { e => Err(e) }
 
   // 验证失败
   match result {
@@ -241,20 +223,14 @@ test "@aggregate.AggregateRoot 多次执行命令累积事件" {
   let create_cmd = @command.CommandMessage::new(
     AccountCommand::CreateAccount("Ivy", 100),
   )
-  aggregate = match aggregate.execute(create_cmd) {
-    Ok(agg) => agg
-    Err(_) => panic()
-  }
+  aggregate = aggregate.execute(create_cmd) catch { _ => panic() }
 
   // 多次存款
   for _i in 1..<4 {
     let deposit_cmd = @command.CommandMessage::new(
       AccountCommand::DepositMoney(100),
     )
-    aggregate = match aggregate.execute(deposit_cmd) {
-      Ok(agg) => agg
-      Err(_) => panic()
-    }
+    aggregate = aggregate.execute(deposit_cmd) catch { _ => panic() }
   }
 
   // 验证版本和事件数量
@@ -309,10 +285,7 @@ test "@aggregate.AggregateRoot 命令元数据传递" {
     .with_correlation("corr-123")
     .with_user("user-456")
 
-  aggregate = match aggregate.execute(cmd) {
-    Ok(agg) => agg
-    Err(_) => panic()
-  }
+  aggregate = aggregate.execute(cmd) catch { _ => panic() }
 
   // 验证事件中包含元数据
   let events = aggregate.uncommitted_events()

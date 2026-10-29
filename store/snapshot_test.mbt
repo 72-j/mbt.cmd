@@ -54,8 +54,12 @@ fn empty_snap_account_state() -> SnapAccountState {
 fn snap_account_handler(
   _state : SnapAccountState,
   _cmd : Unit,
-) -> Result[Array[SnapAccountEvent], @command.CommandError] {
-  Ok([])
+) -> Array[SnapAccountEvent] raise @command.CommandError {
+  // 恒空命令面;raise 注记 = CommandHandler 槽型精确匹配(非 raise 不协变入槽)
+  if false {
+    raise @command.CommandError::InvalidCommand("unreachable")
+  }
+  []
 }
 
 ///|

@@ -22,13 +22,13 @@ pub struct AggUUID {
   value : String
 }
 pub fn AggUUID::eq(Self, Self) -> Bool
-pub fn AggUUID::from_string(String) -> Result[Self, AggregateError]
+pub fn AggUUID::from_string(String) -> Self raise AggregateError
 pub fn AggUUID::new() -> Self
 pub fn AggUUID::to_string(Self) -> String
 pub impl AggregateId for AggUUID
 
 pub struct AggregateRoot[AggregateId, S, C, E] {
-  handler : (S, C) -> Result[Array[E], @command.CommandError]
+  handler : (S, C) -> Array[E] raise @command.CommandError
   applier : @event.EventApplier[S, E]
   empty_state : S
   mut state : AggregateState[AggregateId, S, E]
@@ -38,17 +38,17 @@ pub fn[AggregateId, S, C, E] AggregateRoot::commit(Self[AggregateId, S, C, E]) -
 pub fn[AggregateId, S, C, E] AggregateRoot::current_state(Self[AggregateId, S, C, E]) -> S
 pub fn[AggregateId, S, C, E] AggregateRoot::exec(Self[AggregateId, S, C, E], C) -> Self[AggregateId, S, C, E] raise @command.CommandError
 pub fn[AggregateId, S, C, E] AggregateRoot::exec_with_effect(Self[AggregateId, S, C, E], C, RetryMachine, RetryHooks, (Int64) -> Unit) -> Self[AggregateId, S, C, E] raise @command.CommandError
-pub fn[AggregateId, S, C, E] AggregateRoot::execute(Self[AggregateId, S, C, E], @command.CommandMessage[C]) -> Result[Self[AggregateId, S, C, E], @command.CommandError]
-pub fn[AggregateId, S, C, E] AggregateRoot::from_events(AggregateId, Array[@event.EventMessage[AggregateId, E]], (S, C) -> Result[Array[E], @command.CommandError], @event.EventApplier[S, E], S) -> Self[AggregateId, S, C, E]
-pub fn[AggregateId, S, C, E] AggregateRoot::from_snapshot(AggregateId, S, S, Int, Array[@event.EventMessage[AggregateId, E]], (S, C) -> Result[Array[E], @command.CommandError], @event.EventApplier[S, E]) -> Self[AggregateId, S, C, E]
-pub fn[AggregateId, S, C, E] AggregateRoot::new(AggregateId, (S, C) -> Result[Array[E], @command.CommandError], @event.EventApplier[S, E], S) -> Self[AggregateId, S, C, E]
+pub fn[AggregateId, S, C, E] AggregateRoot::execute(Self[AggregateId, S, C, E], @command.CommandMessage[C]) -> Self[AggregateId, S, C, E] raise @command.CommandError
+pub fn[AggregateId, S, C, E] AggregateRoot::from_events(AggregateId, Array[@event.EventMessage[AggregateId, E]], (S, C) -> Array[E] raise @command.CommandError, @event.EventApplier[S, E], S) -> Self[AggregateId, S, C, E]
+pub fn[AggregateId, S, C, E] AggregateRoot::from_snapshot(AggregateId, S, S, Int32, Array[@event.EventMessage[AggregateId, E]], (S, C) -> Array[E] raise @command.CommandError, @event.EventApplier[S, E]) -> Self[AggregateId, S, C, E]
+pub fn[AggregateId, S, C, E] AggregateRoot::new(AggregateId, (S, C) -> Array[E] raise @command.CommandError, @event.EventApplier[S, E], S) -> Self[AggregateId, S, C, E]
 pub fn[AggregateId, S, C, E] AggregateRoot::to_snapshot(Self[AggregateId, S, C, E]) -> @store.Snapshot[AggregateId, S]
 pub fn[AggregateId, S, C, E] AggregateRoot::uncommitted_events(Self[AggregateId, S, C, E]) -> Array[@event.EventMessage[AggregateId, E]]
-pub fn[AggregateId, S, C, E] AggregateRoot::version(Self[AggregateId, S, C, E]) -> Int
+pub fn[AggregateId, S, C, E] AggregateRoot::version(Self[AggregateId, S, C, E]) -> Int32
 
 pub struct AggregateState[AggregateId, S, E] {
   state : S
-  version : Int
+  version : Int32
   uncommitted_events : Array[@event.EventMessage[AggregateId, E]]
 }
 
@@ -71,7 +71,7 @@ pub fn RetryHooks::none() -> Self
 
 pub(all) struct RetryMachine {
   default_action : (EffectErrorKind) -> RetryAction
-  decide : (Int, Int, EffectErrorKind) -> RetryVerdict
+  decide : (Int32, Int32, EffectErrorKind) -> RetryVerdict
 }
 
 pub(all) enum RetryVerdict {
@@ -84,13 +84,13 @@ pub(all) enum RetryVerdict {
 // Traits
 pub trait AggregateId {
   fn to_string(Self) -> String
-  fn from_string(String) -> Result[Self, AggregateError]
+  fn from_string(String) -> Self raise AggregateError
   fn eq(Self, Self) -> Bool
 }
-pub impl AggregateId for Int
+pub impl AggregateId for Int32
 pub impl AggregateId for String
 
 pub trait Event {
-  fn version() -> Int
+  fn version() -> Int32
   fn type_name() -> String
 }

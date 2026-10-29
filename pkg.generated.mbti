@@ -11,7 +11,7 @@ import {
 }
 
 // Values
-pub fn[Id, S, C, E] dispatch(@store.EventStore[Id, E], @event.EventBus[Id, E]?, @aggregate.AggregateRoot[Id, S, C, E], C, projections? : Array[@projection.LiveProjection[Id, E]], consistency? : Consistency, poll_wait? : (Int64) -> Unit, poll_budget? : Int) -> @aggregate.AggregateRoot[Id, S, C, E] raise EventSourcingErr
+pub fn[Id, S, C, E] dispatch(@store.EventStore[Id, E], @event.EventBus[Id, E]?, @aggregate.AggregateRoot[Id, S, C, E], C, projections? : Array[@projection.LiveProjection[Id, E]], consistency? : Consistency, poll_wait? : (Int64) -> Unit, poll_budget? : Int32) -> @aggregate.AggregateRoot[Id, S, C, E] raise EventSourcingErr
 
 pub fn[AggregateId, S, E] dispatch_ask() -> @monads.Reader[RouteEnv[AggregateId, S, E], RouteEnv[AggregateId, S, E]]
 
@@ -46,12 +46,12 @@ pub(all) suberror EventSourcingErr {
 // Types and methods
 pub(all) struct CommandConfig {
   timeout_ms : Int64
-  max_retries : Int
+  max_retries : Int32
   consistency : Consistency
 }
 pub fn CommandConfig::new() -> Self
 pub fn CommandConfig::with_consistency(Self, Consistency) -> Self
-pub fn CommandConfig::with_retries(Self, Int) -> Self
+pub fn CommandConfig::with_retries(Self, Int32) -> Self
 pub fn CommandConfig::with_timeout(Self, Int64) -> Self
 
 pub(all) enum Consistency {
@@ -73,34 +73,34 @@ pub struct RouteEnv[AggregateId, S, E] {
   event_bus : @event.EventBus[AggregateId, E]?
   logger : &Logger
   default_timeout : Int64
-  default_retry : Int
+  default_retry : Int32
 }
-pub fn[AggregateId, E, S] RouteEnv::new(@store.EventStore[AggregateId, E], @store.SnapshotStore[AggregateId, S], @event.EventBus[AggregateId, E]?, Int64, Int) -> Self[AggregateId, S, E]
+pub fn[AggregateId, E, S] RouteEnv::new(@store.EventStore[AggregateId, E], @store.SnapshotStore[AggregateId, S], @event.EventBus[AggregateId, E]?, Int64, Int32) -> Self[AggregateId, S, E]
 
 pub struct Router[AggregateId, S, C, E] {
   env : RouteEnv[AggregateId, S, E]
   default_config : CommandConfig
-  handlers : Map[String, (S, C) -> Result[Array[E], @command.CommandError]]
+  handlers : Map[String, (S, C) -> Array[E] raise @command.CommandError]
 }
-pub fn[AggregateId, S, C, E] Router::dispatch(Self[AggregateId, S, C, E], AggregateId, @command.CommandMessage[C], (S, C) -> Result[Array[E], @command.CommandError], @event.EventApplier[S, E], S) -> @monads.Reader[RouteEnv[AggregateId, S, E], Result[@aggregate.AggregateRoot[AggregateId, S, C, E], EventSourcingErr]]
-pub fn[AggregateId, S, C, E] Router::dispatch_batch(Self[AggregateId, S, C, E], Array[(AggregateId, @command.CommandMessage[C])], (S, C) -> Result[Array[E], @command.CommandError], @event.EventApplier[S, E], S) -> @monads.Reader[RouteEnv[AggregateId, S, E], Result[Array[@aggregate.AggregateRoot[AggregateId, S, C, E]], EventSourcingErr]]
-pub fn[AggregateId, S, C, E] Router::dispatch_default(Self[AggregateId, S, C, E], AggregateId, @command.CommandMessage[C], @event.EventApplier[S, E], S) -> Result[@aggregate.AggregateRoot[AggregateId, S, C, E], EventSourcingErr]
-pub fn[AggregateId, S, C, E] Router::dispatch_now(Self[AggregateId, S, C, E], AggregateId, @command.CommandMessage[C], (S, C) -> Result[Array[E], @command.CommandError], @event.EventApplier[S, E], S) -> Result[@aggregate.AggregateRoot[AggregateId, S, C, E], EventSourcingErr]
-pub fn[AggregateId, S, C, E] Router::dispatch_with_config(Self[AggregateId, S, C, E], AggregateId, @command.CommandMessage[C], (S, C) -> Result[Array[E], @command.CommandError], @event.EventApplier[S, E], S, Int64, Int) -> @monads.Reader[RouteEnv[AggregateId, S, E], Result[@aggregate.AggregateRoot[AggregateId, S, C, E], EventSourcingErr]]
-pub fn[AggregateId, S, C, E] Router::new(RouteEnv[AggregateId, S, E], CommandConfig, Map[String, (S, C) -> Result[Array[E], @command.CommandError]]) -> Self[AggregateId, S, C, E]
+pub fn[AggregateId, S, C, E] Router::dispatch(Self[AggregateId, S, C, E], AggregateId, @command.CommandMessage[C], (S, C) -> Array[E] raise @command.CommandError, @event.EventApplier[S, E], S) -> @monads.Reader[RouteEnv[AggregateId, S, E], Result[@aggregate.AggregateRoot[AggregateId, S, C, E], EventSourcingErr]]
+pub fn[AggregateId, S, C, E] Router::dispatch_batch(Self[AggregateId, S, C, E], Array[(AggregateId, @command.CommandMessage[C])], (S, C) -> Array[E] raise @command.CommandError, @event.EventApplier[S, E], S) -> @monads.Reader[RouteEnv[AggregateId, S, E], Result[Array[@aggregate.AggregateRoot[AggregateId, S, C, E]], EventSourcingErr]]
+pub fn[AggregateId, S, C, E] Router::dispatch_default(Self[AggregateId, S, C, E], AggregateId, @command.CommandMessage[C], @event.EventApplier[S, E], S) -> @aggregate.AggregateRoot[AggregateId, S, C, E] raise EventSourcingErr
+pub fn[AggregateId, S, C, E] Router::dispatch_now(Self[AggregateId, S, C, E], AggregateId, @command.CommandMessage[C], (S, C) -> Array[E] raise @command.CommandError, @event.EventApplier[S, E], S) -> @aggregate.AggregateRoot[AggregateId, S, C, E] raise EventSourcingErr
+pub fn[AggregateId, S, C, E] Router::dispatch_with_config(Self[AggregateId, S, C, E], AggregateId, @command.CommandMessage[C], (S, C) -> Array[E] raise @command.CommandError, @event.EventApplier[S, E], S, Int64, Int32) -> @monads.Reader[RouteEnv[AggregateId, S, E], Result[@aggregate.AggregateRoot[AggregateId, S, C, E], EventSourcingErr]]
+pub fn[AggregateId, S, C, E] Router::new(RouteEnv[AggregateId, S, E], CommandConfig, Map[String, (S, C) -> Array[E] raise @command.CommandError]) -> Self[AggregateId, S, C, E]
 
 pub(all) struct RouterBuilder[AggregateId, S, C, E] {
   env : RouteEnv[AggregateId, S, E]
   mut default_config : CommandConfig
-  handlers : Map[String, (S, C) -> Result[Array[E], @command.CommandError]]
+  handlers : Map[String, (S, C) -> Array[E] raise @command.CommandError]
 }
-pub fn[AggregateId, S, C, E] RouterBuilder::add_handler(Self[AggregateId, S, C, E], String, (S, C) -> Result[Array[E], @command.CommandError]) -> Self[AggregateId, S, C, E]
-pub fn[AggregateId, S, C, E] RouterBuilder::add_handlers(Self[AggregateId, S, C, E], String, Array[(S, C) -> Result[Array[E], @command.CommandError]]) -> Self[AggregateId, S, C, E]
+pub fn[AggregateId, S, C, E] RouterBuilder::add_handler(Self[AggregateId, S, C, E], String, (S, C) -> Array[E] raise @command.CommandError) -> Self[AggregateId, S, C, E]
+pub fn[AggregateId, S, C, E] RouterBuilder::add_handlers(Self[AggregateId, S, C, E], String, Array[(S, C) -> Array[E] raise @command.CommandError]) -> Self[AggregateId, S, C, E]
 pub fn[AggregateId, S, C, E] RouterBuilder::build(Self[AggregateId, S, C, E]) -> Router[AggregateId, S, C, E]
-pub fn[AggregateId, S, C, E] RouterBuilder::handler_count(Self[AggregateId, S, C, E]) -> Int
+pub fn[AggregateId, S, C, E] RouterBuilder::handler_count(Self[AggregateId, S, C, E]) -> Int32
 pub fn[AggregateId, S, C, E] RouterBuilder::new(RouteEnv[AggregateId, S, E]) -> Self[AggregateId, S, C, E]
 pub fn[AggregateId, S, C, E] RouterBuilder::with_consistency(Self[AggregateId, S, C, E], Consistency) -> Self[AggregateId, S, C, E]
-pub fn[AggregateId, S, C, E] RouterBuilder::with_default_retries(Self[AggregateId, S, C, E], Int) -> Self[AggregateId, S, C, E]
+pub fn[AggregateId, S, C, E] RouterBuilder::with_default_retries(Self[AggregateId, S, C, E], Int32) -> Self[AggregateId, S, C, E]
 pub fn[AggregateId, S, C, E] RouterBuilder::with_default_timeout(Self[AggregateId, S, C, E], Int64) -> Self[AggregateId, S, C, E]
 
 // Type aliases

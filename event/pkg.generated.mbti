@@ -27,28 +27,28 @@ pub(all) struct EventMessage[AggregateId, E] {
   event : E
   event_id : String
   aggregate_id : AggregateId
-  aggregate_version : Int
+  aggregate_version : Int32
   correlation_id : String
   causation_id : String
   user_id : String?
   timestamp : Int64
   metadata : Json
-  schema_version : Int
+  schema_version : Int32
 }
-pub fn[AggregateId, E, C] EventMessage::from_command(E, AggregateId, Int, @command.CommandMessage[C]) -> Self[AggregateId, E]
-pub fn[AggregateId, E] EventMessage::new(E, AggregateId, Int) -> Self[AggregateId, E]
+pub fn[AggregateId, E, C] EventMessage::from_command(E, AggregateId, Int32, @command.CommandMessage[C]) -> Self[AggregateId, E]
+pub fn[AggregateId, E] EventMessage::new(E, AggregateId, Int32) -> Self[AggregateId, E]
 
 pub(all) enum EventStream[AggregateId, E] {
   Nil
   Cons(EventMessage[AggregateId, E], EventStream[AggregateId, E])
 }
-pub fn[AggregateId, E] EventStream::length(Self[AggregateId, E]) -> Int
+pub fn[AggregateId, E] EventStream::length(Self[AggregateId, E]) -> Int32
 pub fn[AggregateId, E] EventStream::to_array(Self[AggregateId, E]) -> Array[EventMessage[AggregateId, E]]
 
 // Type aliases
 
 // Traits
 pub trait Event {
-  fn version() -> Int
+  fn version() -> Int32
   fn type_name() -> String
 }

@@ -11,7 +11,7 @@ pub struct AggregateState[AggregateId, S, E] {
 
 ///|
 /// 命令处理程序类型
-// pub type @command.CommandHandler[S, C, E] = (S, C) -> Result[Array[E], @command.CommandError]
+// pub type @command.CommandHandler[S, C, E] = (S, C) -> Array[E] raise @command.CommandError
 // pub type @event.EventApplier[S,E] = (S, E) -> S
 
 ///|
@@ -100,42 +100,34 @@ pub fn[AggregateId, S, C, E] AggregateRoot::from_snapshot(
 pub fn[AggregateId, S, C, E] AggregateRoot::execute(
   self : AggregateRoot[AggregateId, S, C, E],
   cmd : @command.CommandMessage[C],
-) -> Result[AggregateRoot[AggregateId, S, C, E], @command.CommandError] {
-  // 1. Execute: 业务校验，产生事件
-  match (self.handler)(self.state.state, cmd.command) {
-    Ok(events) => {
-      // 2. Apply: 应用事件到状态
-      let mut current_state = self.state.state
-      let mut current_version = self.state.version
-
-      let event_messages : Array[@event.EventMessage[AggregateId, E]] = []
-
-      for event in events {
-        current_version += 1
-        let event_msg = @event.EventMessage::from_command(
-          event,
-          self.id,
-          current_version,
-          cmd,
-        )
-        event_messages.push(event_msg)
-        current_state = match self.applier {
-          @event.EventApplier::Single(f) => f(current_state, event)
-          @event.EventApplier::Batch(f) => f(current_state, [event])
-        }
-      }
-
-      // 3. 更新聚合状态
-      self.state = {
-        state: current_state,
-        version: current_version,
-        uncommitted_events: self.state.uncommitted_events + event_messages,
-      }
-
-      Ok(self)
+) -> AggregateRoot[AggregateId, S, C, E] raise @command.CommandError {
+  // 1. Execute: 业务校验，产生事件（handler raise 形，错误直穿）
+  let events = (self.handler)(self.state.state, cmd.command)
+  // 2. Apply: 应用事件到状态
+  let mut current_state = self.state.state
+  let mut current_version = self.state.version
+  let event_messages : Array[@event.EventMessage[AggregateId, E]] = []
+  for event in events {
+    current_version += 1
+    let event_msg = @event.EventMessage::from_command(
+      event,
+      self.id,
+      current_version,
+      cmd,
+    )
+    event_messages.push(event_msg)
+    current_state = match self.applier {
+      @event.EventApplier::Single(f) => f(current_state, event)
+      @event.EventApplier::Batch(f) => f(current_state, [event])
     }
-    Err(err) => Err(err)
   }
+  // 3. 更新聚合状态
+  self.state = {
+    state: current_state,
+    version: current_version,
+    uncommitted_events: self.state.uncommitted_events + event_messages,
+  }
+  self
 }
 
 ///|
@@ -192,9 +184,5 @@ pub fn[AggregateId, S, C, E] AggregateRoot::exec(
   self : AggregateRoot[AggregateId, S, C, E],
   cmd : C,
 ) -> AggregateRoot[AggregateId, S, C, E] raise @command.CommandError {
-  let msg = @command.CommandMessage::new(cmd)
-  match self.execute(msg) {
-    Ok(agg) => agg
-    Err(e) => raise e
-  }
+  self.execute(@command.CommandMessage::new(cmd))
 }

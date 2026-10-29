@@ -18,10 +18,10 @@
 fn account_handler(
   state : AccountState,
   cmd : AccountCommand,
-) -> Result[Array[AccountEvent], @command.CommandError] {
+) -> Array[AccountEvent] raise @command.CommandError {
   match account_decide(state, cmd, account_hooks()) {
-    Ok(events) => Ok(events)
-    Err(msg) => Err(@command.CommandError::InvalidCommand(msg))
+    Ok(events) => events
+    Err(msg) => raise @command.CommandError::InvalidCommand(msg)
   }
 }
 
@@ -159,16 +159,16 @@ fn main raise {
   let effect_handler = fn(
     state : AccountState,
     _cmd : AccountCommand,
-  ) -> Result[Array[AccountEvent], @command.CommandError] {
+  ) -> Array[AccountEvent] raise @command.CommandError {
     effect_calls = effect_calls + 1
     if effect_calls <= 2 {
       // 模拟瞬时乐观并发冲突（同类：另一写者抢先）——Duplicate 族，词表 retry
       ignore(state)
-      Err(@command.CommandError::Conflict(1, 2))
+      raise @command.CommandError::Conflict(1, 2)
     } else {
       // 冲突消除，业务裁决放行（等价 deposit_money 守卫通过形）
       ignore(state)
-      Ok([MoneyDeposited(700)])
+      [MoneyDeposited(700)]
     }
   }
   let retry_root = @aggregate.AggregateRoot::new(
@@ -197,7 +197,7 @@ fn main raise {
   let invalid_watcher = fn(
     state : AccountState,
     cmd : AccountCommand,
-  ) -> Result[Array[AccountEvent], @command.CommandError] {
+  ) -> Array[AccountEvent] raise @command.CommandError {
     invalid_calls = invalid_calls + 1
     account_handler(state, cmd)
   }

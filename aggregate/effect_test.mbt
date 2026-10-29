@@ -106,18 +106,18 @@ fn eff_handler(
   calls : Array[Int32],
   _state : EffState,
   cmd : EffCmd,
-) -> Result[Array[EffEvt], @command.CommandError] {
+) -> Array[EffEvt] raise @command.CommandError {
   calls[0] = calls[0] + 1
   match cmd {
-    GoSucceed => Ok([Mark])
+    GoSucceed => [Mark]
     FailTwiceThenOk =>
       if calls[0] <= 2 {
-        Err(@command.CommandError::Conflict(1, 2))
+        raise @command.CommandError::Conflict(1, 2)
       } else {
-        Ok([Mark])
+        [Mark]
       }
-    AlwaysConflict => Err(@command.CommandError::Conflict(1, 2))
-    AlwaysInvalid => Err(@command.CommandError::InvalidCommand("nope"))
+    AlwaysConflict => raise @command.CommandError::Conflict(1, 2)
+    AlwaysInvalid => raise @command.CommandError::InvalidCommand("nope")
   }
 }
 
@@ -165,7 +165,9 @@ test "成功直通：零重试零等待" {
   let waits : Array[Int64] = []
   let root = @aggregate.AggregateRoot::new(
     "eff-0",
-    fn(state, cmd) { eff_handler(calls, state, cmd) },
+    fn(state, cmd) -> Array[EffEvt] raise @command.CommandError {
+      eff_handler(calls, state, cmd)
+    },
     @event.EventApplier::Single(eff_applier),
     { marks: 0, },
   )
@@ -186,7 +188,9 @@ test "重试两败后成：Conflict→Duplicate→retry×2→成功" {
   let waits : Array[Int64] = []
   let root = @aggregate.AggregateRoot::new(
     "eff-1",
-    fn(state, cmd) { eff_handler(calls, state, cmd) },
+    fn(state, cmd) -> Array[EffEvt] raise @command.CommandError {
+      eff_handler(calls, state, cmd)
+    },
     @event.EventApplier::Single(eff_applier),
     { marks: 0, },
   )
@@ -208,7 +212,9 @@ test "耗尽上抛：max=3 → 三等一回后第四次失败 GiveUp 原错上�
   let waits : Array[Int64] = []
   let root = @aggregate.AggregateRoot::new(
     "eff-2",
-    fn(state, cmd) { eff_handler(calls, state, cmd) },
+    fn(state, cmd) -> Array[EffEvt] raise @command.CommandError {
+      eff_handler(calls, state, cmd)
+    },
     @event.EventApplier::Single(eff_applier),
     { marks: 0, },
   )
@@ -234,7 +240,9 @@ test "Validation 不重试：业务拒直接上抛，零等待" {
   let waits : Array[Int64] = []
   let root = @aggregate.AggregateRoot::new(
     "eff-3",
-    fn(state, cmd) { eff_handler(calls, state, cmd) },
+    fn(state, cmd) -> Array[EffEvt] raise @command.CommandError {
+      eff_handler(calls, state, cmd)
+    },
     @event.EventApplier::Single(eff_applier),
     { marks: 0, },
   )
@@ -260,7 +268,9 @@ test "钩子覆写：Duplicate→Exhausted 覆写后零重试（红线7 裁决�
   let waits : Array[Int64] = []
   let root = @aggregate.AggregateRoot::new(
     "eff-4",
-    fn(state, cmd) { eff_handler(calls, state, cmd) },
+    fn(state, cmd) -> Array[EffEvt] raise @command.CommandError {
+      eff_handler(calls, state, cmd)
+    },
     @event.EventApplier::Single(eff_applier),
     { marks: 0, },
   )
@@ -295,15 +305,15 @@ test "指数退避序列：base=100 factor=2 → waits=[100,200,400]" {
   let handler_four_fails_then_ok = fn(
     _state : EffState,
     cmd : EffCmd,
-  ) -> Result[Array[EffEvt], @command.CommandError] {
+  ) -> Array[EffEvt] raise @command.CommandError {
     calls[0] = calls[0] + 1
     match cmd {
-      GoSucceed => Ok([Mark])
+      GoSucceed => [Mark]
       _ =>
         if calls[0] <= 3 {
-          Err(@command.CommandError::Conflict(1, 2))
+          raise @command.CommandError::Conflict(1, 2)
         } else {
-          Ok([Mark])
+          [Mark]
         }
     }
   }
@@ -331,7 +341,9 @@ test "熔断钉：threshold=2 → 第二次连续失败即 GiveUp（max 未到�
   let waits : Array[Int64] = []
   let root = @aggregate.AggregateRoot::new(
     "eff-6",
-    fn(state, cmd) { eff_handler(calls, state, cmd) },
+    fn(state, cmd) -> Array[EffEvt] raise @command.CommandError {
+      eff_handler(calls, state, cmd)
+    },
     @event.EventApplier::Single(eff_applier),
     { marks: 0, },
   )

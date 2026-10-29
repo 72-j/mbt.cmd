@@ -70,4 +70,4 @@ pub fn[C] CommandMessage::with_user(
 
 ///|
 /// 命令处理程序类型
-pub type CommandHandler[S, C, E] = (S, C) -> Result[Array[E], CommandError]
+pub type CommandHandler[S, C, E] = (S, C) -> Array[E] raise CommandError

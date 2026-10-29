@@ -288,10 +288,10 @@ fn[AggregateId, S, C, E] Router::dispatch_once(
   handler : @command.CommandHandler[S, C, E],
   applier : @event.EventApplier[S, E],
   empty_state : S,
-) -> Result[@aggregate.AggregateRoot[AggregateId, S, C, E], EventSourcingErr] {
+) -> @aggregate.AggregateRoot[AggregateId, S, C, E] raise EventSourcingErr {
   // ========== Step 0: 快照基态 ==========
   let base = (env.snapshot_store.load)(aggregate_id) catch {
-    e => return Err(EventSourcingErr::SnapshotErr(snapshot_error_of(e)))
+    e => raise EventSourcingErr::SnapshotErr(snapshot_error_of(e))
   }
   let (base_state, base_version) = match base {
     Some((state, version)) => (state, version)
@@ -303,29 +303,28 @@ fn[AggregateId, S, C, E] Router::dispatch_once(
     aggregate_id,
     base_version,
   ) catch {
-    e => return Err(EventSourcingErr::EventStoreErr(event_store_error_of(e)))
+    e => raise EventSourcingErr::EventStoreErr(event_store_error_of(e))
   }
   // ========== Step 2: 快照态 + 尾事件重建聚合根 ==========
   let aggregate = @aggregate.AggregateRoot::from_snapshot(
     aggregate_id, empty_state, base_state, base_version, events, handler, applier,
   )
   // ========== Step 3: 执行命令 ==========
-  let aggregate = match aggregate.execute(cmd) {
-    Ok(agg) => agg
-    Err(e) => return Err(EventSourcingErr::CommandErr(e))
+  let aggregate = aggregate.execute(cmd) catch {
+    e => raise EventSourcingErr::CommandErr(e)
   }
   let uncommitted_events = aggregate.uncommitted_events()
   // ========== Step 4: 保存事件（错误穿透）==========
   if !uncommitted_events.is_empty() {
     (env.event_store.append)(env.event_store, aggregate_id, uncommitted_events) catch {
-      e => return Err(EventSourcingErr::EventStoreErr(event_store_error_of(e)))
+      e => raise EventSourcingErr::EventStoreErr(event_store_error_of(e))
     }
   }
   // ========== Step 4.5: EventBus 发布 ==========
   match env.event_bus {
     Some(bus) =>
       (bus.publish)(bus, uncommitted_events) catch {
-        e => return Err(EventSourcingErr::EventBusErr(event_bus_error_of(e)))
+        e => raise EventSourcingErr::EventBusErr(event_bus_error_of(e))
       }
     None => ()
   }
@@ -339,11 +338,11 @@ fn[AggregateId, S, C, E] Router::dispatch_once(
       snapshot.version,
       snapshot.timestamp,
     ) catch {
-      e => return Err(EventSourcingErr::SnapshotErr(snapshot_error_of(e)))
+      e => raise EventSourcingErr::SnapshotErr(snapshot_error_of(e))
     }
   }
   // ========== Step 6: 提交并返回 ==========
-  Ok(aggregate.commit())
+  aggregate.commit()
 }
 
 ///|
@@ -361,7 +360,13 @@ pub fn[AggregateId, S, C, E] Router::dispatch(
   Result[@aggregate.AggregateRoot[AggregateId, S, C, E], EventSourcingErr],
 ] {
   dispatch_reader_new(env => {
-    Router::dispatch_once(env, aggregate_id, cmd, handler, applier, empty_state)
+    Ok(
+      Router::dispatch_once(
+        env, aggregate_id, cmd, handler, applier, empty_state,
+      ),
+    ) catch {
+      e => Err(e)
+    }
   })
 }
 
@@ -374,11 +379,14 @@ pub fn[AggregateId, S, C, E] Router::dispatch_now(
   handler : @command.CommandHandler[S, C, E],
   applier : @event.EventApplier[S, E],
   empty_state : S,
-) -> Result[@aggregate.AggregateRoot[AggregateId, S, C, E], EventSourcingErr] {
+) -> @aggregate.AggregateRoot[AggregateId, S, C, E] raise EventSourcingErr {
   // let reader = self.dispatch_typed(cmd, command_type)
   let reader = self.dispatch(aggregate_id, cmd, handler, applier, empty_state)
 
-  dispatch_reader_run(reader, self.env)
+  match dispatch_reader_run(reader, self.env) {
+    Ok(agg) => agg
+    Err(e) => raise e
+  }
 }
 
 ///|
@@ -408,9 +416,13 @@ pub fn[AggregateId, S, C, E] Router::dispatch_with_config(
   ignore(self)
   let machine = Router::store_retry_machine(max_retries)
   dispatch_reader_new(env => {
-    Router::dispatch_with_retry(
-      env, aggregate_id, cmd, handler, applier, empty_state, machine,
-    )
+    Ok(
+      Router::dispatch_with_retry(
+        env, aggregate_id, cmd, handler, applier, empty_state, machine,
+      ),
+    ) catch {
+      e => Err(e)
+    }
   })
 }
 
@@ -462,41 +474,50 @@ fn[AggregateId, S, C, E] Router::dispatch_with_retry(
   applier : @event.EventApplier[S, E],
   empty_state : S,
   machine : @aggregate.RetryMachine,
-) -> Result[@aggregate.AggregateRoot[AggregateId, S, C, E], EventSourcingErr] {
+) -> @aggregate.AggregateRoot[AggregateId, S, C, E] raise EventSourcingErr {
   let mut attempts = 0
   let mut consecutive_failures = 0
-  let mut result = Router::dispatch_once(
-    env, aggregate_id, cmd, handler, applier, empty_state,
-  )
+  let mut result = Ok(
+    Router::dispatch_once(env, aggregate_id, cmd, handler, applier, empty_state),
+  ) catch {
+    e => Err(e)
+  }
   let mut running = result is Err(_)
   while running {
     let err = match result {
       Err(e) => e
-      Ok(_) => return result
+      Ok(agg) => return agg
     }
     consecutive_failures += 1
     let kind = effect_kind_of_sourcing_err(err)
     match (machine.default_action)(kind) {
       @aggregate.ActionExhausted => {
         running = false
-        return Err(err)
+        raise err
       }
       @aggregate.ActionRetry => {
         attempts += 1
         match (machine.decide)(attempts, consecutive_failures, kind) {
           @aggregate.WaitRetry(_) =>
-            result = Router::dispatch_once(
-              env, aggregate_id, cmd, handler, applier, empty_state,
-            )
+            result = Ok(
+              Router::dispatch_once(
+                env, aggregate_id, cmd, handler, applier, empty_state,
+              ),
+            ) catch {
+              e => Err(e)
+            }
           @aggregate.GiveUpRaise => {
             running = false
-            return Err(err)
+            raise err
           }
         }
       }
     }
   }
-  result
+  match result {
+    Ok(agg) => agg
+    Err(e) => raise e
+  }
 }
 
 ///|
@@ -587,12 +608,10 @@ pub fn[AggregateId, S, C, E] Router::dispatch_default(
   cmd : @command.CommandMessage[C],
   applier : @event.EventApplier[S, E],
   empty_state : S,
-) -> Result[@aggregate.AggregateRoot[AggregateId, S, C, E], EventSourcingErr] {
+) -> @aggregate.AggregateRoot[AggregateId, S, C, E] raise EventSourcingErr {
   if self.handlers.is_empty() {
-    return Err(
-      EventSourcingErr::CommandErr(
-        @command.CommandError::UnregisteredCommand("No handlers registered"),
-      ),
+    raise EventSourcingErr::CommandErr(
+      @command.CommandError::UnregisteredCommand("No handlers registered"),
     )
   }
 
@@ -601,10 +620,8 @@ pub fn[AggregateId, S, C, E] Router::dispatch_default(
   let handler = match self.handlers.iter().next() {
     Some((_, h)) => h
     None =>
-      return Err(
-        EventSourcingErr::CommandErr(
-          @command.CommandError::UnregisteredCommand("No handlers registered"),
-        ),
+      raise EventSourcingErr::CommandErr(
+        @command.CommandError::UnregisteredCommand("No handlers registered"),
       )
   }
   self.dispatch_now(aggregate_id, cmd, handler, applier, empty_state)

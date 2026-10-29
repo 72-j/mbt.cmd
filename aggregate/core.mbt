@@ -12,7 +12,7 @@
 // pub struct AggregateId(String)
 pub trait AggregateId {
   fn to_string(Self) -> String
-  fn from_string(s : String) -> Result[Self, AggregateError]
+  fn from_string(s : String) -> Self raise AggregateError
   fn eq(self : Self, other : Self) -> Bool
   // cmp(self : Self, other : Self) -> Int
 }
@@ -23,11 +23,8 @@ pub impl AggregateId for String with fn to_string(self : String) -> String {
 }
 
 ///|
-pub impl AggregateId for String with fn from_string(s : String) -> Result[
-  String,
-  AggregateError,
-] {
-  Ok(s)
+pub impl AggregateId for String with fn from_string(s : String) -> String raise AggregateError {
+  s
 }
 
 ///|
@@ -66,10 +63,7 @@ pub impl AggregateId for Int32 with fn to_string(self : Int32) -> String {
 }
 
 ///|
-pub impl AggregateId for Int32 with fn from_string(s : String) -> Result[
-  Int32,
-  AggregateError,
-] {
+pub impl AggregateId for Int32 with fn from_string(s : String) -> Int32 raise AggregateError {
   // 简化实现，实际应该处理错误
   let mut result = 0
   let mut negative = false
@@ -87,14 +81,14 @@ pub impl AggregateId for Int32 with fn from_string(s : String) -> Result[
       result = result * 10 + (c.to_int() - 48)
       i = i + 1
     } else {
-      return Err(AggregateError::IdParseError("Invalid integer string: \{s}"))
+      raise AggregateError::IdParseError("Invalid integer string: \{s}")
     }
   }
 
   if negative {
-    Ok(-result)
+    -result
   } else {
-    Ok(result)
+    result
   }
 }
 
@@ -120,11 +114,8 @@ pub impl AggregateId for AggUUID with fn to_string(self : AggUUID) -> String {
 }
 
 ///|
-pub impl AggregateId for AggUUID with fn from_string(s : String) -> Result[
-  AggUUID,
-  AggregateError,
-] {
-  Ok(AggUUID::{ value: s, })
+pub impl AggregateId for AggUUID with fn from_string(s : String) -> AggUUID raise AggregateError {
+  AggUUID::{ value: s, }
 }
 
 ///|

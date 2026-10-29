@@ -10,7 +10,7 @@ import {
 
 // Errors
 pub(all) suberror EventStoreError {
-  DuplicateVersion(Int)
+  DuplicateVersion(Int32)
   StorageError(String)
   SerializationError(String)
 }
@@ -24,8 +24,8 @@ pub(all) suberror SnapshotError {
 // Types and methods
 pub(all) struct EventStore[AggregateId, E] {
   append : (EventStore[AggregateId, E], AggregateId, Array[@event.EventMessage[AggregateId, E]]) -> Unit raise EventStoreError
-  load : (EventStore[AggregateId, E], AggregateId, Int) -> Array[@event.EventMessage[AggregateId, E]] raise EventStoreError
-  current_version : (EventStore[AggregateId, E], AggregateId) -> Int raise EventStoreError
+  load : (EventStore[AggregateId, E], AggregateId, Int32) -> Array[@event.EventMessage[AggregateId, E]] raise EventStoreError
+  current_version : (EventStore[AggregateId, E], AggregateId) -> Int32 raise EventStoreError
 }
 
 pub struct SQLiteEventStore[E] {
@@ -35,23 +35,23 @@ pub struct SQLiteEventStore[E] {
   get_type_name : (E) -> String
 }
 pub fn[E] SQLiteEventStore::append(Self[E], String, Array[@event.EventMessage[String, E]]) -> Unit raise
-pub fn[E] SQLiteEventStore::current_version(Self[E], String) -> Int raise
+pub fn[E] SQLiteEventStore::current_version(Self[E], String) -> Int32 raise
 pub fn[E] SQLiteEventStore::init_schema(Self[E]) -> Unit raise
-pub fn[E] SQLiteEventStore::load(Self[E], String, Int) -> Array[@event.EventMessage[String, E]] raise
+pub fn[E] SQLiteEventStore::load(Self[E], String, Int32) -> Array[@event.EventMessage[String, E]] raise
 pub fn[E] SQLiteEventStore::new(String, (E) -> Bytes, (Bytes) -> E raise, (E) -> String) -> Self[E] raise
 pub fn[E] SQLiteEventStore::to_event_store(Self[E]) -> EventStore[String, E]
 
 pub struct Snapshot[AggregateId, S] {
   aggregate_id : AggregateId
   state : S
-  version : Int
+  version : Int32
   timestamp : Int64
 }
-pub fn[AggregateId, S] Snapshot::new(AggregateId, S, Int) -> Self[AggregateId, S]
+pub fn[AggregateId, S] Snapshot::new(AggregateId, S, Int32) -> Self[AggregateId, S]
 
 pub(all) struct SnapshotStore[AggregateId, S] {
-  save : (AggregateId, S, Int, Int64) -> Unit raise SnapshotError
-  load : (AggregateId) -> (S, Int)? raise SnapshotError
+  save : (AggregateId, S, Int32, Int64) -> Unit raise SnapshotError
+  load : (AggregateId) -> (S, Int32)? raise SnapshotError
 }
 
 // Type aliases

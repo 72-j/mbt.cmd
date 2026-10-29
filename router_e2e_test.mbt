@@ -77,13 +77,13 @@ fn int32_of_string(s : String) -> Int32? {
 fn e2e_handler(
   _state : E2eState,
   cmd : E2eCommand,
-) -> Result[Array[E2eEvent], @command.CommandError] {
+) -> Array[E2eEvent] raise @command.CommandError {
   match cmd {
     Add(x) =>
       if x < 0 {
-        Err(@command.CommandError::PreconditionFailed("negative amount"))
+        raise @command.CommandError::PreconditionFailed("negative amount")
       } else {
-        Ok([Added(x)])
+        [Added(x)]
       }
   }
 }
@@ -147,13 +147,17 @@ test "router e2e: dispatch persists, replay continues, user_id chains" {
   let cmd = @command.CommandMessage::new(Add(5))
     .with_user("u1")
     .with_correlation("corr-1")
-  let result = router.dispatch_now(
-    "agg-1",
-    cmd,
-    e2e_handler,
-    @event.EventApplier::Single(e2e_applier),
-    { total: 0, },
-  )
+  let result = Ok(
+    router.dispatch_now(
+      "agg-1",
+      cmd,
+      e2e_handler,
+      @event.EventApplier::Single(e2e_applier),
+      { total: 0, },
+    ),
+  ) catch {
+    e => Err(e)
+  }
   let agg = match result {
     Ok(a) => a
     Err(_) => fail("dispatch failed")
@@ -171,13 +175,17 @@ test "router e2e: dispatch persists, replay continues, user_id chains" {
     @mooncmd.CommandConfig::new(),
     Map([]),
   )
-  let result2 = router2.dispatch_now(
-    "agg-1",
-    @command.CommandMessage::new(Add(7)),
-    e2e_handler,
-    @event.EventApplier::Single(e2e_applier),
-    { total: 0, },
-  )
+  let result2 = Ok(
+    router2.dispatch_now(
+      "agg-1",
+      @command.CommandMessage::new(Add(7)),
+      e2e_handler,
+      @event.EventApplier::Single(e2e_applier),
+      { total: 0, },
+    ),
+  ) catch {
+    e => Err(e)
+  }
   match result2 {
     Ok(a) => {
       assert_eq(a.version(), 2)
@@ -225,13 +233,17 @@ test "router e2e: duplicate version surfaces typed through dispatch" {
     _ => fail("expected typed DuplicateVersion")
   }
   // @mooncmd.Router 径同族:错误经 dispatch 仍可分辨(事件穿透不抹平)
-  let result = router.dispatch_now(
-    "agg-2",
-    @command.CommandMessage::new(Add(1)),
-    e2e_handler,
-    @event.EventApplier::Single(e2e_applier),
-    { total: 0, },
-  )
+  let result = Ok(
+    router.dispatch_now(
+      "agg-2",
+      @command.CommandMessage::new(Add(1)),
+      e2e_handler,
+      @event.EventApplier::Single(e2e_applier),
+      { total: 0, },
+    ),
+  ) catch {
+    e => Err(e)
+  }
   // 顺序径:dispatch 走 v6 追加成功(状态 = 5+1)
   match result {
     Ok(a) => assert_eq(a.current_state().total, 16) // 种子 1+2+3+4+5=15,+1
@@ -262,13 +274,17 @@ test "router e2e: event bus wired, publish failure honest with events persisted"
     3,
   )
   let router = @mooncmd.Router::new(env, @mooncmd.CommandConfig::new(), Map([]))
-  let _ = router.dispatch_now(
-    "agg-3",
-    @command.CommandMessage::new(Add(9)),
-    e2e_handler,
-    @event.EventApplier::Single(e2e_applier),
-    { total: 0, },
-  )
+  let _ = Ok(
+    router.dispatch_now(
+      "agg-3",
+      @command.CommandMessage::new(Add(9)),
+      e2e_handler,
+      @event.EventApplier::Single(e2e_applier),
+      { total: 0, },
+    ),
+  ) catch {
+    e => Err(e)
+  }
   assert_eq(bus.totals, [9])
   // 失败总线:dispatch 失败,但事件已落库（诚实语义钉）
   let failing = FailingBus::{ calls: 0, }
@@ -289,14 +305,18 @@ test "router e2e: event bus wired, publish failure honest with events persisted"
     @mooncmd.CommandConfig::new(),
     Map([]),
   )
-  let published_ok = match
+  let outcome = Ok(
     router_fail.dispatch_now(
       "agg-4",
       @command.CommandMessage::new(Add(3)),
       e2e_handler,
       @event.EventApplier::Single(e2e_applier),
       { total: 0, },
-    ) {
+    ),
+  ) catch {
+    e => Err(e)
+  }
+  let published_ok = match outcome {
     Err(
       @mooncmd.EventSourcingErr::EventBusErr(
         @event.EventBusError::PublishError(_)
@@ -340,13 +360,17 @@ test "router e2e: snapshot base state loaded with tail events" {
     e => fail("tail append failed: \{e.to_string()}")
   }
   let router = @mooncmd.Router::new(env, @mooncmd.CommandConfig::new(), Map([]))
-  let result = router.dispatch_now(
-    "agg-5",
-    @command.CommandMessage::new(Add(7)),
-    e2e_handler,
-    @event.EventApplier::Single(e2e_applier),
-    { total: 0, },
-  )
+  let result = Ok(
+    router.dispatch_now(
+      "agg-5",
+      @command.CommandMessage::new(Add(7)),
+      e2e_handler,
+      @event.EventApplier::Single(e2e_applier),
+      { total: 0, },
+    ),
+  ) catch {
+    e => Err(e)
+  }
   match result {
     Ok(a) => {
       assert_eq(a.version(), 4)
@@ -459,7 +483,7 @@ test "router e2e: with_config does not retry validation errors" {
   let counting : @command.CommandHandler[E2eState, E2eCommand, E2eEvent] = fn(
     state,
     cmd,
-  ) {
+  ) -> Array[E2eEvent] raise @command.CommandError {
     handler_calls += 1
     e2e_handler(state, cmd)
   }

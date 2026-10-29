@@ -10,7 +10,7 @@ pub(all) suberror CommandError {
   Unauthorized(String)
   PreconditionFailed(String)
   NotFound(String)
-  Conflict(Int, Int)
+  Conflict(Int32, Int32)
 }
 pub fn CommandError::to_string(Self) -> String
 
@@ -29,7 +29,7 @@ pub fn[C] CommandMessage::with_correlation(Self[C], String) -> Self[C]
 pub fn[C] CommandMessage::with_user(Self[C], String) -> Self[C]
 
 // Type aliases
-pub type CommandHandler[S, C, E] = (S, C) -> Result[Array[E], CommandError]
+pub type CommandHandler[S, C, E] = (S, C) -> Array[E] raise CommandError
 
 // Traits
 pub trait Command {
