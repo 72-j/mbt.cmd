@@ -1,5 +1,33 @@
 # CHANGELOG
 
+## 0.2.0（2026-10-30）
+
+**破坏性：写路径 failable API 迁 raise 风格**（工具链 [0078]
+result_error_return 收口，`moon check --deny-warn` 门恢复绿）。
+
+### 对外 API
+
+- **破坏性**：`CommandHandler` 类型别名改为
+  `(S, C) -> Array[E] raise CommandError`（原 `Result` 返回形）——
+  命令处理器直接 `raise` 业务拒，不再自行包 `Ok/Err`。
+- **破坏性**：`AggregateRoot::execute` /
+  `Router::dispatch_now` / `Router::dispatch_default` /
+  `Router::dispatch_with_retry`（私有）与 `AggregateId::from_string`
+  三个内建 impl 同步迁 raise 形。调用方从
+  `match f(x) { Ok(..) .. Err(..) }` 改为 `try f(x) catch { .. }`
+  （或在 raise 语境直接透传）。
+- `Router::dispatch` / `dispatch_with_config`（Reader 形）返回型
+  `DispatchReader[..., Result[...]]` 保持不变——Reader 携带的结果仍是
+  数据；`dispatch` 统一门面（0.1.1 已是 raise 形）零变更。
+- `.mbti` 随签名变更同笔重生成（含 Int→Int32 工具链规范形）。
+
+### 测试
+
+- 双档读数：native 62 / 62、wasm 45 / 45，与 0.1.1 语义零漂移；
+  `examples/bank` 全链自证 EXAMPLE:PASS。README 计数表同步
+  63 → 62（bank live 门转自足结构钉的 −1 补记）。
+
+
 ## 0.1.1 (2026-10-24)
 
 - **Effect 重试状态机**：`RetryMachine` 协议面（`EffectErrorKind` 四类封闭集 +

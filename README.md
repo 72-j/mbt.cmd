@@ -10,7 +10,7 @@ correlation / causation 追溯链、时间戳、schema 版本），Router 作为
 ## 特性
 
 - 纯事件主链：命令处理器为纯函数
-  `(S, C) -> Result[Array[E], CommandError]`，只做业务裁决、不碰元数据与
+  `(S, C) -> Array[E] raise CommandError`，只做业务裁决、不碰元数据与
   存储；`AggregateRoot` 承担生命周期（执行 / 提交 / 重放重建 / 快照）。
 - 元数据自动包装：`EventMessage` 由框架独占组装——`event_id`（UUID v4）、
   `correlation_id` 承自命令、`causation_id` 记前因、`user_id` 全链透传、
@@ -65,7 +65,7 @@ import {
 ```moonbit
 let root = @aggregate.AggregateRoot::new(
   "account-001",
-  account_handler,                                   // (S, C) -> Result[Array[E], CommandError]
+  account_handler,                                   // (S, C) -> Array[E] raise CommandError
   @event.EventApplier::Single(account_applier),      // (S, E) -> S
   AccountState::init(),
 )
@@ -198,13 +198,13 @@ moon test --target native               # 全模块测试（wasm 同支持）
 moon run examples/bank --target native  # 全链自证，终行 EXAMPLE:PASS
 ```
 
-运行时输出各测试面的计数行（下表实测于 2026-10-24；分包读数，合计
-63 / 63）：
+运行时输出各测试面的计数行（下表实测于 2026-10-30；分包读数，合计
+62 / 62）：
 
 | 面 | 读数 |
 |---|---|
 | 单元与端到端测试（主包 + 各域子包：聚合生命周期、乐观并发、投影契约、Router 分发全流程） | 45 / 45 |
-| 词表生成门与契约测试（`examples/bank`：生成产物逐字节比对、已知答案、init 值契约 + wire 往返恒等） | 18 / 18 |
+| 词表生成门与契约测试（`examples/bank`：生成产物逐字节比对、已知答案、init 值契约 + wire 往返恒等） | 17 / 17 |
 | 示例全链自证（`moon run examples/bank`） | 终行 `EXAMPLE:PASS` |
 
 版本沿革见 `CHANGELOG.md`。

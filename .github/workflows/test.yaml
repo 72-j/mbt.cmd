@@ -1,0 +1,78 @@
+# mbt.cmd 独立仓 CI（thy1016/mooncmd）。
+#
+# 形态承 mbt.jsonld 同名 workflow（其 2026-10-30 首跑 SUCCESS）：
+#   · static（仅 Linux，只跑一次）：`check --deny-warn` + .mbti 漂移门
+#     + 示例全链冒烟。
+#   · test（3 OS 矩阵）：`moon test --deny-warn` 双档——本仓
+#     preferred_target = wasm（wasm 档 = 默认），native 档显式
+#     `--target native`（SQLite 事件存储腿；sqlite3 包自带 sqlite3.c
+#     合并件，只需 C 编译器，无需系统 libsqlite）。
+#   · 工具链安装集中到 `.github/actions/setup-moon`；本文件只留门与判据。
+#   · 门纪律：每门一步、不串命令、禁 `continue-on-error` / `|| true`。
+#   · 无 fmt 门：`examples/bank/account_gen.mbt` 等为生成物（生成物禁手写，
+#     再生器属维护侧独立工具链）；格式纪律由维护侧收口笔承担。
+name: Test
+
+on:
+  push:
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  static:
+    name: Static gates
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Setup Moon
+        uses: ./.github/actions/setup-moon
+
+      - name: 静态门 · check --deny-warn
+        run: moon check --deny-warn
+
+      - name: 门·.mbti 漂移
+        run: |
+          moon info
+          drift="$(git status --porcelain -- '*.mbti')"
+          if [ -n "$drift" ]; then
+            echo "::error::.mbti 与源码漂移——本地跑 moon info，把 .mbti 与产生它的改动同笔提交："
+            echo "$drift"
+            exit 1
+          fi
+
+      - name: 示例冒烟 · examples/bank（native）
+        run: moon run examples/bank --target native
+
+  test:
+    name: Test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Setup Moon
+        uses: ./.github/actions/setup-moon
+
+      - name: 测试 · --deny-warn（wasm + native 双档）
+        run: |
+          echo "=== Wasm target ==="
+          moon test --deny-warn
+          echo "=== Native target ==="
+          moon test --deny-warn --target native
