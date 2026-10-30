@@ -7,6 +7,10 @@
 #     preferred_target = wasm（wasm 档 = 默认），native 档显式
 #     `--target native`（SQLite 事件存储腿；sqlite3 包自带 sqlite3.c
 #     合并件，只需 C 编译器，无需系统 libsqlite）。
+#   · Windows 口径（注解取证定谳，2026-10-30）：wasm 档跳——moonrun
+#     沙箱无可写挂载，store 测试 fs.IOError；native 档 store 包除外——
+#     moonbitlang/x/fs 在 Windows 开不了文件，双后端同源。wasm 面由
+#     ubuntu/macos 承担（wasm 绿 ≠ native 绿 doctrine 不变）。
 #   · 工具链安装集中到 `.github/actions/setup-moon`；本文件只留门与判据。
 #   · 门纪律：每门一步、不串命令、禁 `continue-on-error` / `|| true`。
 #   · 无 fmt 门：`examples/bank/account_gen.mbt` 等为生成物（生成物禁手写，
@@ -81,7 +85,12 @@ jobs:
         if: runner.os != 'Windows'
         run: moon test --deny-warn --target wasm
 
+      - name: 测试 · native 档（windows = store 除外；其余 OS 全量）
+        if: runner.os == 'Windows'
+        run: moon test --deny-warn --target native -p thy1016/mooncmd -p thy1016/mooncmd/aggregate -p thy1016/mooncmd/command -p thy1016/mooncmd/event -p thy1016/mooncmd/projection -p thy1016/mooncmd/monads -p thy1016/mooncmd/examples/bank
+
       - name: 测试 · native 档（失败吐注解取证）
+        if: runner.os != 'Windows'
         run: |
           set -o pipefail
           if moon test --deny-warn --target native 2>&1 | tee native_diag.log; then
