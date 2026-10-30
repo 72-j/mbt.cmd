@@ -396,7 +396,7 @@ pub fn[AggregateId, S, C, E] Router::dispatch_now(
 /// （effect_kind_of_sourcing_err 分类 + 机器 decide 上限门——分类/动作/上限
 /// 全机器面，与 aggregate/effect 协议同源）；**timeout_ms 降级声明** = MVP
 /// 同步径无定时器，退避时长同步径忽略（WaitRetry → 立即重试），随 async
-/// dispatch 面另役。dispatch_with_config 与 dispatch 的差别仅此。
+/// dispatch 面另行接入。dispatch_with_config 与 dispatch 的差别仅此。
 pub fn[AggregateId, S, C, E] Router::dispatch_with_config(
   self : Router[AggregateId, S, C, E],
   aggregate_id : AggregateId,

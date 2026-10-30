@@ -13,7 +13,7 @@
 //! 4. **视图持久化可选**：`PersistedProjection` = 视图 + checkpoint 的
 //!    SQLite 落点（save 即 ack;load 即恢复）,与 `LiveProjection` 组合
 //!    = 重启续跑。
-//! MVP 口径：拉取形（poll）;推送订阅随消费需求另役。
+//! MVP 口径：拉取形（poll）;推送订阅随消费需求另行排期。
 
 ///|
 /// 视图（MVP 口径 = Json;强类型视图随消费需求扩形）
