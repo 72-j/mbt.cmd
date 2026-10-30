@@ -555,7 +555,7 @@ test "router e2e: dispatch facade strong consistency waits projection checkpoint
   assert_eq(done.version(), 1)
   assert_eq(proj.checkpoint(), 1)
   // 预算超:卡死投影（挂另一库,永不更新）→ ConsistencyErr
-  let other = e2e_fresh("/tmp/mooncmd_router_e2e_g2.db")
+  let other = e2e_fresh("./mooncmd_router_e2e_g2.db")
   let stuck = @projection.LiveProjection::new(
     "agg-8b",
     other.to_event_store(),

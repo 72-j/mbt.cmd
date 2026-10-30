@@ -39,7 +39,7 @@ fn proj_projection() -> @projection.Projection[String, ProjEvent] {
 
 ///|
 test "projection live: origin load checkpoint then refresh idempotent" {
-  let db_path = "/tmp/mooncmd_proj_gate.db"
+  let db_path = "./mooncmd_proj_gate.db"
   let _ = @fs.remove_file(db_path) catch { _ => () }
   let store = @store.SQLiteEventStore::new(
     db_path, proj_serialize, proj_deserialize, proj_type_name,
