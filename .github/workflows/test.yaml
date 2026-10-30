@@ -81,5 +81,16 @@ jobs:
         if: runner.os != 'Windows'
         run: moon test --deny-warn --target wasm
 
-      - name: 测试 · native 档
-        run: moon test --deny-warn --target native
+      - name: 测试 · native 档（失败吐注解取证）
+        run: |
+          set -o pipefail
+          if moon test --deny-warn --target native 2>&1 | tee native_diag.log; then
+            echo "native 档绿"
+          else
+            status=$?
+            echo "::error::native leg failed (exit=$status), tail as annotations:"
+            tail -n 8 native_diag.log | while read -r line; do
+              echo "::error::${line:0:180}"
+            done
+            exit 1
+          fi
