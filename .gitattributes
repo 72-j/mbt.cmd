@@ -1,0 +1,22 @@
+# ===== 行尾归一（jsonld CI-2 / moonxml 同款根治笔）=====
+# 为什么补：本仓无属性文件时，Windows runner 缺省 core.autocrlf=true 检出把
+# 文本件转 CRLF——`examples/bank` 契约门是**逐字节比对**（生成产物 ≡ 入库件；
+# wire 往返恒等），被归一化即等于偷偷改判据输入，CI Windows 腿红
+# （61107ed run 实证：Test (windows-latest) 双档步 failure，其余三腿绿）。
+# 口径：判据面文本件一律 **LF 检出**——判据是字节，必须跨 OS 同形。
+* text=auto eol=lf
+
+# 判据直接依赖字节的几族：点名钉死（防将来 `* text=auto` 被改动）
+*.mbt text eol=lf
+*.mbti text eol=lf
+*.toml text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.txt text eol=lf
+*.sh text eol=lf
+*.py text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf
+*.sql text eol=lf
+
+# 本仓无上游冻结语料（全部为本仓自有文件）；`* text=auto eol=lf` 已全覆盖。
