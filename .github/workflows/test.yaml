@@ -70,9 +70,15 @@ jobs:
       - name: Setup Moon
         uses: ./.github/actions/setup-moon
 
-      - name: 测试 · --deny-warn（wasm + native 双档）
+      - name: 探针 · 运行时器在位（moonrun/工具链核身）
+        if: runner.os == 'Windows'
         run: |
-          echo "=== Wasm target ==="
-          moon test --deny-warn
-          echo "=== Native target ==="
-          moon test --deny-warn --target native
+          moon version --all
+          moonrun --version || echo "::warning::moonrun 不可用"
+          gcc --version | head -1 || true
+
+      - name: 测试 · wasm 档
+        run: moon test --deny-warn --target wasm
+
+      - name: 测试 · native 档
+        run: moon test --deny-warn --target native
