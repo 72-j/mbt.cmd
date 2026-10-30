@@ -1,0 +1,68 @@
+# ==========================================================
+# QuickMachine **业务面**（纪律：与生成面分文件）
+# 管：业务分布 / 回归基线 / 覆盖率要求 —— [business] [random_check]
+#     [[assert_check]] [environment] [failure_detection] [report]
+# 生成面见同目录 quicktest_gen.toml
+#
+# ⚠ v1 覆盖口径（n3 家法同款：weight-0 + 台账）：
+#   · Withdraw / Close 不入机——两族命令的真值面依赖余额算术
+#     （guard `balance >= amount` / Close 须零余额），生成器 assign
+#     表达力只认 true/false 字面，模型无法值级镜像 → 随机喂不进；
+#     余额值面由 bank 契约门（init 值契约 + wire 往返）承担。
+#   · 本机随机面覆盖：Create（Closed→Active）/ Deposit（Active 环）的
+#     任意交错 + 错位命令的业务拒（模型无转移 = Error(1)，P0 归一）。
+# ==========================================================
+[business]
+ref_id_range = 4
+
+[business.weights]
+Create = 2
+Deposit = 5
+
+[random_check]
+seed = 20261030
+cases = 60
+max_commands = 16
+max_tries = 20
+shrink = true
+max_shrinks = 60
+max_shrink_rounds = 16
+required_command_names = ["Create", "Deposit"]
+
+[environment]
+isolation_strategy = "per_test_case"
+before_each = []
+after_each = []
+timeout_seconds = 30
+
+[failure_detection]
+failure_if = [
+  "postcondition fails",
+  "model != system observable state",
+  "unexpected error code",
+]
+
+[report]
+include_trace = true
+include_model = true
+include_responses = true
+
+# ==========================================================
+# 固定脚本（回归基线）：绿色生命周期 + 错位拒
+#   ① Create → Deposit → Deposit：态推进 + 两笔入账
+#   ② Deposit 先行（Closed 态无此转移）→ 业务拒 → Create 回正
+# ==========================================================
+[[assert_check]]
+event = "Create"
+
+[[assert_check]]
+event = "Deposit"
+
+[[assert_check]]
+event = "Deposit"
+
+[[assert_check]]
+event = "Deposit"
+
+[[assert_check]]
+event = "Create"

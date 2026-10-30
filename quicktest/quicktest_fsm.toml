@@ -1,0 +1,39 @@
+# ==========================================================
+# mooncmd 账户生命周期 FSM（QuickMachine 机器数据；手写领域机）
+# 体式承 pbtgen（fsm TOML = states/events/transitions；P4.2d 最小形）。
+# v1 口径：生命周期位面（Closed/Active + Create/Deposit）——余额算术
+#   超出生成器 assign 表达力（assign_tail 只认 true/false 字面），
+#   Withdraw/Close 不入机（挂账 v2，见 quicktest.toml 头注）。
+# ==========================================================
+
+[meta]
+name = "mooncmd_account"
+version = "0.1.0"
+prefix = "Qk"
+trait_name = "Account"
+style = "mutable"
+
+[[states]]
+name = "Closed"
+is_initial = true
+
+[[states]]
+name = "Active"
+
+[[events]]
+name = "Create"
+
+[[events]]
+name = "Deposit"
+
+[[transitions]]
+from = "Closed"
+to = "Active"
+on = "Create"
+action = "do_create"
+
+[[transitions]]
+from = "Active"
+to = "Active"
+on = "Deposit"
+action = "do_deposit"

@@ -7,7 +7,7 @@
 
 name = "thy1016/mooncmd"
 
-version = "0.2.0"
+version = "0.2.1"
 
 repository = "https://www.gitlink.org.cn/thy7/mbt.cmd"
 
@@ -33,4 +33,8 @@ import {
   "moonbitlang/x@0.5.5",
   "moonbit-community/sqlite3@0.2.3",
   "f4ah6o/uuidm@0.2.1",
+  // quicktest 随机状态机脚手架（仅 mooncmd/quicktest 测试面消费）
+  "moonbit-community/quickcheck_statemachine@0.0.1",
+  // quickcheck 统一最新（0.14.0 注册表 tarball 是旧格式 moon.mod.json，新工具链拒装）
+  "moonbitlang/quickcheck@0.15.1",
 }

@@ -1,5 +1,24 @@
 # CHANGELOG
 
+## 0.2.1（2026-10-31）
+
+**新增 quicktest：QuickMachine 随机状态机测试面**（参考 pbtgen 思路；
+三面 TOML(fsm/生成/业务) → pbtgen 生成器物化骨架 → P0 接框架真面）。
+
+### 新增
+
+- `quicktest` 包：账户生命周期 FSM(Closed/Active + Create/Deposit)的
+  随机属性测试机——随机门 60 例 + 固定脚本门 + 覆盖门(long-run 见证
+  `resp:Continue`),模型 ≡ 引擎双执行比较(聚合 exec 管线真面,域做最小
+  夹具)。`.hand-maintained` 标记在案(bootstrap-only 物化纪律)。
+- 依赖:`moonbit-community/quickcheck_statemachine@0.0.1` +
+  `moonbitlang/quickcheck@0.15.1`(统一最新;0.14.0 注册表 tarball 为
+  旧格式 moon.mod.json,新工具链拒装——统一升级即绕)。
+
+### 测试
+
+- 全套件 native 62→71(quicktest 9 件);wasm 同绿;EXAMPLE:PASS 不变。
+
 ## 0.2.0（2026-10-30）
 
 **破坏性：写路径 failable API 迁 raise 风格**（工具链 [0078]

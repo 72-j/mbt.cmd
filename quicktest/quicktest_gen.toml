@@ -1,0 +1,67 @@
+# ==========================================================
+# QuickMachine **生成面**（纪律：与业务面分文件，同 pbtgen 双面体例）
+# 管：生成什么 / 生成到哪 / 怎么接线 —— [meta] [generator] [type_mapping]
+#     [artifacts] [defaults] [actions]
+# 业务面见同目录 quicktest.toml（[business] [random_check] [[assert_check]]
+#     [environment] [failure_detection] [report]）
+#
+# 引擎接线：skelgen_package = bank 真面目（AccountState/AccountCommand/
+#     account_handler/applier 全在）——P0（system.mbt）调真引擎执行命令，
+#     不重写业务语义（moonttl P4.2b 同款口径）。
+# ==========================================================
+[meta]
+name = "mooncmd_quick_machine"
+version = "0.1.0"
+description = "mooncmd 账户生命周期 QuickMachine 测试骨架生成配置"
+prefix = "Qk"
+
+[generator]
+enabled = true
+fsm_toml = "mooncmd/quicktest/quicktest_fsm.toml"
+skelgen_package = "thy1016/mooncmd/examples/bank"
+engine_alias = "@bank"
+qcs_alias = "@qcs"
+output_dir = "mooncmd/quicktest"
+# 生成头时间戳钉住（G6 口径：再生幂等）
+generated_at = 1791000000000
+
+[type_mapping]
+span_alias = "RefId"
+ref_type = "@qcs.Ref[RefId]"
+# v1 纯位置机：无 Span 槽（模型槽白名单只认 Span 型 context 字段）
+model_slots = []
+# 生命周期机不发射载荷——Effect 归一化留空表
+effect_maps = {}
+error_codes = { undefined_transition = 1, action_failed = 1 }
+
+[artifacts]
+types = true
+valid = true
+model_exec = true
+callbacks = false
+business = true
+metrics = false
+system = true
+state_machine = true
+runner = true
+assembly = "direct"
+
+[defaults]
+precondition = "valid_table"
+postcondition = "model_compare"
+invariant = "top"
+generator = "valid_weighted"
+shrinker = "none"
+mock = "model_execute"
+response_vars = "none"
+reify_command = "resolve_symbolic"
+bind_response = "passthrough"
+remap_command = "identity"
+
+# ==========================================================
+# [actions]：action → 意图表（生成面数据）
+# 生命周期机的两个 action 都是状态推进（无发射载荷）→ Continue。
+# ==========================================================
+[actions]
+do_create = "Continue"
+do_deposit = "Continue"
