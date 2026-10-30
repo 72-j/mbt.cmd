@@ -87,7 +87,7 @@ jobs:
 
       - name: 测试 · native 档（windows = store 除外；其余 OS 全量）
         if: runner.os == 'Windows'
-        run: moon test --deny-warn --target native -p thy1016/mooncmd -p thy1016/mooncmd/aggregate -p thy1016/mooncmd/command -p thy1016/mooncmd/event -p thy1016/mooncmd/projection -p thy1016/mooncmd/monads -p thy1016/mooncmd/examples/bank
+        run: moon test --deny-warn --target native -p thy1016/mooncmd -p thy1016/mooncmd/aggregate -p thy1016/mooncmd/command -p thy1016/mooncmd/event -p thy1016/mooncmd/projection -p thy1016/mooncmd/monads -p thy1016/mooncmd/examples/bank -p thy1016/mooncmd/quicktest
 
       - name: 测试 · native 档（失败吐注解取证）
         if: runner.os != 'Windows'
