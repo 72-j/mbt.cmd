@@ -133,7 +133,7 @@ fn mem_snapshots_store(
 ///|
 // 端到端:dispatch → SQLite 落库 → 重放续写 + user_id 链（钉A）
 test "router e2e: dispatch persists, replay continues, user_id chains" {
-  let db_path = "/tmp/mooncmd_router_e2e_a.db"
+  let db_path = "./mooncmd_router_e2e_a.db"
   let store = e2e_fresh(db_path)
   let snapshots = mem_snapshots_new()
   let env : @mooncmd.RouteEnv[String, E2eState, E2eEvent] = @mooncmd.RouteEnv::new(
@@ -199,7 +199,7 @@ test "router e2e: dispatch persists, replay continues, user_id chains" {
 // 钉B·DuplicateVersion 穿透不抹平:版本跳写后 dispatch 可分辨 DuplicateVersion
 // （错误回原族,非降维文本）。
 test "router e2e: duplicate version surfaces typed through dispatch" {
-  let store = e2e_fresh("/tmp/mooncmd_router_e2e_b.db")
+  let store = e2e_fresh("./mooncmd_router_e2e_b.db")
   let snapshots = mem_snapshots_new()
   let event_store = store.to_event_store()
   let env : @mooncmd.RouteEnv[String, E2eState, E2eEvent] = @mooncmd.RouteEnv::new(
@@ -255,7 +255,7 @@ test "router e2e: duplicate version surfaces typed through dispatch" {
 // 钉C·@event.EventBus 发布:publish 收到同批;publish 失败 = dispatch 失败诚实
 // 且事件已落库（盲目重试会双重作用,at-least-once 投递归后续裁定）。
 test "router e2e: event bus wired, publish failure honest with events persisted" {
-  let store = e2e_fresh("/tmp/mooncmd_router_e2e_c.db")
+  let store = e2e_fresh("./mooncmd_router_e2e_c.db")
   let snapshots = mem_snapshots_new()
   let bus = RecordingBus::{ totals: [], }
   let env : @mooncmd.RouteEnv[String, E2eState, E2eEvent] = @mooncmd.RouteEnv::new(
@@ -336,7 +336,7 @@ test "router e2e: event bus wired, publish failure honest with events persisted"
 // 钉D·快照读路径:基态(100@v2) + 尾事件(v3:+5) + 执行(+7) = 112@v4——
 // 无快照读（从 0 重放）必得 12,本测必红。
 test "router e2e: snapshot base state loaded with tail events" {
-  let store = e2e_fresh("/tmp/mooncmd_router_e2e_d.db")
+  let store = e2e_fresh("./mooncmd_router_e2e_d.db")
   let snapshots = mem_snapshots_new()
   snapshots.by_id["agg-5"] = ({ total: 100, }, 2)
   let env : @mooncmd.RouteEnv[String, E2eState, E2eEvent] = @mooncmd.RouteEnv::new(
@@ -384,7 +384,7 @@ test "router e2e: snapshot base state loaded with tail events" {
 // 钉E·with_config 重试:首炸 DuplicateVersion → 重试成功;max_retries=0
 // → 不重试直接失败。
 test "router e2e: with_config retries duplicate version then succeeds" {
-  let store = e2e_fresh("/tmp/mooncmd_router_e2e_e.db")
+  let store = e2e_fresh("./mooncmd_router_e2e_e.db")
   let snapshots = mem_snapshots_new()
   // 炸一次桩:首调 append 抛 DuplicateVersion,次调委派真库
   let real = store.to_event_store()
@@ -477,7 +477,7 @@ test "router e2e: with_config retries duplicate version then succeeds" {
 
 ///|
 test "router e2e: with_config does not retry validation errors" {
-  let store = e2e_fresh("/tmp/mooncmd_router_e2e_f.db")
+  let store = e2e_fresh("./mooncmd_router_e2e_f.db")
   let snapshots = mem_snapshots_new()
   let mut handler_calls = 0
   let counting : @command.CommandHandler[E2eState, E2eCommand, E2eEvent] = fn(
@@ -523,7 +523,7 @@ test "router e2e: with_config does not retry validation errors" {
 
 ///|
 test "router e2e: dispatch facade strong consistency waits projection checkpoint" {
-  let store = e2e_fresh("/tmp/mooncmd_router_e2e_g.db")
+  let store = e2e_fresh("./mooncmd_router_e2e_g.db")
   let records = store.to_event_store()
   let projection = @projection.Projection::new(
     fn() { @json.to_json("fresh") },

@@ -42,7 +42,7 @@ fn deserialize_test_event(data : Bytes) -> TestEvent raise {
 
 ///|
 test "@store.SQLiteEventStore 创建和初始化" {
-  let db_path = "/tmp/test_event_store_1.db"
+  let db_path = "./test_event_store_1.db"
 
   // 删除可能存在的旧数据库文件
   if @fs.path_exists(db_path) {
@@ -65,7 +65,7 @@ test "@store.SQLiteEventStore 创建和初始化" {
 
 ///|
 async test "@store.SQLiteEventStore 追加和加载事件" {
-  let db_path = "/tmp/test_event_store_2.db"
+  let db_path = "./test_event_store_2.db"
   /// 获取事件类型名称
 
   // 删除可能存在的旧数据库文件
