@@ -12,8 +12,8 @@ fn account_handler(
         raise @command.CommandError::InvalidCommand("Name cannot be empty")
       } else if initial_balance < 0 {
         raise @command.CommandError::InvalidCommand(
-            "Initial balance cannot be negative",
-          )
+          "Initial balance cannot be negative",
+        )
       } else {
         [AccountEvent::AccountCreated(name, initial_balance)]
       }
@@ -22,8 +22,8 @@ fn account_handler(
         raise @command.CommandError::InvalidCommand("Account is not active")
       } else if amount <= 0 {
         raise @command.CommandError::InvalidCommand(
-            "Deposit amount must be positive",
-          )
+          "Deposit amount must be positive",
+        )
       } else {
         [AccountEvent::MoneyDeposited(amount)]
       }
@@ -32,8 +32,8 @@ fn account_handler(
         raise @command.CommandError::InvalidCommand("Account is not active")
       } else if amount <= 0 {
         raise @command.CommandError::InvalidCommand(
-            "Withdrawal amount must be positive",
-          )
+          "Withdrawal amount must be positive",
+        )
       } else if amount > state.balance {
         raise @command.CommandError::InvalidCommand("Insufficient funds")
       } else {
@@ -44,8 +44,8 @@ fn account_handler(
         raise @command.CommandError::InvalidCommand("Account is already closed")
       } else if state.balance != 0 {
         raise @command.CommandError::InvalidCommand(
-            "Cannot close account with non-zero balance",
-          )
+          "Cannot close account with non-zero balance",
+        )
       } else {
         [AccountEvent::AccountClosed]
       }
@@ -71,11 +71,7 @@ test "@aggregate.AggregateRoot 执行创建账户命令" {
   )
 
   // 执行命令
-  let result = try {
-    Ok(aggregate.execute(cmd))
-  } catch {
-    e => Err(e)
-  }
+  let result = Ok(aggregate.execute(cmd)) catch { e => Err(e) }
 
   // 验证执行成功
   match result {
@@ -125,24 +121,18 @@ test "@aggregate.AggregateRoot 执行取款命令" {
   let create_cmd = @command.CommandMessage::new(
     AccountCommand::CreateAccount("Bob Wilson", 1000),
   )
-  aggregate = try aggregate.execute(create_cmd) catch {
-    _ => panic()
-  }
+  aggregate = aggregate.execute(create_cmd) catch { _ => panic() }
 
   let deposit_cmd = @command.CommandMessage::new(
     AccountCommand::DepositMoney(500),
   )
-  aggregate = try aggregate.execute(deposit_cmd) catch {
-    _ => panic()
-  }
+  aggregate = aggregate.execute(deposit_cmd) catch { _ => panic() }
 
   // 执行取款命令
   let withdraw_cmd = @command.CommandMessage::new(
     AccountCommand::WithdrawMoney(300),
   )
-  aggregate = try aggregate.execute(withdraw_cmd) catch {
-    _ => panic()
-  }
+  aggregate = aggregate.execute(withdraw_cmd) catch { _ => panic() }
 
   // 验证状态
   let state = aggregate.current_state()
@@ -167,11 +157,7 @@ test "@aggregate.AggregateRoot 命令失败处理" {
   let withdraw_cmd = @command.CommandMessage::new(
     AccountCommand::WithdrawMoney(100),
   )
-  let result = try {
-    Ok(aggregate.execute(withdraw_cmd))
-  } catch {
-    e => Err(e)
-  }
+  let result = Ok(aggregate.execute(withdraw_cmd)) catch { e => Err(e) }
 
   // 验证命令失败
   match result {
@@ -202,19 +188,13 @@ test "@aggregate.AggregateRoot 余额不足错误" {
   let create_cmd = @command.CommandMessage::new(
     AccountCommand::CreateAccount("Alice", 100),
   )
-  aggregate = try aggregate.execute(create_cmd) catch {
-    _ => panic()
-  }
+  aggregate = aggregate.execute(create_cmd) catch { _ => panic() }
 
   // 尝试取出超过余额的金额
   let withdraw_cmd = @command.CommandMessage::new(
     AccountCommand::WithdrawMoney(200),
   )
-  let result = try {
-    Ok(aggregate.execute(withdraw_cmd))
-  } catch {
-    e => Err(e)
-  }
+  let result = Ok(aggregate.execute(withdraw_cmd)) catch { e => Err(e) }
 
   // 验证失败
   match result {
