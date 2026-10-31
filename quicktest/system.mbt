@@ -89,3 +89,72 @@ test "mooncmd_quick_machine system: 首条转移模型预测 ≡ 引擎响应" {
   let (_, expected) = model_execute(model_empty(), command)
   assert_eq(run_command(command, system), expected)
 }
+
+// ===== 守恒律测试（固定罐; 随机交错由 runner 的 qcs 门承担） =====
+// 被测性质 = exec 管线的四条守恒律（jsonld/moonxml 守恒罐同体例）:
+//   ①版本守恒——每条被接受命令恰好推进一版（k 命令 == k 版, 不丢不跳）
+//   ②事件流守恒——未提交流恰 k 条（每命令恰一事件）+ 消息版本位连续
+//     1..k（aggregate_version 是乐观并发校验的骨架, 跳版/重版即失明）
+//   ③账目守恒——引擎可观状态 ≡ 纯模型镜像逐步同步（双执行零漂移）
+//   ④拒绝零痕迹——业务拒不推版/不入流/不记账（失败命令零副作用）
+
+///|
+test "mooncmd 守恒律①: 版本守恒——k 命令恰 k 版" {
+  let system = system_init()
+  let script = [Create, Deposit, Deposit, Deposit]
+  for index, command in script {
+    assert_eq(run_command(command, system), Continue)
+    assert_eq(system.root.state.version, index + 1)
+  }
+}
+
+///|
+test "mooncmd 守恒律②: 事件流守恒——流长 k + 消息版本位连续 1..k" {
+  let system = system_init()
+  let script = [Create, Deposit, Deposit]
+  for command in script {
+    assert_eq(run_command(command, system), Continue)
+  }
+  let stream = system.root.state.uncommitted_events
+  assert_eq(stream.length(), 3)
+  for index, message in stream {
+    assert_eq(message.aggregate_version, index + 1)
+  }
+}
+
+///|
+test "mooncmd 守恒律③: 账目守恒——引擎状态 ≡ 模型镜像逐步同步" {
+  let mut model = model_empty()
+  let system = system_init()
+  let mut deposits = 0
+  for command in [Create, Deposit, Deposit] {
+    let (_, expected) = model_execute(model, command)
+    assert_eq(run_command(command, system), expected)
+    model = transition(model, command, expected)
+    match command {
+      Deposit => deposits = deposits + 1
+      _ => ()
+    }
+    let snapshot = system.root.current_state()
+    assert_eq(snapshot.exists, model.state == Active)
+    assert_eq(snapshot.count, deposits)
+  }
+}
+
+///|
+test "mooncmd 守恒律④: 拒绝零痕迹——业务拒后版本/事件流/账目全冻结" {
+  let system = system_init()
+  // 未开户先 Deposit → 业务拒, 三读数全零
+  assert_eq(run_command(Deposit, system), Error(1))
+  assert_eq(system.root.state.version, 0)
+  assert_eq(system.root.state.uncommitted_events.length(), 0)
+  assert_eq(system.root.current_state().exists, false)
+  // 开户后重复 Create → 业务拒; 拒后三读数冻结在拒前值
+  assert_eq(run_command(Create, system), Continue)
+  assert_eq(run_command(Create, system), Error(1))
+  assert_eq(system.root.state.version, 1)
+  assert_eq(system.root.state.uncommitted_events.length(), 1)
+  let snapshot = system.root.current_state()
+  assert_true(snapshot.exists)
+  assert_eq(snapshot.count, 0)
+}
