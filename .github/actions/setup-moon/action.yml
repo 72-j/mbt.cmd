@@ -47,8 +47,9 @@ runs:
       run: |
         moon --version
         moon version --all
-        # 本仓已知良好工具链（2026-10-30 双档 62/45 全绿所录）；偏差只警告，不阻塞。
-        known_good="0.1.20261023"
+        # 本仓已知良好工具链（2026-10-31 所录：20261028 于 CI 全门四面绿 ×2——
+        # master + tag v0.2.1 两轮 static+3OS test 全 success）；偏差只警告，不阻塞。
+        known_good="0.1.20261028"
         installed="$(moon --version | head -n 1 | awk '{print $2}')"
         if [ "$installed" != "$known_good" ]; then
           echo "::warning::MoonBit $installed ≠ 已知良好 $known_good——先本地复跑 check/test 再按需更新本 action"
