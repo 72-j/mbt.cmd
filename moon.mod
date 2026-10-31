@@ -7,7 +7,7 @@
 
 name = "thy1016/mooncmd"
 
-version = "0.2.1"
+version = "0.2.2"
 
 repository = "https://www.gitlink.org.cn/thy7/mbt.cmd"
 
