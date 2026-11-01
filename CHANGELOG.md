@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## 未发布
+
+**结构：`examples/bank` 拆 lib/cmd**（工具链演化：main 包黑盒测试件
+`_test.mbt` 被弃用警告）。`examples/bank` 转示例库包（行为 + 全部测试面
+原位不动）；可执行全链自证入口迁 `examples/bank_demo`（`main.mbt` 随迁，
+bank 包成员改 `@bank.` 限定）。可执行门换径：`moon run examples/bank_demo
+--target native`（README/spec 同步）。测试读数不变（native 75/75，wasm
+58/58），EXAMPLE:PASS 续绿。
+
 ## 0.2.2（2026-10-31）
 
 文档面版本：README「测试与验证」补 quicktest 生命周期随机状态机说明（事件

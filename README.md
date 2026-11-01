@@ -153,8 +153,8 @@ moon test                           # 生成产物结构钉 + 契约测试 + 已
 生成物包含：状态结构与初值、事件 / 命令枚举、apply 演化链、命令分派
 骨架、wire 序列化（含 schema 版本预留位）、契约测试门（init 值契约 +
 wire 往返恒等）。事件命名与粒度属通用语言决策，由词表声明；机械演化
-与序列化由生成器承担。完整上手路径见 `examples/bank`（可运行全链自证：
-`moon run examples/bank --target native`）。
+与序列化由生成器承担。完整上手路径见 `examples/bank_demo`（可运行全链自证：
+`moon run examples/bank_demo --target native`；行为与测试住 `examples/bank` 库包）。
 
 ## API 总览
 
@@ -195,7 +195,7 @@ wire 往返恒等）。事件命名与粒度属通用语言决策，由词表声
 
 ```bash
 moon test --target native               # 全模块测试（wasm 同支持）
-moon run examples/bank --target native  # 全链自证，终行 EXAMPLE:PASS
+moon run examples/bank_demo --target native  # 全链自证，终行 EXAMPLE:PASS
 ```
 
 运行时输出各测试面的计数行（下表实测于 2026-10-31；分包读数，native
@@ -206,7 +206,7 @@ moon run examples/bank --target native  # 全链自证，终行 EXAMPLE:PASS
 | 单元与端到端测试（主包 + 各域子包：聚合生命周期、乐观并发、投影契约、Router 分发全流程） | 45 / 45 |
 | 词表生成门与契约测试（`examples/bank`：生成产物逐字节比对、已知答案、init 值契约 + wire 往返恒等） | 17 / 17 |
 | quicktest 随机状态机（生命周期机 + 守恒律四罐） | 13 / 13 |
-| 示例全链自证（`moon run examples/bank`） | 终行 `EXAMPLE:PASS` |
+| 示例全链自证（`moon run examples/bank_demo`） | 终行 `EXAMPLE:PASS` |
 
 ### quicktest 生命周期随机状态机
 

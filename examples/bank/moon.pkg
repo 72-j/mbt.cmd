@@ -1,15 +1,11 @@
-// bank:银行业务账户聚合完整示例包——词表 account_agg.toml
-// + gen 产物 account_gen.mbt(黄金门逐字节,门住主包 account_agg_gate_test)
-// + 策略钩子 account_policy.mbt(红线7 手写)+ main.mbt 十查链(EXAMPLE:PASS)。
+// bank:银行业务账户聚合示例库包——词表 account_agg.toml
+// + gen 产物 account_gen.mbt(黄金门逐字节,门住 account_gen_known_answer_test)
+// + 策略钩子 account_policy.mbt(红线7 手写)+ 测试面(夹具/契约门/结构钉)。
+// 可执行全链自证住 examples/bank_demo(main 包黑盒测试件被工具链弃用,拆 lib/cmd)。
 // 门面无再导出面(typealias 本工具链不支持 [3002])——消费方按域直连
 // (@aggregate/@command/@event/@store)。
 import {
-  "moonbitlang/core/encoding/utf8",
-  "thy1016/mooncmd",
   "thy1016/mooncmd/aggregate",
-  "thy1016/mooncmd/command",
-  "thy1016/mooncmd/event",
-  "thy1016/mooncmd/store",
 }
 
 import {
@@ -18,7 +14,5 @@ import {
   "thy1016/mooncmd/command",
   "thy1016/mooncmd/event",
 } for "test"
-
-pkgtype(kind: "executable")
 
 supported_targets = "native"

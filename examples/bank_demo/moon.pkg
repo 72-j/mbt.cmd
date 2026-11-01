@@ -1,0 +1,15 @@
+// bank_demo:全链自证可执行入口——行为与测试住库包 examples/bank
+// （main 包黑盒测试件被工具链弃用,拆 lib/cmd;示例叙事见 main.mbt 十查链）。
+import {
+  "moonbitlang/core/encoding/utf8",
+  "thy1016/mooncmd",
+  "thy1016/mooncmd/aggregate",
+  "thy1016/mooncmd/command",
+  "thy1016/mooncmd/event",
+  "thy1016/mooncmd/store",
+  "thy1016/mooncmd/examples/bank",
+}
+
+pkgtype(kind: "executable")
+
+supported_targets = "native"

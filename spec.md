@@ -13,9 +13,9 @@
 | 项 | 事实 |
 |---|---|
 | 目录形态 | **六包布局**（役8 ff9ce54）：根包（router + 总错误 + logger）+ `aggregate/` + `command/` + `event/` + `monads/`（原 mystate，ab230a5 改名）+ `projection/` + `store/`；每包独立 `moon.pkg` + `.mbti`；测试命名循 moonttl 标准（黑盒 `*_test.mbt` / 白盒 `*_wbtest.mbt`） |
-| 示例面 | `examples/bank`（可执行自证包，native-only）：`main.mbt` 全链演示 + 聚合 gen 五件（`account_agg.toml` 词表 / `account_gen.mbt` 产物含 wire 映射 / `account_policy.mbt` + `account_retry_policy.mbt` 手写钩子 / `account_contract_wbtest.mbt` 免费契约门）+ 产物结构钉（自足零依赖，known-answer 形）+ 夹具；词表再生 = 维护侧骨架生成器（独立仓，`moon run skelschema/cmd --target native`） |
+| 示例面 | `examples/bank`（示例**库包**，native-only）+ `examples/bank_demo`（可执行自证入口，2026-11-01 拆 lib/cmd——main 包黑盒测试件被工具链弃用）：聚合 gen 五件（`account_agg.toml` 词表 / `account_gen.mbt` 产物含 wire 映射 / `account_policy.mbt` + `account_retry_policy.mbt` 手写钩子 / `account_contract_wbtest.mbt` 免费契约门）+ 产物结构钉（自足零依赖，known-answer 形）+ 夹具；词表再生 = 维护侧骨架生成器（独立仓，`moon run skelschema/cmd --target native`） |
 | 模块形态 | **独立模块** `thy1016/mooncmd`（moon.mod 在盘，moonspace 范式；ADR-MC-007）；主仓树内在存但主仓不跟踪（主仓 .gitignore 止蚀） |
-| 包路径 | 根包 `thy1016/mooncmd`（router/总错误/logger）；分包 `thy1016/mooncmd/{aggregate,command,event,monads,projection,store}`；示例 `thy1016/mooncmd/examples/bank` |
+| 包路径 | 根包 `thy1016/mooncmd`（router/总错误/logger）；分包 `thy1016/mooncmd/{aggregate,command,event,monads,projection,store}`；示例 `thy1016/mooncmd/examples/bank`（库）+ `examples/bank_demo`（入口） |
 | 运行时依赖 | 包间：aggregate→command/event/store 等（见各 moon.pkg）；外部：`moonbitlang/async@0.22.4` · `moonbit-community/sqlite3@0.2.3` · `f4ah6o/uuidm@0.2.1`；core（utf8/json）内置 |
 | 测试依赖 | `moonbitlang/x@0.5.5`（fs）——产物门 = 自足结构钉，无外部依赖 |
 | 模块账 | moon.mod 独立在盘（uuidm 随迁自主仓，根仓无其它用户）；脚手架 = `proj_dialect.toml` 方言件 + `moonxr/ops_projgen.mbtx`；发布元数据变更须经 `moonxr/release_review.mbtx`（独立 clone 真路径） |
@@ -160,7 +160,7 @@ State Monad（`State[S, V]`，三法则注记在案）· Writer Monad（`Writer[
 | 门 | 判据 |
 |---|---|
 | 测试计数棘轮 | 独立模块口径 **48**（46 + 黄金门 + 金锚，2026-10-22 实测；裸跑 = wasm，native 同）；沿革：41（10-21 单包口径）← 104（根仓口径，连坐子包+双后端重复计数，仅作参考） |
-| 可执行门 | `moon run examples/bank --target native` → **EXAMPLE:PASS**（十项检查） |
+| 可执行门 | `moon run examples/bank_demo --target native` → **EXAMPLE:PASS**（十项检查） |
 | 静态 | `moon check --deny-warn` **0 错 0 警**（**已闭** 2026-10-08 收口笔；两包实测，主包 25 tasks 零告警） |
 | 契约面 | 公开面变更必 `moon info` 同笔提交（`.mbti` 无漂移，主仓先例同款） |
 | 时间源 | 投影/确定性测试不含当前时钟读取（NFR-MC-4） |

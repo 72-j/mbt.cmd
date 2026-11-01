@@ -16,47 +16,50 @@
 /// 桥接:gen 分派（String 错域）→ 框架命令错误（InvalidCommand 同界,
 /// demo 守卫语义原样——策略件四钩子升级为 demo 守卫,错误串逐字保留）
 fn account_handler(
-  state : AccountState,
-  cmd : AccountCommand,
-) -> Array[AccountEvent] raise @command.CommandError {
-  match account_decide(state, cmd, account_hooks()) {
+  state : @bank.AccountState,
+  cmd : @bank.AccountCommand,
+) -> Array[@bank.AccountEvent] raise @command.CommandError {
+  match @bank.account_decide(state, cmd, @bank.account_hooks()) {
     Ok(events) => events
     Err(msg) => raise @command.CommandError::InvalidCommand(msg)
   }
 }
 
 ///|
-fn account_applier(state : AccountState, event : AccountEvent) -> AccountState {
+fn account_applier(
+  state : @bank.AccountState,
+  event : @bank.AccountEvent,
+) -> @bank.AccountState {
   event.apply(state)
 }
 
 ///|
-fn account_empty_state() -> AccountState {
-  AccountState::init()
+fn account_empty_state() -> @bank.AccountState {
+  @bank.AccountState::init()
 }
 
 ///|
 /// 事件序列化 = gen 产物流 wire（D-MG-6;格式契约见 account_contract_wbtest roundtrip 钉）
-fn account_serialize(event : AccountEvent) -> Bytes {
+fn account_serialize(event : @bank.AccountEvent) -> Bytes {
   @utf8.encode(event.to_wire())
 }
 
 ///|
-fn account_deserialize(data : Bytes) -> AccountEvent raise {
+fn account_deserialize(data : Bytes) -> @bank.AccountEvent raise {
   let text = @utf8.decode(data)
-  match AccountEvent::from_wire(text) {
+  match @bank.AccountEvent::from_wire(text) {
     Some(event) => event
     None => abort("bad event wire payload: \{text}")
   }
 }
 
 ///|
-fn account_type_name(event : AccountEvent) -> String {
+fn account_type_name(event : @bank.AccountEvent) -> String {
   match event {
-    AccountCreated(_, _) => "AccountCreated"
-    MoneyDeposited(_) => "MoneyDeposited"
-    MoneyWithdrawn(_) => "MoneyWithdrawn"
-    AccountClosed => "AccountClosed"
+    @bank.AccountCreated(_, _) => "@bank.AccountCreated"
+    @bank.MoneyDeposited(_) => "@bank.MoneyDeposited"
+    @bank.MoneyWithdrawn(_) => "@bank.MoneyWithdrawn"
+    @bank.AccountClosed => "@bank.AccountClosed"
   }
 }
 
@@ -78,9 +81,9 @@ fn main raise {
       @event.EventApplier::Single(account_applier),
       account_empty_state(),
     )
-    .exec(CreateAccount("Demo Holder", 1000))
-    .exec(DepositMoney(500))
-    .exec(WithdrawMoney(300))
+    .exec(@bank.CreateAccount("Demo Holder", 1000))
+    .exec(@bank.DepositMoney(500))
+    .exec(@bank.WithdrawMoney(300))
   let chain_ok = aggregate.version() == 3
   all_green = all_green &&
     check("内存命令链", chain_ok, "版本 = \{aggregate.version()}")
@@ -157,9 +160,9 @@ fn main raise {
   // wait = 打印型假钟（真钟 = async sleep，宿主接）;词表 fixed interval=100。
   let mut effect_calls = 0
   let effect_handler = fn(
-    state : AccountState,
-    _cmd : AccountCommand,
-  ) -> Array[AccountEvent] raise @command.CommandError {
+    state : @bank.AccountState,
+    _cmd : @bank.AccountCommand,
+  ) -> Array[@bank.AccountEvent] raise @command.CommandError {
     effect_calls = effect_calls + 1
     if effect_calls <= 2 {
       // 模拟瞬时乐观并发冲突（同类：另一写者抢先）——Duplicate 族，词表 retry
@@ -168,19 +171,19 @@ fn main raise {
     } else {
       // 冲突消除，业务裁决放行（等价 deposit_money 守卫通过形）
       ignore(state)
-      [MoneyDeposited(700)]
+      [@bank.MoneyDeposited(700)]
     }
   }
   let retry_root = @aggregate.AggregateRoot::new(
     "demo-effect-1",
     effect_handler,
     @event.EventApplier::Single(account_applier),
-    AccountState::init(),
+    @bank.AccountState::init(),
   )
   let effect_done = retry_root.exec_with_effect(
-    DepositMoney(700),
-    account_retry_machine(),
-    account_retry_hooks_pure(),
+    @bank.DepositMoney(700),
+    @bank.account_retry_machine(),
+    @bank.account_retry_hooks_pure(),
     fn(ms) { println("    [effect] 冲突，固定退避 \{ms}ms 后重试") },
   )
   let effect1_ok = effect_calls == 3 &&
@@ -195,9 +198,9 @@ fn main raise {
   // 演示 2：Validation（业务拒）——词表 exhausted，零重试直上抛（重放同结果）。
   let mut invalid_calls = 0
   let invalid_watcher = fn(
-    state : AccountState,
-    cmd : AccountCommand,
-  ) -> Array[AccountEvent] raise @command.CommandError {
+    state : @bank.AccountState,
+    cmd : @bank.AccountCommand,
+  ) -> Array[@bank.AccountEvent] raise @command.CommandError {
     invalid_calls = invalid_calls + 1
     account_handler(state, cmd)
   }
@@ -205,15 +208,15 @@ fn main raise {
     "demo-effect-2",
     invalid_watcher,
     @event.EventApplier::Single(account_applier),
-    AccountState::init(),
+    @bank.AccountState::init(),
   )
   let mut effect2_rejected = false
   try {
     // 未激活户取款 = 业务拒（Validation 族）→ 状态机不重试，原错上抛
     let _ = invalid_root.exec_with_effect(
-      WithdrawMoney(100),
-      account_retry_machine(),
-      account_retry_hooks_pure(),
+      @bank.WithdrawMoney(100),
+      @bank.account_retry_machine(),
+      @bank.account_retry_hooks_pure(),
       fn(_ms) { () },
     )
   } catch {
@@ -243,9 +246,14 @@ fn main raise {
     records,
     None,
     closable,
-    WithdrawMoney(1200),
+    @bank.WithdrawMoney(1200),
   )
-  let closed = @mooncmd.dispatch(records, None, after_withdraw, CloseAccount)
+  let closed = @mooncmd.dispatch(
+    records,
+    None,
+    after_withdraw,
+    @bank.CloseAccount,
+  )
   let closed_state = closed.current_state()
   let close_ok = closed_state.balance == 0 && !closed_state.is_active
   all_green = all_green &&
