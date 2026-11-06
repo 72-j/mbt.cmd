@@ -3,25 +3,26 @@ package "thy1016/mooncmd/projection"
 
 import {
   "moonbit-community/sqlite3",
+  "moonbitlang/core/json",
   "thy1016/mooncmd/event",
   "thy1016/mooncmd/store",
 }
 
 // Values
-pub fn[AggregateId, E] default_batch((Json, @event.EventMessage[AggregateId, E]) -> Json) -> (Json, Array[@event.EventMessage[AggregateId, E]]) -> Json
+pub fn[AggregateId, E] default_batch((@json.Json, @event.EventMessage[AggregateId, E]) -> @json.Json) -> (@json.Json, Array[@event.EventMessage[AggregateId, E]]) -> @json.Json
 
 // Errors
 
 // Types and methods
 pub(all) struct LiveProjection[AggregateId, E] {
-  mut view : Json
+  mut view : @json.Json
   mut last_version : Int32
   projection : Projection[AggregateId, E]
   event_store : @store.EventStore[AggregateId, E]
   aggregate_id : AggregateId
 }
 pub fn[AggregateId, E] LiveProjection::checkpoint(Self[AggregateId, E]) -> Int32
-pub fn[AggregateId, E] LiveProjection::get_view(Self[AggregateId, E]) -> Json
+pub fn[AggregateId, E] LiveProjection::get_view(Self[AggregateId, E]) -> @json.Json
 pub fn[AggregateId, E] LiveProjection::new(AggregateId, @store.EventStore[AggregateId, E], Projection[AggregateId, E], SubscriptionPosition) -> Self[AggregateId, E] raise @store.EventStoreError
 pub fn[AggregateId, E] LiveProjection::refresh(Self[AggregateId, E]) -> Unit raise @store.EventStoreError
 
@@ -29,16 +30,16 @@ pub(all) struct PersistedProjection {
   conn : @sqlite3.Connection
   table_name : String
 }
-pub fn PersistedProjection::load(Self, String) -> (Json, Int32)? raise
+pub fn PersistedProjection::load(Self, String) -> (@json.Json, Int32)? raise
 pub fn PersistedProjection::new(@sqlite3.Connection, String) -> Self raise
-pub fn PersistedProjection::save(Self, String, Json, Int32) -> Unit raise
+pub fn PersistedProjection::save(Self, String, @json.Json, Int32) -> Unit raise
 
 pub(all) struct Projection[AggregateId, E] {
-  init : () -> Json
-  apply : (Json, @event.EventMessage[AggregateId, E]) -> Json
-  apply_batch : (Json, Array[@event.EventMessage[AggregateId, E]]) -> Json
+  init : () -> @json.Json
+  apply : (@json.Json, @event.EventMessage[AggregateId, E]) -> @json.Json
+  apply_batch : (@json.Json, Array[@event.EventMessage[AggregateId, E]]) -> @json.Json
 }
-pub fn[AggregateId, E] Projection::new(() -> Json, (Json, @event.EventMessage[AggregateId, E]) -> Json, (Json, Array[@event.EventMessage[AggregateId, E]]) -> Json) -> Self[AggregateId, E]
+pub fn[AggregateId, E] Projection::new(() -> @json.Json, (@json.Json, @event.EventMessage[AggregateId, E]) -> @json.Json, (@json.Json, Array[@event.EventMessage[AggregateId, E]]) -> @json.Json) -> Self[AggregateId, E]
 
 pub(all) enum SubscriptionPosition {
   Origin

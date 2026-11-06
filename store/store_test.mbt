@@ -6,11 +6,12 @@
 
 ///|
 /// 测试用的简单事件类型
+#derive(Debug, Eq)
 enum TestEvent {
   Created(String)
   Updated(String)
   Deleted
-} derive(Debug, Eq)
+}
 
 ///|
 fn get_test_event_type_name(event : TestEvent) -> String {

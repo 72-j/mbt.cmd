@@ -11,36 +11,41 @@
 
 ///|
 /// Span 的符号替身：生成期以 Symbolic(Var) 引用，执行期解析为 Concrete(RefId)
+#derive(Eq, Debug)
 priv struct RefId {
   id : Int32
-} derive(Eq, Debug)
+}
 
 ///|
 /// Command - 测试命令类型（源: [[events]]）
+#derive(Debug)
 priv enum Command {
   Create
   Deposit
-} derive(Debug)
+}
 
 ///|
 /// Response - 测试响应类型（源: [[effects]] + 错误归一化）
+#derive(Eq, Debug)
 priv enum Response {
   Continue // 状态推进（[actions] 意图 = Continue；无发射载荷）
   Error(Int32) // 引擎错误归一化（[type_mapping].error_codes）
-} derive(Eq, Debug)
+}
 
 ///|
 /// ModelState - 纯模型状态枚举（镜像引擎 State 枚举，独立于引擎包）
+#derive(Eq, Debug)
 priv enum ModelState {
   Closed
   Active
-} derive(Eq, Debug)
+}
 
 ///|
 /// Model - 纯模型（源: Context 的 Span 槽位；规格而非被测实现）
+#derive(Eq, Debug)
 priv struct Model {
   state : ModelState
-} derive(Eq, Debug)
+}
 
 ///|
 /// 初始模型：Closed，槽位全空

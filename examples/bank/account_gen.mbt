@@ -5,11 +5,12 @@
 // 再生：改表 → 黄金门测试重生成逐字节对拍
 
 ///|
+#derive(Eq)
 pub(all) struct AccountState {
   name : String
   balance : Int32
   is_active : Bool
-} derive(Eq)
+}
 
 ///|
 pub extend AccountState with Eq::{not_equal, equal}
@@ -20,23 +21,25 @@ pub fn AccountState::init() -> AccountState {
 }
 
 ///|
+#derive(Eq)
 pub(all) enum AccountEvent {
   AccountCreated(String, Int32)
   MoneyDeposited(Int32)
   MoneyWithdrawn(Int32)
   AccountClosed
-} derive(Eq)
+}
 
 ///|
 pub extend AccountEvent with Eq::{not_equal, equal}
 
 ///|
+#derive(Eq)
 pub(all) enum AccountCommand {
   CreateAccount(String, Int32)
   DepositMoney(Int32)
   WithdrawMoney(Int32)
   CloseAccount
-} derive(Eq)
+}
 
 ///|
 pub extend AccountCommand with Eq::{not_equal, equal}

@@ -1,10 +1,11 @@
 ///|
 /// 测试用的简单事件类型（夹具本地化：拆分后跨包测试件不可见，AGENTS 三手病③）
+#derive(Debug, Eq)
 enum TestEvent {
   Created(String)
   Updated(String)
   Deleted
-} derive(Debug, Eq)
+}
 
 ///|
 fn get_test_event_type_name(event : TestEvent) -> String {

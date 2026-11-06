@@ -16,9 +16,10 @@ enum E2eCommand {
 }
 
 ///|
+#derive(Eq)
 enum E2eEvent {
   Added(Int32)
-} derive(Eq)
+}
 
 ///|
 // 跨跑清场(删除库文件;@fs 在 test import 块)

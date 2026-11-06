@@ -2,6 +2,7 @@
 package "thy1016/mooncmd/event"
 
 import {
+  "moonbitlang/core/json",
   "thy1016/mooncmd/command",
 }
 
@@ -32,7 +33,7 @@ pub(all) struct EventMessage[AggregateId, E] {
   causation_id : String
   user_id : String?
   timestamp : Int64
-  metadata : Json
+  metadata : @json.Json
   schema_version : Int32
 }
 pub fn[AggregateId, E, C] EventMessage::from_command(E, AggregateId, Int32, @command.CommandMessage[C]) -> Self[AggregateId, E]

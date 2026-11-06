@@ -1,6 +1,10 @@
 // Generated using `moon info`, DON'T EDIT IT
 package "thy1016/mooncmd/command"
 
+import {
+  "moonbitlang/core/json",
+}
+
 // Values
 
 // Errors
@@ -22,7 +26,7 @@ pub struct CommandMessage[C] {
   causation_id : String
   mut user_id : String?
   timestamp : Int64
-  metadata : Json
+  metadata : @json.Json
 }
 pub fn[C] CommandMessage::new(C) -> Self[C]
 pub fn[C] CommandMessage::with_correlation(Self[C], String) -> Self[C]
