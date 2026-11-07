@@ -49,11 +49,22 @@
 
 ---
 
+## ADR-MC-008 时间源注入代码化（clock/id_gen 可选槽）`[定案 2026-11-07 用户五裁]`
+
+- **裁定五条**（用户 2026-11-07 拍）：D1 = 裸 fn 槽（不立 trait Clock、不加依赖；**后议触发条件：业务侧不注钟 → 永远不议**）；D2 = 两级注入（`RouteEnv` 级 Router 全链受控 + `AggregateRoot` 级单聚合受控）；D3 = 双槽同形（`clock? : () -> Int64` + `id_gen? : () -> String`，uuid 同题同解）；D4 = RouterBuilder 不动（不加 clock 字段）；D5 = 随下版 0.2.3 发布。
+- **设计依据**：穿链路径单一——dispatch/Router → `AggregateRoot.execute` → `EventMessage::from_command`，注一点则全链受控；`() -> Int64` 同步裸 fn 零 async 色传导（`@async.now()` 同步可调，0.22.4 mbti 实勘）；信封组装点 = 框架内唯一读钟面。
+- **落地面**：信封构造器 ×4（`CommandMessage::new` / `EventMessage::new` / `from_command` / `Snapshot::new`）+ 聚合根三级构造（`new` / `from_events` / `from_snapshot`）+ `RouteEnv::new` 尾部可选参数；`AggregateRoot` / `RouteEnv` 各持双槽字段；缺省 = 现行为不变（`@async.now()` / `@uuid.v4()`）——三条纪律不破：业务代码零直读时钟 / 框架独占组装 / 缺省行为不变。红线 6 随役 Supersede v1.2.0（"时间源唯一"→"时间源唯一且可注入"）。
+- **证据罐三件**：bank 定钟全链（事件时间戳全取注入值）/ 同输入同钟同 id 源两次运行事件流逐字段相等（id 消费序 = envelope 1 格 + event 1 格）/ Router env 注钟落库时间戳透传。native 78/78 + EXAMPLE:PASS + 主仓 golden 17/17 零涟漪（gen 链未触）。
+- **被否方案**：① trait Clock 注入——加抽象层 + 跨包 impl 面，业务侧无第二形态需求（D1 后议条件封死）；② RouterBuilder 加 clock 字段——两级已覆盖（env 级即 Router 全链），builder 重复（D4）；③ 只注 root 不注 env——Router 内部 from_snapshot 构造点会落到系统钟，全链受控破功（D2 反向依据）。
+
+---
+
 > **签发记(2026-10-22)**:ADR-MC-001..006 全数 [定案 2026-10-22 签发] → **[定案]**——独立仓 0.1.0 首发(RELEASE:PASS)+ 役5a/5b/5d/7 实战检验 + Account 金样对照,定版窗口兑现(随役5c 契约清债笔)。逐条正文不动,状态标记即签发。
 
 ## 变更记录
 
 | 版本 | 日期 | 变更 |
 |---|---|---|
+| v1.2.0 | 2026-11-07 | **ADR-MC-008 立条**（时间源注入代码化，用户五裁定案 D1–D5：裸 fn 槽 / 两级 / 双槽同形 / RouterBuilder 不动 / 随下版 0.2.3）；红线 6 Supersede 走 const.md v1.2.0 另簿。 |
 | v1.1.0 | 2026-10-21 | **ADR-MC-007 立条**（独立成仓在树 mbt.cmd，Supersede ADR-MC-001 包路径口径）；同步去敏三处（内部项目名→中性表述，release_review ③ 类门对齐）。 |
 | v1.0.0 | 2026-10-08 | 建卷（用户令「开 MU2 立卷笔」）：ADR-MC-001..006 自 MCMD-S1 §二原样搬迁（状态标记原样，拆卷 ≠ 签发）；建卷同笔登记全仓 ADR 索引（generator/README.md §3 一行）。源档归档 `bak/requirements.md`。 |

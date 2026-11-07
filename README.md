@@ -14,7 +14,9 @@ correlation / causation 追溯链、时间戳、schema 版本），Router 作为
   存储；`AggregateRoot` 承担生命周期（执行 / 提交 / 重放重建 / 快照）。
 - 元数据自动包装：`EventMessage` 由框架独占组装——`event_id`（UUID v4）、
   `correlation_id` 承自命令、`causation_id` 记前因、`user_id` 全链透传、
-  `schema_version` 预留位、时间戳唯一取自 `@async.now()` 注入点。
+  `schema_version` 预留位；时间/标识源可注入——`clock?` / `id_gen?`
+  可选槽（两级：`RouteEnv` 与 `AggregateRoot` 构造点），缺省
+  `@async.now()` / `@uuid.v4()`，注一点则全链受控。
 - 乐观并发：批次首事件版本必须等于当前版本 + 1，否则
   `DuplicateVersion` 拒写；表级 `UNIQUE(aggregate_id, version)` 竞态兜底；
   事务失败整体回滚。
@@ -147,8 +149,10 @@ evolve = ["add balance=amount"]
 moon test                           # 生成产物结构钉 + 契约测试 + 已知答案校验
 ```
 
-词表再生成属维护侧工具链（骨架生成器独立仓，不随本模块发布）：改动
-`account_agg.toml` 等词表后由生成器刷新产物，**生成物禁手写**。
+词表再生成属维护侧工具链：发射器集中主仓（bitbang 仓 `skelschema` 包，
+不随本模块发布），本仓持词表（TOML）与生成产物。改 `account_agg.toml`
+等词表后，主仓仓根 `moon run skelschema/cmd` 再生刷新产物；主仓 golden
+统一户黄金门逐字节对拍（REGEN≡DISK，再生 ≡ 入库产物）；**生成物禁手写**。
 
 生成物包含：状态结构与初值、事件 / 命令枚举、apply 演化链、命令分派
 骨架、wire 序列化（含 schema 版本预留位）、契约测试门（init 值契约 +
@@ -183,8 +187,9 @@ wire 往返恒等）。事件命名与粒度属通用语言决策，由词表声
 
 - 命令处理器只返回纯事件；事件元数据由 `AggregateRoot` 独占包装；
   持久化只经 Router 触发。
-- 事件时间戳只来自 `@async.now()` 注入点；投影与确定性路径不读取
-  当前时钟。
+- 事件时间戳/事件标识只来自注入的 `clock` / `id_gen` 槽（缺省系统钟
+  `@async.now()` / `@uuid.v4()`）；业务代码零直读时钟，投影与确定性
+  路径不读取当前时钟——同输入 + 同注钟 + 同 id 源 ⇒ 同事件流。
 - 不做分布式 / 跨进程事件总线（`EventBus` 仅进程内可选挂点）；不做
   事件升级 / 迁移框架（`schema_version` 只预留）；不承诺第二存储后端；
   不内置业务聚合（`examples/bank` 为示例与测试模板）。

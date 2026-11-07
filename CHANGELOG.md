@@ -2,6 +2,20 @@
 
 ## 未发布
 
+**时间源注入代码化**（`clock?` / `id_gen?` 可选槽，缺省行为不变）。
+信封构造器（`CommandMessage::new` / `EventMessage::new` /
+`EventMessage::from_command` / `Snapshot::new`）、聚合根三级构造
+（`AggregateRoot::new` / `from_events` / `from_snapshot`）与
+`RouteEnv::new` 增尾部可选参数 `clock? : () -> Int64` +
+`id_gen? : () -> String`；`AggregateRoot` 与 `RouteEnv` 各持双槽字段，
+框架内唯一穿链点（execute → from_command / exec → 信封组装 /
+to_snapshot）全走注入槽。缺省 = 现行为不变（`@async.now()` /
+`@uuid.v4()`）；两级注入（env 级 Router 全链受控，root 级单聚合受控）；
+RouterBuilder 不动；业务代码零直读时钟纪律不破。确定性证据罐三件：
+定钟全链（事件时间戳全取注入值）、同输入同钟同 id 源两次运行事件流
+逐字段相等、Router env 注钟落库时间戳透传（native 78/78 +
+EXAMPLE:PASS + 主仓 golden 17/17 零涟漪）。
+
 **结构：`examples/bank` 拆 lib/cmd**（工具链演化：main 包黑盒测试件
 `_test.mbt` 被弃用警告）。`examples/bank` 转示例库包（行为 + 全部测试面
 原位不动）；可执行全链自证入口迁 `examples/bank_demo`（`main.mbt` 随迁，

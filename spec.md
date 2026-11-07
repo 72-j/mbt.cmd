@@ -31,7 +31,7 @@ Command → CommandMessage（correlation_id / causation_id / user_id）
       （补 event_id=uuidv4 / aggregate_id / aggregate_version /
         correlation_id 承自 CommandMessage / causation_id 记前因 /
         user_id 承自 CommandMessage（役5b 链通至落列）/
-        timestamp=@async.now() / metadata=Json / schema_version=1）
+        timestamp=注钟槽缺省 @async.now() / metadata=Json / schema_version=1）
   → AggregateState.uncommitted_events
   → Router dispatch_once（役5b 接通，唯一写入口）：
       Step0 快照基态（SnapshotStore.load）→ Step1 尾事件（after_version=快照版本）
@@ -49,7 +49,14 @@ aggregate, cmd, projections~, consistency~, poll_wait~, poll_budget~)`
 
 - **红线三条**（const.md §1，已签发）：① Handler 只返回纯事件；② `execute` 独占包装权；③ Router 唯一持久化写入口。
 - 形态 A 链式捷径：`AggregateRoot::exec(cmd) -> Self raise CommandError`（命令自动包装 CommandMessage；役8 前奏在途件）。
-- 时间源唯一：事件时间戳只来自 `@async.now()` 注入点；投影/确定性路径禁取当前时钟（红线6）。
+- 时间源唯一且可注入（时间源注入代码化，2026-11-07）：事件时间戳/事件
+  标识只经框架注入槽 `clock? : () -> Int64` / `id_gen? : () -> String`
+  （信封构造器 + 聚合根三级构造 + `RouteEnv::new` 尾部可选参数；两级
+  注入——env 级 Router 全链受控 / root 级单聚合受控；缺省
+  `@async.now()` / `@uuid.v4()`，缺省行为不变）；业务代码零直读时钟，
+  投影/确定性路径禁取当前时钟（红线6）；同输入 + 同注钟 + 同 id 源
+  ⇒ 同事件流（确定性证据罐三件：bank 定钟全链 / 同输入对拍 / Router
+  env 透传落库）。
 
 ### 2.1 Effect 重试状态机（设计定稿 2026-10-22；落码 = 役8 续，`[设计定稿，未落码]`）
 
@@ -197,6 +204,7 @@ State Monad（`State[S, V]`，三法则注记在案）· Writer Monad（`Writer[
 
 | 版本 | 日期 | 变更 |
 |---|---|---|
+| v0.2.3（未发布） | 2026-11-07 | **时间源注入代码化**（评审"时间源不可注入"销项）：`clock?` / `id_gen?` 可选槽四级面（信封构造器 ×4 / 聚合根三级构造 / RouteEnv::new / AggregateRoot+RouteEnv 双槽字段）；缺省行为不变（@async.now() / @uuid.v4()）；RouterBuilder 不动（D4）；红线6 改口"唯一且可注入"；§2 主链 timestamp 行注缺省。证据罐三件（bank 定钟全链 / 同输入对拍 / Router env 透传）+ native 78/78 + EXAMPLE:PASS + 主仓 golden 17/17 零涟漪。 |
 | v0.2.1 | 2026-10-22 | **对账笔换版**：① §1 六包布局 + 示例面 + 分包路径/依赖；② §2 主链改 dispatch_once 全流程（快照基态/尾事件/EventBus publish/user_id）+ 新 §2.1 **Effect 重试状态机设计**（分层/词表四语义表/协议面/红线三警惕，`[设计定稿，未落码]`）；③ §3.0 六包分包面总览（§3.1–3.6 转历史卷面）+ 3.6 改名 monads；④ §4 缺口 4–6 划闭（user_version 迁移/适配器/错误穿透）；⑤ §5 已落-未落全表改口；⑥ §6 棘轮 48 + 可执行门。配套行同步四卷版本。 |
 | v0.2.0 | 2026-10-22 | **役5c 契约清债笔**:投影契约成文(FR-MC-3——拉取非推送/检查点即版本/apply 纯函数禁时钟/持久化可选,吸收 commanded checkpoint·ack 语义)/LiveProjection 实装(new·refresh·checkpoint 拉取形)/PersistedProjection 修通(SQL 首字符引号 bug+panic 吞错→errdefer·自然上抛)/ADR-MC-001..006 签发/役6 挂起(WVGEN 卷不存在,锚=世界卷生成需求真立项;姊妹事件溯源仓 ES 同挂锚=审计回放需求)/proj 测试双偏差修复。 |
 | v0.1.9 | 2026-10-22 | **役5b 接通笔**：EventMessage +user_id 链（§3.1）/ Router dispatch_once 重构（快照读路径 + EventBus 接通 + 错误穿透不抹平）/ with_config 重试实装（timeout 降级声明）/ SQLiteEventStore::to_event_store 适配器 / from_snapshot 聚合形——C-06 断链九项清七，余二归 5c。46/46（native+wasm 双跑）· deny 0 · EXAMPLE:PASS。 |
