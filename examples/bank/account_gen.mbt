@@ -1,8 +1,8 @@
-// ===== GENERATED FILE — DO NOT EDIT =====
-// 源表：mooncmd/examples/bank/account_agg.toml（schema 1.0）
-// 绑定器：skelschema/mooncmd_agg_toml_gen.mbt（聚合方言;gen 骨架+机械演化,
-// 裁决 = 策略件手写钩子——mooncmd const.md 红线7-9）
-// 再生：改表 → 黄金门测试重生成逐字节对拍
+// ===== GENERATED FILE — DO NOT EDIT（生成物禁手写，const.md §7）=====
+// 源表：../bitbang2/mooncmd/examples/bank/account_agg.toml（schema 1.0）
+// 再生：moon run skelschema/cmd(仓根起跑;改表 → 再生 → 黄金门对拍)
+// 绑定器：skelschema/mooncmd_agg_toml_gen.mbt(parse/validate/emit 三件套)
+// 聚合方言:gen 骨架+机械演化,裁决 = 策略件手写钩子——mooncmd const.md 红线7-9。
 
 ///|
 #derive(Eq)

@@ -7,7 +7,8 @@
 #   事件载荷字段引用（可 "-" 前缀取负）或字面量（true/false/整数）。
 # 类型封闭集：string / int / bool（扩类型 = 词表拍改）。
 # 生成物禁手写（生成红线9）；绑定器 skelschema/mooncmd_agg_toml_gen.mbt；
-# 黄金门 = mooncmd 侧重生成逐字节对拍。表头三件 = gen 体例键，非协议字段。
+# 黄金门 = 主仓 golden 统一户 REGEN≡DISK 逐字节对拍（发射器集中主仓
+# skelschema，不随本模块发布）。表头三件 = gen 体例键，非协议字段。
 
 schema_version = "1.0"
 generator = "mooncmd_agg_gen"

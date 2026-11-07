@@ -1,4 +1,7 @@
-// 生成物禁手写（生成纪律）——绑定器 skelschema/retry_toml_gen.mbt；词表改动经再生成刷新本件。
+// ===== GENERATED FILE — DO NOT EDIT（生成物禁手写，const.md §7）=====
+// 源表：../bitbang2/mooncmd/examples/bank/account_retry.toml
+// 再生：moon run skelschema/cmd(仓根起跑;改表 → 再生 → 黄金门对拍)
+// 绑定器：skelschema/retry_toml_gen.mbt(parse/validate/emit 三件套)
 // 源词表：account_retry.toml（[retry] max=3 backoff=fixed interval=100 + [retry.on_error] + [circuit]?）
 // 业务裁决 = account_retry_policy.mbt 手写钩子（红线7：裁决不入表）。
 

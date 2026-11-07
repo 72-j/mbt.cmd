@@ -1,8 +1,9 @@
 // ===== gen 产物结构钉(known-answer 形;自足零依赖)=====
 // 开源克隆者可跑——纯字符串断言,无外部依赖。
 // 职责:防 gen 产物被手改/意外截断(结构级守卫)。
-// 逐字节再生成门在维护侧工具链(骨架生成器所在仓),不随本模块发布;
-// 词表改动须经再生成刷新产物,禁手写(生成纪律)。
+// 逐字节再生成门(REGEN≡DISK)在主仓 golden 统一户,发射器集中主仓
+// skelschema 包,均不随本模块发布;词表改动须经主仓仓根
+// moon run skelschema/cmd 再生成刷新产物,禁手写(生成纪律)。
 
 ///|
 test "gen product structural known-answer: key lines present" {
