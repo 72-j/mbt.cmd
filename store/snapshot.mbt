@@ -26,6 +26,11 @@ pub fn[AggregateId, S] Snapshot::new(
   aggregate_id : AggregateId,
   state : S,
   version : Int32,
+  clock? : () -> Int64,
 ) -> Snapshot[AggregateId, S] {
-  { aggregate_id, state, version, timestamp: @async.now(), }
+  let now = match clock {
+    Some(clock_fn) => clock_fn
+    None => fn() { @async.now() }
+  }
+  { aggregate_id, state, version, timestamp: now(), }
 }

@@ -36,8 +36,8 @@ pub(all) struct EventMessage[AggregateId, E] {
   metadata : @json.Json
   schema_version : Int32
 }
-pub fn[AggregateId, E, C] EventMessage::from_command(E, AggregateId, Int32, @command.CommandMessage[C]) -> Self[AggregateId, E]
-pub fn[AggregateId, E] EventMessage::new(E, AggregateId, Int32) -> Self[AggregateId, E]
+pub fn[AggregateId, E, C] EventMessage::from_command(E, AggregateId, Int32, @command.CommandMessage[C], clock? : () -> Int64, id_gen? : () -> String) -> Self[AggregateId, E]
+pub fn[AggregateId, E] EventMessage::new(E, AggregateId, Int32, clock? : () -> Int64, id_gen? : () -> String) -> Self[AggregateId, E]
 
 pub(all) enum EventStream[AggregateId, E] {
   Nil

@@ -33,15 +33,17 @@ pub struct AggregateRoot[AggregateId, S, C, E] {
   empty_state : S
   mut state : AggregateState[AggregateId, S, E]
   id : AggregateId
+  clock : () -> Int64
+  id_gen : () -> String
 }
 pub fn[AggregateId, S, C, E] AggregateRoot::commit(Self[AggregateId, S, C, E]) -> Self[AggregateId, S, C, E]
 pub fn[AggregateId, S, C, E] AggregateRoot::current_state(Self[AggregateId, S, C, E]) -> S
 pub fn[AggregateId, S, C, E] AggregateRoot::exec(Self[AggregateId, S, C, E], C) -> Self[AggregateId, S, C, E] raise @command.CommandError
 pub fn[AggregateId, S, C, E] AggregateRoot::exec_with_effect(Self[AggregateId, S, C, E], C, RetryMachine, RetryHooks, (Int64) -> Unit) -> Self[AggregateId, S, C, E] raise @command.CommandError
 pub fn[AggregateId, S, C, E] AggregateRoot::execute(Self[AggregateId, S, C, E], @command.CommandMessage[C]) -> Self[AggregateId, S, C, E] raise @command.CommandError
-pub fn[AggregateId, S, C, E] AggregateRoot::from_events(AggregateId, Array[@event.EventMessage[AggregateId, E]], (S, C) -> Array[E] raise @command.CommandError, @event.EventApplier[S, E], S) -> Self[AggregateId, S, C, E]
-pub fn[AggregateId, S, C, E] AggregateRoot::from_snapshot(AggregateId, S, S, Int32, Array[@event.EventMessage[AggregateId, E]], (S, C) -> Array[E] raise @command.CommandError, @event.EventApplier[S, E]) -> Self[AggregateId, S, C, E]
-pub fn[AggregateId, S, C, E] AggregateRoot::new(AggregateId, (S, C) -> Array[E] raise @command.CommandError, @event.EventApplier[S, E], S) -> Self[AggregateId, S, C, E]
+pub fn[AggregateId, S, C, E] AggregateRoot::from_events(AggregateId, Array[@event.EventMessage[AggregateId, E]], (S, C) -> Array[E] raise @command.CommandError, @event.EventApplier[S, E], S, clock? : () -> Int64, id_gen? : () -> String) -> Self[AggregateId, S, C, E]
+pub fn[AggregateId, S, C, E] AggregateRoot::from_snapshot(AggregateId, S, S, Int32, Array[@event.EventMessage[AggregateId, E]], (S, C) -> Array[E] raise @command.CommandError, @event.EventApplier[S, E], clock? : () -> Int64, id_gen? : () -> String) -> Self[AggregateId, S, C, E]
+pub fn[AggregateId, S, C, E] AggregateRoot::new(AggregateId, (S, C) -> Array[E] raise @command.CommandError, @event.EventApplier[S, E], S, clock? : () -> Int64, id_gen? : () -> String) -> Self[AggregateId, S, C, E]
 pub fn[AggregateId, S, C, E] AggregateRoot::to_snapshot(Self[AggregateId, S, C, E]) -> @store.Snapshot[AggregateId, S]
 pub fn[AggregateId, S, C, E] AggregateRoot::uncommitted_events(Self[AggregateId, S, C, E]) -> Array[@event.EventMessage[AggregateId, E]]
 pub fn[AggregateId, S, C, E] AggregateRoot::version(Self[AggregateId, S, C, E]) -> Int32

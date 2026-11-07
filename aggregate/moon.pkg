@@ -7,5 +7,6 @@ import {
   "thy1016/mooncmd/event",
   "thy1016/mooncmd/store",
   "f4ah6o/uuidm" @uuid,
+  "moonbitlang/async",
   "moonbitlang/core/encoding/utf8",
 }

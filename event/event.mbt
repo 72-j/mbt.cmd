@@ -23,16 +23,26 @@ pub fn[AggregateId, E] EventMessage::new(
   event : E,
   aggregate_id : AggregateId,
   version : Int32,
+  clock? : () -> Int64,
+  id_gen? : () -> String,
 ) -> EventMessage[AggregateId, E] {
+  let now = match clock {
+    Some(clock_fn) => clock_fn
+    None => fn() { @async.now() }
+  }
+  let gen_id = match id_gen {
+    Some(id_fn) => id_fn
+    None => fn() { @uuid.v4().to_string() }
+  }
   {
     event,
-    event_id: @uuid.v4().to_string(),
+    event_id: gen_id(),
     aggregate_id,
     aggregate_version: version,
-    correlation_id: @uuid.v4().to_string(),
+    correlation_id: gen_id(),
     causation_id: "",
     user_id: None,
-    timestamp: @async.now(),
+    timestamp: now(),
     metadata: @json.to_json("{}"),
     schema_version: 1,
   }
@@ -44,16 +54,26 @@ pub fn[AggregateId, E, C] EventMessage::from_command(
   aggregate_id : AggregateId,
   version : Int32,
   cmd : @command.CommandMessage[C],
+  clock? : () -> Int64,
+  id_gen? : () -> String,
 ) -> EventMessage[AggregateId, E] {
+  let now = match clock {
+    Some(clock_fn) => clock_fn
+    None => fn() { @async.now() }
+  }
+  let gen_id = match id_gen {
+    Some(id_fn) => id_fn
+    None => fn() { @uuid.v4().to_string() }
+  }
   {
     event,
-    event_id: @uuid.v4().to_string(),
+    event_id: gen_id(),
     aggregate_id,
     aggregate_version: version,
     correlation_id: cmd.correlation_id,
     causation_id: cmd.command_id,
     user_id: cmd.user_id,
-    timestamp: @async.now(),
+    timestamp: now(),
     metadata: cmd.metadata,
     schema_version: 1,
   }

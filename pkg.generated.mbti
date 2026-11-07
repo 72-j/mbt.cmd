@@ -74,8 +74,10 @@ pub struct RouteEnv[AggregateId, S, E] {
   logger : &Logger
   default_timeout : Int64
   default_retry : Int32
+  clock : () -> Int64
+  id_gen : () -> String
 }
-pub fn[AggregateId, E, S] RouteEnv::new(@store.EventStore[AggregateId, E], @store.SnapshotStore[AggregateId, S], @event.EventBus[AggregateId, E]?, Int64, Int32) -> Self[AggregateId, S, E]
+pub fn[AggregateId, E, S] RouteEnv::new(@store.EventStore[AggregateId, E], @store.SnapshotStore[AggregateId, S], @event.EventBus[AggregateId, E]?, Int64, Int32, clock? : () -> Int64, id_gen? : () -> String) -> Self[AggregateId, S, E]
 
 pub struct Router[AggregateId, S, C, E] {
   env : RouteEnv[AggregateId, S, E]

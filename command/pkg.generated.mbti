@@ -28,7 +28,7 @@ pub struct CommandMessage[C] {
   timestamp : Int64
   metadata : @json.Json
 }
-pub fn[C] CommandMessage::new(C) -> Self[C]
+pub fn[C] CommandMessage::new(C, clock? : () -> Int64, id_gen? : () -> String) -> Self[C]
 pub fn[C] CommandMessage::with_correlation(Self[C], String) -> Self[C]
 pub fn[C] CommandMessage::with_user(Self[C], String) -> Self[C]
 

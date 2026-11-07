@@ -22,6 +22,8 @@ pub struct AggregateRoot[AggregateId, S, C, E] {
   empty_state : S
   mut state : AggregateState[AggregateId, S, E]
   id : AggregateId
+  clock : () -> Int64
+  id_gen : () -> String
 }
 /// 聚合根数据结构
 // pub struct AggregateRoot[Id, S, E] {
@@ -33,12 +35,32 @@ pub struct AggregateRoot[AggregateId, S, C, E] {
 // impl[Id, S,C,E] AggregateRoot[Id, S,C,E] {
 
 ///|
+/// 缺省系统钟/标识源：信封组装点唯一读钟面（缺省系统钟 @async.now()）
+fn default_clock(clock : (() -> Int64)?) -> () -> Int64 {
+  match clock {
+    Some(clock_fn) => clock_fn
+    None => fn() { @async.now() }
+  }
+}
+
+///|
+/// 缺省事件标识源（缺省 @uuid.v4()）
+fn default_id_gen(id_gen : (() -> String)?) -> () -> String {
+  match id_gen {
+    Some(id_fn) => id_fn
+    None => fn() { @uuid.v4().to_string() }
+  }
+}
+
+///|
 /// 创建新的聚合根
 pub fn[AggregateId, S, C, E] AggregateRoot::new(
   id : AggregateId,
   handler : @command.CommandHandler[S, C, E],
   applier : @event.EventApplier[S, E],
   empty_state : S,
+  clock? : () -> Int64,
+  id_gen? : () -> String,
 ) -> AggregateRoot[AggregateId, S, C, E] {
   {
     handler,
@@ -46,6 +68,8 @@ pub fn[AggregateId, S, C, E] AggregateRoot::new(
     empty_state,
     state: { state: empty_state, version: 0, uncommitted_events: [], },
     id,
+    clock: default_clock(clock),
+    id_gen: default_id_gen(id_gen),
   }
 }
 
@@ -57,9 +81,19 @@ pub fn[AggregateId, S, C, E] AggregateRoot::from_events(
   handler : @command.CommandHandler[S, C, E],
   applier : @event.EventApplier[S, E],
   empty_state : S,
+  clock? : () -> Int64,
+  id_gen? : () -> String,
 ) -> AggregateRoot[AggregateId, S, C, E] {
   AggregateRoot::from_snapshot(
-    id, empty_state, empty_state, 0, events, handler, applier,
+    id,
+    empty_state,
+    empty_state,
+    0,
+    events,
+    handler,
+    applier,
+    clock=default_clock(clock),
+    id_gen=default_id_gen(id_gen),
   )
 }
 
@@ -75,6 +109,8 @@ pub fn[AggregateId, S, C, E] AggregateRoot::from_snapshot(
   events : Array[@event.EventMessage[AggregateId, E]],
   handler : @command.CommandHandler[S, C, E],
   applier : @event.EventApplier[S, E],
+  clock? : () -> Int64,
+  id_gen? : () -> String,
 ) -> AggregateRoot[AggregateId, S, C, E] {
   let final_state = events.fold(init=base_state, fn(s, e) {
     match applier {
@@ -92,6 +128,8 @@ pub fn[AggregateId, S, C, E] AggregateRoot::from_snapshot(
     empty_state,
     state: { state: final_state, version, uncommitted_events: [], },
     id,
+    clock: default_clock(clock),
+    id_gen: default_id_gen(id_gen),
   }
 }
 
@@ -114,6 +152,8 @@ pub fn[AggregateId, S, C, E] AggregateRoot::execute(
       self.id,
       current_version,
       cmd,
+      clock=self.clock,
+      id_gen=self.id_gen,
     )
     event_messages.push(event_msg)
     current_state = match self.applier {
@@ -172,7 +212,12 @@ pub fn[AggregateId, S, C, E] AggregateRoot::current_state(
 pub fn[AggregateId, S, C, E] AggregateRoot::to_snapshot(
   self : AggregateRoot[AggregateId, S, C, E],
 ) -> @store.Snapshot[AggregateId, S] {
-  @store.Snapshot::new(self.id, self.state.state, self.state.version)
+  @store.Snapshot::new(
+    self.id,
+    self.state.state,
+    self.state.version,
+    clock=self.clock,
+  )
 }
 // }
 
@@ -184,5 +229,7 @@ pub fn[AggregateId, S, C, E] AggregateRoot::exec(
   self : AggregateRoot[AggregateId, S, C, E],
   cmd : C,
 ) -> AggregateRoot[AggregateId, S, C, E] raise @command.CommandError {
-  self.execute(@command.CommandMessage::new(cmd))
+  self.execute(
+    @command.CommandMessage::new(cmd, clock=self.clock, id_gen=self.id_gen),
+  )
 }

@@ -47,7 +47,7 @@ pub struct Snapshot[AggregateId, S] {
   version : Int32
   timestamp : Int64
 }
-pub fn[AggregateId, S] Snapshot::new(AggregateId, S, Int32) -> Self[AggregateId, S]
+pub fn[AggregateId, S] Snapshot::new(AggregateId, S, Int32, clock? : () -> Int64) -> Self[AggregateId, S]
 
 pub(all) struct SnapshotStore[AggregateId, S] {
   save : (AggregateId, S, Int32, Int64) -> Unit raise SnapshotError

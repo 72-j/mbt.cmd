@@ -32,14 +32,26 @@ pub struct CommandMessage[C] {
 }
 
 ///|
-pub fn[C] CommandMessage::new(command : C) -> CommandMessage[C] {
+pub fn[C] CommandMessage::new(
+  command : C,
+  clock? : () -> Int64,
+  id_gen? : () -> String,
+) -> CommandMessage[C] {
+  let now = match clock {
+    Some(clock_fn) => clock_fn
+    None => fn() { @async.now() }
+  }
+  let gen_id = match id_gen {
+    Some(id_fn) => id_fn
+    None => fn() { @uuid.v4().to_string() }
+  }
   {
     command,
-    command_id: @uuid.v4().to_string(),
+    command_id: gen_id(),
     correlation_id: "",
     causation_id: "",
     user_id: None,
-    timestamp: @async.now(),
+    timestamp: now(),
     metadata: @json.to_json("{}"),
   }
 }

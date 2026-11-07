@@ -12,6 +12,8 @@ pub struct RouteEnv[AggregateId, S, E] {
   logger : &Logger
   default_timeout : Int64
   default_retry : Int32
+  clock : () -> Int64
+  id_gen : () -> String
 }
 
 ///|
@@ -22,7 +24,17 @@ pub fn[AggregateId, E, S] RouteEnv::new(
   // logger: &Logger,
   default_timeout : Int64,
   default_retry : Int32,
+  clock? : () -> Int64,
+  id_gen? : () -> String,
 ) -> RouteEnv[AggregateId, S, E] {
+  let env_clock = match clock {
+    Some(clock_fn) => clock_fn
+    None => fn() { @async.now() }
+  }
+  let env_id_gen = match id_gen {
+    Some(id_fn) => id_fn
+    None => fn() { @uuid.v4().to_string() }
+  }
   {
     event_store,
     snapshot_store,
@@ -30,6 +42,8 @@ pub fn[AggregateId, E, S] RouteEnv::new(
     logger: make_console_logger(),
     default_timeout,
     default_retry,
+    clock: env_clock,
+    id_gen: env_id_gen,
   }
 }
 // }
@@ -307,7 +321,15 @@ fn[AggregateId, S, C, E] Router::dispatch_once(
   }
   // ========== Step 2: 快照态 + 尾事件重建聚合根 ==========
   let aggregate = @aggregate.AggregateRoot::from_snapshot(
-    aggregate_id, empty_state, base_state, base_version, events, handler, applier,
+    aggregate_id,
+    empty_state,
+    base_state,
+    base_version,
+    events,
+    handler,
+    applier,
+    clock=env.clock,
+    id_gen=env.id_gen,
   )
   // ========== Step 3: 执行命令 ==========
   let aggregate = aggregate.execute(cmd) catch {
