@@ -1,29 +1,15 @@
-// mooncmd 主包门面——Router 住主目录 / EventSourcingErr 总族 / logger;
-// 域类型无再导出面（typealias 本工具链不支持 [3002]），消费方按域直连
-// @command/@event/@aggregate/@store。
+// cmd 根包:moonx 入口(薄启动器)——argv 交 driver 主径(读表 → 发射 →
+// 写盘三件 → 印 import 指引),本件只管进程出口(moonbitlang/x/sys
+// 可移植 exit)。发射本体住 gen 包(纯 String→String 面,wasm-safe)。
 import {
-  "thy1016/mooncmd/command",
-  "thy1016/mooncmd/event",
-  "thy1016/mooncmd/aggregate",
-  "thy1016/mooncmd/store",
-  "thy1016/mooncmd/monads",
-  "thy1016/mooncmd/projection",
+  "thy1016/cmd/gen",
   "moonbitlang/async",
-  "f4ah6o/uuidm" @uuid,
+  "moonbitlang/async/fs",
+  "moonbitlang/core/env",
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/x/sys",
 }
 
-import {
-  "moonbitlang/x/fs",
-  "moonbitlang/core/json",
-  "moonbitlang/core/encoding/utf8",
-  "thy1016/mooncmd/command",
-  "thy1016/mooncmd/event",
-  "thy1016/mooncmd/store",
-  "thy1016/mooncmd/projection",
-} for "test"
+supported_targets = "native+wasm"
 
-supported_targets = "wasm+native"
-
-options(
-  "is-main": false,
-)
+pkgtype(kind: "executable")

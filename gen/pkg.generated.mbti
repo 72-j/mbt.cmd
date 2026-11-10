@@ -1,0 +1,62 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "thy1016/cmd/gen"
+
+import {
+  "moonbit-community/toml",
+}
+
+// Values
+pub fn emit_mooncmd_agg(MooncmdAggDef, provenance~ : SchemaProvenance) -> String
+
+pub fn emit_mooncmd_agg_contract_tests(MooncmdAggDef) -> String
+
+pub fn emit_mooncmd_agg_policy_stub(MooncmdAggDef) -> String
+
+pub fn parse_mooncmd_agg(String) -> Result[MooncmdAggDef, String]
+
+pub fn schema_emit_header(StringBuilder, SchemaProvenance, String, String) -> Unit
+
+pub fn schema_toml_root(String) -> Result[Map[String, @toml.TomlValue], String]
+
+pub fn validate_mooncmd_agg(MooncmdAggDef) -> Result[Unit, String]
+
+// Errors
+
+// Types and methods
+pub(all) struct AggCommandDef {
+  name : String
+  fields : Array[AggFieldDef]
+}
+
+pub(all) struct AggEventDef {
+  name : String
+  fields : Array[AggFieldDef]
+  evolve : Array[String]
+}
+
+pub(all) struct AggFieldDef {
+  name : String
+  ty : String
+  init : String
+}
+
+pub(all) struct MooncmdAggDef {
+  schema_version : String
+  generator : String
+  target_package : String
+  name : String
+  id : String
+  state_fields : Array[AggFieldDef]
+  events : Array[AggEventDef]
+  commands : Array[AggCommandDef]
+}
+
+pub(all) struct SchemaProvenance {
+  source_table : String
+  regen_command : String
+  binder_path : String
+}
+
+// Type aliases
+
+// Traits

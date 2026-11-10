@@ -1,10 +1,13 @@
+.DS_Store
 _build/
 .mooncakes/
-bak/
-ctx.md
+.vscode/
+*.log
+*.bak
 todo.md
-.mingspace
-proj_dialect.toml
-
-# 测试库残留(相对路径 temp db)
-*.db
+ctx.md
+.mingspace/
+.playground/
+bak/
+# moon.work = 未发布期 dev 叠层件(成员绝对路径),不入仓——见 README 开发节
+moon.work

@@ -1,40 +1,33 @@
-// MoonBit module manifest — mooncmd
-// 定位：主仓通用 CQRS/事件溯源框架独立模块（命令 → 纯事件 → EventMessage
-// 自动包装 → EventStore → 投影/快照的最小完备抽象）；架构思想档案见
-// spec.md / const.md / adr.md；发布元数据变更须经发布前评审
-// （moonxr/release_review.mbtx，独立 clone 真路径——workspace 成员目录
-// 内跑会带上全 workspace，见脚本头注）。
+// MoonBit module manifest — cmd
+// 定位:mooncmd(消费者径)的 moonx 命令面——薄模块,根包即可执行。
+// 吃聚合词表 TOML,吐骨架代码三件(`<name>_gen.mbt` 纯生成区 /
+// `<name>_policy.mbt` 决策体 stub 区 / `<name>_contract_wbtest.mbt`
+// 契约罐)。preferred_target = wasm:moonx 只跑注册表预编译 wasm
+// (经 moonrun 宿主,async 栈同一 API)。air 同形(bitbang3 = wasm 版
+// moonx 轻量版库)。发射器抽自主仓 skelschema 体保真;治理三律
+// (变更单向 / golden 漂移探测 / 发布配对)见 README 与本地卷
+// cmd_ming.md;契约锚 = mooncmd 仓 tag cmd-contract-*。
+// 依赖面:发射器零 mooncmd 耦合(account_gen.mbt 全文无 import 实证)
+// ——本模块不依赖 thy1016/mooncmd;唯一发射面依赖 = @toml。
+// 叠层开发(未发布期):仓内 moon.work(gitignore 忽略不入仓)——
+// 见 README 开发节;发版后删之回注册表解析。
 
-name = "thy1016/mooncmd"
+name = "thy1016/cmd"
 
-version = "0.2.2"
+version = "0.0.1"
 
-repository = "https://www.gitlink.org.cn/thy7/mbt.cmd"
+readme = "README.md"
 
 license = "MulanPSL-2.0"
 
-keywords = [
-  "event-sourcing",
-  "cqrs",
-  "event-store",
-  "aggregate",
-  "snapshot",
-  "sqlite",
-]
+keywords = [ "command-line", "moonx", "wasm", "codegen", "event-sourcing" ]
 
-description = "Command-side event sourcing kernel for MoonBit: pure command handlers, auto-wrapped EventMessage metadata (correlation/causation), optimistic concurrency with duplicate-version rejection, SQLite event store, projections and snapshots."
-
-readme = "README.md"
+description = "cmd —— mooncmd 的 moonx 命令面:聚合词表 TOML 一令生成骨架代码(手写孪生件形状,消费者径)"
 
 preferred_target = "wasm"
 
 import {
-  "moonbitlang/async@0.22.4",
-  "moonbitlang/x@0.5.5",
-  "moonbit-community/sqlite3@0.2.3",
-  "f4ah6o/uuidm@0.2.1",
-  // quicktest 随机状态机脚手架（仅 mooncmd/quicktest 测试面消费）
-  "moonbit-community/quickcheck_statemachine@0.0.1",
-  // quickcheck 统一最新（0.14.0 注册表 tarball 是旧格式 moon.mod.json，新工具链拒装）
-  "moonbitlang/quickcheck@0.15.1",
+  "moonbitlang/async@0.22.7",
+  "moonbitlang/x@0.5.6",
+  "moonbit-community/toml@0.5.0",
 }

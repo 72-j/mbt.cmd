@@ -1,6 +1,0 @@
-// command:命令域类型
-import {
-  "moonbitlang/async",
-  "f4ah6o/uuidm" @uuid,
-  "moonbitlang/core/json",
-}

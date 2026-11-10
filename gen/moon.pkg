@@ -1,0 +1,15 @@
+// cmd/gen —— 聚合词表发射器(抽自主仓 skelschema 体保真;治理①变更单向律:
+// 能力变更只先落主仓 skelschema,本包只跟随搬运)。纯 String→String 面,
+// 唯一依赖 @toml;黑盒测试面(@fs golden 探针 + parse 正负例)走 for "test"
+// 授亲——golden 探针 = 治理②漂移探测器本体(bank 表 → 产物字节钉)。
+import {
+  "moonbit-community/toml",
+}
+
+import {
+  "moonbitlang/async",
+  "moonbitlang/async/fs",
+  "moonbitlang/core/encoding/utf8",
+} for "test"
+
+supported_targets = "native+wasm"

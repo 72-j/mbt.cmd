@@ -1,113 +1,12 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "thy1016/mooncmd"
-
-import {
-  "thy1016/mooncmd/aggregate",
-  "thy1016/mooncmd/command",
-  "thy1016/mooncmd/event",
-  "thy1016/mooncmd/monads",
-  "thy1016/mooncmd/projection",
-  "thy1016/mooncmd/store",
-}
+package "thy1016/cmd"
 
 // Values
-pub fn[Id, S, C, E] dispatch(@store.EventStore[Id, E], @event.EventBus[Id, E]?, @aggregate.AggregateRoot[Id, S, C, E], C, projections? : Array[@projection.LiveProjection[Id, E]], consistency? : Consistency, poll_wait? : (Int64) -> Unit, poll_budget? : Int32) -> @aggregate.AggregateRoot[Id, S, C, E] raise EventSourcingErr
-
-pub fn[AggregateId, S, E] dispatch_ask() -> @monads.Reader[RouteEnv[AggregateId, S, E], RouteEnv[AggregateId, S, E]]
-
-pub fn[AggregateId, S, E, A] dispatch_asks((RouteEnv[AggregateId, S, E]) -> A) -> @monads.Reader[RouteEnv[AggregateId, S, E], A]
-
-pub fn[AggregateId, S, E, R, A] dispatch_reader_bind(@monads.Reader[RouteEnv[AggregateId, S, E], R], (R) -> @monads.Reader[RouteEnv[AggregateId, S, E], A]) -> @monads.Reader[RouteEnv[AggregateId, S, E], A]
-
-pub fn[AggregateId, S, E, R, A] dispatch_reader_map(@monads.Reader[RouteEnv[AggregateId, S, E], R], (R) -> A) -> @monads.Reader[RouteEnv[AggregateId, S, E], A]
-
-pub fn[AggregateId, S, E, R] dispatch_reader_new((RouteEnv[AggregateId, S, E]) -> R) -> @monads.Reader[RouteEnv[AggregateId, S, E], R]
-
-pub fn[AggregateId, S, E, R] dispatch_reader_run(@monads.Reader[RouteEnv[AggregateId, S, E], R], RouteEnv[AggregateId, S, E]) -> R
-
-pub fn effect_kind_of_sourcing_err(EventSourcingErr) -> @aggregate.EffectErrorKind
-
-pub fn log_warn(String) -> Unit
-
-pub fn make_console_logger() -> ConsoleLogger
-
-pub fn make_mute_logger() -> MuteLogger
 
 // Errors
-pub(all) suberror EventSourcingErr {
-  CommandErr(@command.CommandError)
-  EventStoreErr(@store.EventStoreError)
-  EventBusErr(@event.EventBusError)
-  SnapshotErr(@store.SnapshotError)
-  AggregateErr(@aggregate.AggregateError)
-  ConsistencyErr(String)
-}
 
 // Types and methods
-pub(all) struct CommandConfig {
-  timeout_ms : Int64
-  max_retries : Int32
-  consistency : Consistency
-}
-pub fn CommandConfig::new() -> Self
-pub fn CommandConfig::with_consistency(Self, Consistency) -> Self
-pub fn CommandConfig::with_retries(Self, Int32) -> Self
-pub fn CommandConfig::with_timeout(Self, Int64) -> Self
-
-pub(all) enum Consistency {
-  Eventual
-  Strong
-}
-
-type ConsoleLogger
-pub fn ConsoleLogger::info(Self, String) -> Unit
-pub impl Logger for ConsoleLogger
-
-type MuteLogger
-pub fn MuteLogger::info(Self, String) -> Unit
-pub impl Logger for MuteLogger
-
-pub struct RouteEnv[AggregateId, S, E] {
-  event_store : @store.EventStore[AggregateId, E]
-  snapshot_store : @store.SnapshotStore[AggregateId, S]
-  event_bus : @event.EventBus[AggregateId, E]?
-  logger : &Logger
-  default_timeout : Int64
-  default_retry : Int32
-  clock : () -> Int64
-  id_gen : () -> String
-}
-pub fn[AggregateId, E, S] RouteEnv::new(@store.EventStore[AggregateId, E], @store.SnapshotStore[AggregateId, S], @event.EventBus[AggregateId, E]?, Int64, Int32, clock? : () -> Int64, id_gen? : () -> String) -> Self[AggregateId, S, E]
-
-pub struct Router[AggregateId, S, C, E] {
-  env : RouteEnv[AggregateId, S, E]
-  default_config : CommandConfig
-  handlers : Map[String, (S, C) -> Array[E] raise @command.CommandError]
-}
-pub fn[AggregateId, S, C, E] Router::dispatch(Self[AggregateId, S, C, E], AggregateId, @command.CommandMessage[C], (S, C) -> Array[E] raise @command.CommandError, @event.EventApplier[S, E], S) -> @monads.Reader[RouteEnv[AggregateId, S, E], Result[@aggregate.AggregateRoot[AggregateId, S, C, E], EventSourcingErr]]
-pub fn[AggregateId, S, C, E] Router::dispatch_batch(Self[AggregateId, S, C, E], Array[(AggregateId, @command.CommandMessage[C])], (S, C) -> Array[E] raise @command.CommandError, @event.EventApplier[S, E], S) -> @monads.Reader[RouteEnv[AggregateId, S, E], Result[Array[@aggregate.AggregateRoot[AggregateId, S, C, E]], EventSourcingErr]]
-pub fn[AggregateId, S, C, E] Router::dispatch_default(Self[AggregateId, S, C, E], AggregateId, @command.CommandMessage[C], @event.EventApplier[S, E], S) -> @aggregate.AggregateRoot[AggregateId, S, C, E] raise EventSourcingErr
-pub fn[AggregateId, S, C, E] Router::dispatch_now(Self[AggregateId, S, C, E], AggregateId, @command.CommandMessage[C], (S, C) -> Array[E] raise @command.CommandError, @event.EventApplier[S, E], S) -> @aggregate.AggregateRoot[AggregateId, S, C, E] raise EventSourcingErr
-pub fn[AggregateId, S, C, E] Router::dispatch_with_config(Self[AggregateId, S, C, E], AggregateId, @command.CommandMessage[C], (S, C) -> Array[E] raise @command.CommandError, @event.EventApplier[S, E], S, Int64, Int32) -> @monads.Reader[RouteEnv[AggregateId, S, E], Result[@aggregate.AggregateRoot[AggregateId, S, C, E], EventSourcingErr]]
-pub fn[AggregateId, S, C, E] Router::new(RouteEnv[AggregateId, S, E], CommandConfig, Map[String, (S, C) -> Array[E] raise @command.CommandError]) -> Self[AggregateId, S, C, E]
-
-pub(all) struct RouterBuilder[AggregateId, S, C, E] {
-  env : RouteEnv[AggregateId, S, E]
-  mut default_config : CommandConfig
-  handlers : Map[String, (S, C) -> Array[E] raise @command.CommandError]
-}
-pub fn[AggregateId, S, C, E] RouterBuilder::add_handler(Self[AggregateId, S, C, E], String, (S, C) -> Array[E] raise @command.CommandError) -> Self[AggregateId, S, C, E]
-pub fn[AggregateId, S, C, E] RouterBuilder::add_handlers(Self[AggregateId, S, C, E], String, Array[(S, C) -> Array[E] raise @command.CommandError]) -> Self[AggregateId, S, C, E]
-pub fn[AggregateId, S, C, E] RouterBuilder::build(Self[AggregateId, S, C, E]) -> Router[AggregateId, S, C, E]
-pub fn[AggregateId, S, C, E] RouterBuilder::handler_count(Self[AggregateId, S, C, E]) -> Int32
-pub fn[AggregateId, S, C, E] RouterBuilder::new(RouteEnv[AggregateId, S, E]) -> Self[AggregateId, S, C, E]
-pub fn[AggregateId, S, C, E] RouterBuilder::with_consistency(Self[AggregateId, S, C, E], Consistency) -> Self[AggregateId, S, C, E]
-pub fn[AggregateId, S, C, E] RouterBuilder::with_default_retries(Self[AggregateId, S, C, E], Int32) -> Self[AggregateId, S, C, E]
-pub fn[AggregateId, S, C, E] RouterBuilder::with_default_timeout(Self[AggregateId, S, C, E], Int64) -> Self[AggregateId, S, C, E]
 
 // Type aliases
 
 // Traits
-pub trait Logger {
-  fn info(Self, String) -> Unit
-}
