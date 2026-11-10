@@ -160,6 +160,27 @@ wire 往返恒等）。事件命名与粒度属通用语言决策，由词表声
 与序列化由生成器承担。完整上手路径见 `examples/bank_demo`（可运行全链自证：
 `moon run examples/bank_demo --target native`；行为与测试住 `examples/bank` 库包）。
 
+### 手写聚合配方（消费者径）
+
+发射器不随本模块发布——构建自己的聚合时，把词表当**设计工作表**，
+按分区手写同等结构（形状对抄 `examples/bank/account_gen.mbt`，约 190 行
+样板即清单）：
+
+| 词表分区 | 手写件 | 形状要点 |
+|---|---|---|
+| `[aggregate.state]` | 状态结构 + `init()` | `pub(all) struct` + `#derive(Eq)`；每字段一行，初值对齐表 `init` |
+| `[[aggregate.events]]` | 事件枚举 | `pub(all) enum`，一行一变体，载荷字段照表 |
+| `[[aggregate.commands]]` | 命令枚举 | 同上 |
+| evolve 指令 | `apply` 演化链 | 封闭集四指令（set/add/append/remove）直写 `{ ..state, field: value, }` 更新链（同字段后写覆前写）；封闭集外的演化属裁决，进钩子 |
+| —— | 裁决钩子 + 分派 | `DecideHooks` 记录型函数面 + `decide` 分派骨架（只做载荷拆包）；**裁决体手写**（红线 7：余额不足类业务裁决不进 apply 链，参照 `account_policy.mbt`；MoonBit 记录字段作函数调用要带括号：`(hooks.deposit_money)(state, amount)`） |
+| —— | wire 序列化 | `to_wire` / `from_wire` 行格式 `"1\t<Event>\t<fields>"`，首列 = `schema_version` 预留位（现版只认 `"1"`，坏载荷返 `None`） |
+
+手写验收清单 = 上段「生成物包含」逐项自配：init 值契约（每字段初值可
+从 `init()` 读回）、wire 往返恒等（`from_wire(to_wire(e)) == Some(e)`）、
+已知答案（apply 逐事件对拍状态）——断言形可参照 `examples/bank` 的
+契约测试件。口径拨清：「生成物禁手写」约束的是 owner 仓的 regen 面
+（防手改被再生覆盖）；消费者手写自己的词汇层不受此限，本节即其配方。
+
 ## API 总览
 
 | 包 | 入口 | 作用 |

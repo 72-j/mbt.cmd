@@ -9,6 +9,8 @@
 # 生成物禁手写（生成红线9）；绑定器 skelschema/mooncmd_agg_toml_gen.mbt；
 # 黄金门 = 主仓 golden 统一户 REGEN≡DISK 逐字节对拍（发射器集中主仓
 # skelschema，不随本模块发布）。表头三件 = gen 体例键，非协议字段。
+# 消费者径：发射器不随本模块发布——本表即设计工作表，按分区手写同等
+# 结构（配方见 README「手写聚合配方」）；「生成物包含」段 = 手写验收清单。
 
 schema_version = "1.0"
 generator = "mooncmd_agg_gen"
