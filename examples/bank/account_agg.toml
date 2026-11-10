@@ -11,6 +11,8 @@
 # skelschema，不随本模块发布）。表头三件 = gen 体例键，非协议字段。
 # 消费者径：发射器不随本模块发布——本表即设计工作表，按分区手写同等
 # 结构（配方见 README「手写聚合配方」）；「生成物包含」段 = 手写验收清单。
+# 或走 moonx 命令面：moonx thy1016/cmd@latest <table.toml>（@latest 恒写；
+# 产出 gen/contract/policy 三件，policy 仅缺位时落——stub-zone）。
 
 schema_version = "1.0"
 generator = "mooncmd_agg_gen"

@@ -1,6 +1,6 @@
 # mooncmd
 
-`thy1016/mooncmd` 是一个用 MoonBit 编写的命令侧事件溯源（Event Sourcing /
+`thy1016/mooncmd` 是一个用 MoonBit 编写的事件溯源（Event Sourcing /
 CQRS）框架库：命令处理器产出纯事件，框架统一包装事件元数据（事件 ID、
 correlation / causation 追溯链、时间戳、schema 版本），Router 作为唯一持久化
 写入口；内置乐观并发守门、SQLite 事件存储、拉取式投影、快照加速、Effect
@@ -159,6 +159,22 @@ moon test                           # 生成产物结构钉 + 契约测试 + 已
 wire 往返恒等）。事件命名与粒度属通用语言决策，由词表声明；机械演化
 与序列化由生成器承担。完整上手路径见 `examples/bank_demo`（可运行全链自证：
 `moon run examples/bank_demo --target native`；行为与测试住 `examples/bank` 库包）。
+
+### 命令面发射（消费者径，moonx）
+
+不想手写的消费者走 moonx 命令面（`thy1016/cmd`，独立薄模块，
+wasm-safe；moonx = 取注册表预编译 wasm → moonrun）：
+
+```bash
+moonx thy1016/cmd@latest <table.toml>
+```
+
+`@latest` 恒写。产出三件落**表同目录**：`<名>_gen.mbt` +
+`<名>_contract_wbtest.mbt`（regen 覆写）+ `<名>_policy.mbt`（裁决策略
+stub，**仅缺位时落，regen 永不覆写**——stub-zone）。填好裁决体后装配：
+`<名>_hooks()` 传入 `<名>_decide`（见 gen 分派骨架）；契约罐随包
+`moon test` 即验。发射器与 mooncmd 词表方言的契约 = 治理三律（变更
+单向 / 漂移探测 / 发布配对），见 cmd 仓 README。
 
 ### 手写聚合配方（消费者径）
 
