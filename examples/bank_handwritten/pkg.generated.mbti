@@ -1,0 +1,73 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "thy1016/mooncmd/examples/bank_handwritten"
+
+import {
+  "thy1016/mooncmd/aggregate",
+  "thy1016/mooncmd/command",
+  "thy1016/mooncmd/event",
+  "thy1016/mooncmd/store",
+}
+
+// Values
+pub fn account_applier(AccountState, AccountEvent) -> AccountState
+
+pub fn account_decide(AccountState, AccountCommand, AccountDecideHooks) -> Result[Array[AccountEvent], String]
+
+pub fn account_handler(AccountState, AccountCommand) -> Array[AccountEvent] raise @command.CommandError
+
+pub fn account_hooks() -> AccountDecideHooks
+
+pub fn account_root(String) -> @aggregate.AggregateRoot[String, AccountState, AccountCommand, AccountEvent]
+
+// Errors
+
+// Types and methods
+#derive(Eq)
+pub(all) enum AccountCommand {
+  CreateAccount(String, Int32)
+  DepositMoney(Int32)
+  WithdrawMoney(Int32)
+  CloseAccount
+}
+pub fn AccountCommand::equal(Self, Self) -> Bool
+pub fn AccountCommand::not_equal(Self, Self) -> Bool
+
+pub(all) struct AccountDecideHooks {
+  create_account : (AccountState, String, Int32) -> Result[Array[AccountEvent], String]
+  deposit_money : (AccountState, Int32) -> Result[Array[AccountEvent], String]
+  withdraw_money : (AccountState, Int32) -> Result[Array[AccountEvent], String]
+  close_account : (AccountState) -> Result[Array[AccountEvent], String]
+}
+
+#derive(Eq)
+pub(all) enum AccountEvent {
+  AccountCreated(String, Int32)
+  MoneyDeposited(Int32)
+  MoneyWithdrawn(Int32)
+  AccountClosed
+}
+pub fn AccountEvent::apply(Self, AccountState) -> AccountState
+pub fn AccountEvent::equal(Self, Self) -> Bool
+pub fn AccountEvent::from_wire(String) -> Self?
+pub fn AccountEvent::not_equal(Self, Self) -> Bool
+pub fn AccountEvent::to_wire(Self) -> String
+
+#derive(Eq)
+pub(all) struct AccountState {
+  name : String
+  balance : Int32
+  is_active : Bool
+}
+pub fn AccountState::equal(Self, Self) -> Bool
+pub fn AccountState::init() -> Self
+pub fn AccountState::not_equal(Self, Self) -> Bool
+
+pub struct MemoryEventStore {
+  log : Array[@event.EventMessage[String, AccountEvent]]
+}
+pub fn MemoryEventStore::new() -> Self
+pub fn MemoryEventStore::to_event_store(Self) -> @store.EventStore[String, AccountEvent]
+
+// Type aliases
+
+// Traits

@@ -1,0 +1,16 @@
+// bank_handwritten:纯消费者角度的手写聚合示例——发射器住主仓私仓不随本
+// 模块发布，词汇层全部手写（配方：README「手写聚合配方（消费者径）」）。
+// 业务与 examples/bank 同族（账户开户/存取/销户），是生成产物
+// account_gen.mbt 的手写孪生件，读者可逐文件对照两种途径的产物。
+// 纯 MoonBit 面（无 fs/sqlite）：native 与 wasm 双腿同跑；存储用
+// 内存 EventStore 端口实现（memory_store.mbt），生产径换 SQLiteEventStore。
+import {
+  "thy1016/mooncmd/aggregate",
+  "thy1016/mooncmd/command",
+  "thy1016/mooncmd/event",
+  "thy1016/mooncmd/store",
+}
+
+// supported_targets 随依赖支持域钉(aggregate/store = native+wasm)
+
+supported_targets = "native+wasm"

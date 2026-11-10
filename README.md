@@ -181,6 +181,12 @@ wire 往返恒等）。事件命名与粒度属通用语言决策，由词表声
 契约测试件。口径拨清：「生成物禁手写」约束的是 owner 仓的 regen 面
 （防手改被再生覆盖）；消费者手写自己的词汇层不受此限，本节即其配方。
 
+完整可跑的手写示例见 `examples/bank_handwritten`——与生成产物
+`account_gen.mbt` 同族同形的手写孪生件（账户开户/存取/销户，纯
+MoonBit 面 native+wasm 双腿），另附 EventStore 端口的内存实现
+（`memory_store.mbt`，生产径换 `SQLiteEventStore` 消费侧零改动），
+7 个契约测试逐项演示验收清单的断言形。
+
 ## API 总览
 
 | 包 | 入口 | 作用 |
