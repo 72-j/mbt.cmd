@@ -4,6 +4,8 @@
 # v1 口径：生命周期位面（Closed/Active + Create/Deposit）——余额算术
 #   超出生成器 assign 表达力（assign_tail 只认 true/false 字面），
 #   Withdraw/Close 不入机（挂账 v2，见 quicktest.toml 头注）。
+# 口径（2026-11-10）：发射器（pbtgen）住主仓私仓不随本模块发布——
+#   本表 = 机器规格基线；产物手维护为权威（.hand-maintained），非活生成源。
 # ==========================================================
 
 [meta]

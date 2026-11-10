@@ -1,5 +1,5 @@
 // ===== GENERATED FILE — DO NOT EDIT（生成物禁手写，const.md §7）=====
-// 源表：../bitbang2/mooncmd/examples/bank/account_retry.toml
+// 源表：examples/bank/account_retry.toml
 // 再生：moon run skelschema/cmd(仓根起跑;改表 → 再生 → 黄金门对拍)
 // 绑定器：skelschema/retry_toml_gen.mbt(parse/validate/emit 三件套)
 // 源词表：account_retry.toml（[retry] max=3 backoff=fixed interval=100 + [retry.on_error] + [circuit]?）

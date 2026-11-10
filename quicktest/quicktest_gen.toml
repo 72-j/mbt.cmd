@@ -8,6 +8,8 @@
 # 引擎接线：skelgen_package = bank 真面目（AccountState/AccountCommand/
 #     account_handler/applier 全在）——P0（system.mbt）调真引擎执行命令，
 #     不重写业务语义（moonttl P4.2b 同款口径）。
+# 口径（2026-11-10）：发射器（pbtgen）住主仓私仓不随本模块发布——
+#   本表 = 生成面规格存档；产物手维护为权威，非活生成源。
 # ==========================================================
 [meta]
 name = "mooncmd_quick_machine"

@@ -28,7 +28,7 @@ correlation / causation 追溯链、时间戳、schema 版本），Router 作为
 - Effect 重试状态机：`RetryMachine` 协议面（错误分类封闭集 + 纯裁决，
   无时钟无副作用）+ `exec_with_effect`（固定 / 指数退避、按错误类别
   分派、熔断；退避等待由调用方注入）。
-- 聚合词表代码生成：TOML 声明（约 30–50 行）自动产出状态结构、事件与
+- 聚合词表代码生成（维护侧工具链，产物已随模块入库）：TOML 声明（约 30–50 行）自动产出状态结构、事件与
   命令枚举、apply 演化链、命令分派骨架、wire 序列化与契约测试门；
   业务裁决归手写策略钩子。
 - Monad 注入面：`monads` 子包提供 State / Writer / Reader / EventWriter
