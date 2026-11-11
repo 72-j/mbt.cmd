@@ -156,9 +156,12 @@ moon test                           # 生成产物结构钉 + 契约测试 + 已
 
 生成物包含：状态结构与初值、事件 / 命令枚举、apply 演化链、命令分派
 骨架、wire 序列化（含 schema 版本预留位）、契约测试门（init 值契约 +
-wire 往返恒等）。事件命名与粒度属通用语言决策，由词表声明；机械演化
-与序列化由生成器承担。完整上手路径见 `examples/bank_demo`（可运行全链自证：
-`moon run examples/bank_demo --target native`；行为与测试住 `examples/bank` 库包）。
+wire 往返恒等）、装配胶水六桥件（`account_glue.mbt`，二版拍1 起：
+handler/applier/empty_state/serialize/deserialize/type_name，
+`examples/bank` 直消费）。事件命名与粒度属通用语言决策，由词表声明；
+机械演化与序列化由生成器承担。完整上手路径见 `examples/bank_demo`
+（可运行全链自证：`moon run examples/bank_demo --target native`；行为与
+测试住 `examples/bank` 库包）。
 
 ### 命令面发射（消费者径，moonx）
 
@@ -169,11 +172,17 @@ wasm-safe；moonx = 取注册表预编译 wasm → moonrun）：
 moonx thy1016/cmd@latest <table.toml>
 ```
 
-`@latest` 恒写。产出三件落**表同目录**：`<名>_gen.mbt` +
-`<名>_contract_wbtest.mbt`（regen 覆写）+ `<名>_policy.mbt`（裁决策略
-stub，**仅缺位时落，regen 永不覆写**——stub-zone）。填好裁决体后装配：
-`<名>_hooks()` 传入 `<名>_decide`（见 gen 分派骨架）；契约罐随包
-`moon test` 即验。发射器与 mooncmd 词表方言的契约 = 治理三律（变更
+`@latest` 恒写。产出四件落**表同目录**：`<名>_gen.mbt` +
+`<名>_contract_wbtest.mbt` + `<名>_glue.mbt`（装配胶水六桥件：
+handler/applier/empty_state/serialize/deserialize/type_name——regen
+覆写，桥面零手写）+ `<名>_policy.mbt`（裁决策略 stub，**仅缺位时落，
+regen 永不覆写**——stub-zone）。填好裁决体后装配：消费包 `moon.pkg`
+生产 import 块加 `thy1016/mooncmd/command` +
+`moonbitlang/core/encoding/utf8`（moon.mod 模块级授亲），然后
+`AggregateRoot::new(id, <名>_handler, EventApplier::Single(<名>_applier),
+<名>_empty_state())` + `SQLiteEventStore::new(path, <名>_serialize,
+<名>_deserialize, <名>_type_name)`；契约罐随包 `moon test` 即验。
+发射器与 mooncmd 词表方言的契约 = 治理三律（变更
 单向 / 漂移探测 / 发布配对），见 cmd 仓 README。
 
 ### 手写聚合配方（消费者径）

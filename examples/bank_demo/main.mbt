@@ -11,57 +11,10 @@
 /// ① 聚合三件套（役7 转正:词表 gen 形）——类型/apply/分派 = account_gen.mbt
 /// （源表 account_agg.toml,黄金门逐字节）;裁决 = account_policy.mbt 手写钩子
 /// （红线7）。金样对照 = 行为金锚 + EXAMPLE:PASS 续绿（account_gate_wbtest）。
-
-///|
-/// 桥接:gen 分派（String 错域）→ 框架命令错误（InvalidCommand 同界,
-/// demo 守卫语义原样——策略件四钩子升级为 demo 守卫,错误串逐字保留）
-fn account_handler(
-  state : @bank.AccountState,
-  cmd : @bank.AccountCommand,
-) -> Array[@bank.AccountEvent] raise @command.CommandError {
-  match @bank.account_decide(state, cmd, @bank.account_hooks()) {
-    Ok(events) => events
-    Err(msg) => raise @command.CommandError::InvalidCommand(msg)
-  }
-}
-
-///|
-fn account_applier(
-  state : @bank.AccountState,
-  event : @bank.AccountEvent,
-) -> @bank.AccountState {
-  event.apply(state)
-}
-
-///|
-fn account_empty_state() -> @bank.AccountState {
-  @bank.AccountState::init()
-}
-
-///|
-/// 事件序列化 = gen 产物流 wire（D-MG-6;格式契约见 account_contract_wbtest roundtrip 钉）
-fn account_serialize(event : @bank.AccountEvent) -> Bytes {
-  @utf8.encode(event.to_wire())
-}
-
-///|
-fn account_deserialize(data : Bytes) -> @bank.AccountEvent raise {
-  let text = @utf8.decode(data)
-  match @bank.AccountEvent::from_wire(text) {
-    Some(event) => event
-    None => abort("bad event wire payload: \{text}")
-  }
-}
-
-///|
-fn account_type_name(event : @bank.AccountEvent) -> String {
-  match event {
-    @bank.AccountCreated(_, _) => "@bank.AccountCreated"
-    @bank.MoneyDeposited(_) => "@bank.MoneyDeposited"
-    @bank.MoneyWithdrawn(_) => "@bank.MoneyWithdrawn"
-    @bank.AccountClosed => "@bank.AccountClosed"
-  }
-}
+/// 装配六桥件（handler/applier/empty_state/serialize/deserialize/type_name）
+/// = account_glue.mbt 发射产物（二版拍1;regen 覆写区,黄金门逐字节）——
+/// demo 直消费 @bank.*,本文件零手写桥（消双实现 drift;type_name 标签串
+/// 随 glue 裸名形,store 仅记不比对,:memory: 每跑新开零持久化）。
 
 ///|
 fn check(label : String, ok : Bool, detail : String) -> Bool {
@@ -77,9 +30,9 @@ fn main raise {
   // ========== ② 内存命令链：命令 → 纯事件 → EventMessage 自动包装 ==========
   let aggregate = @aggregate.AggregateRoot::new(
       aggregate_id,
-      account_handler,
-      @event.EventApplier::Single(account_applier),
-      account_empty_state(),
+      @bank.account_handler,
+      @event.EventApplier::Single(@bank.account_applier),
+      @bank.account_empty_state(),
     )
     .exec(@bank.CreateAccount("Demo Holder", 1000))
     .exec(@bank.DepositMoney(500))
@@ -108,7 +61,7 @@ fn main raise {
     )
   // ========== ③ SQLite 落库 + 重放重建 ==========
   let store = @store.SQLiteEventStore::new(
-    ":memory:", account_serialize, account_deserialize, account_type_name,
+    ":memory:", @bank.account_serialize, @bank.account_deserialize, @bank.account_type_name,
   )
   store.append(aggregate_id, uncommitted)
   let loaded = store.load(aggregate_id, 0)
@@ -118,9 +71,9 @@ fn main raise {
   let rebuilt = @aggregate.AggregateRoot::from_events(
     aggregate_id,
     loaded,
-    account_handler,
-    @event.EventApplier::Single(account_applier),
-    account_empty_state(),
+    @bank.account_handler,
+    @event.EventApplier::Single(@bank.account_applier),
+    @bank.account_empty_state(),
   )
   let rebuilt_state = rebuilt.current_state()
   let rebuild_ok = rebuilt.version() == aggregate.version() &&
@@ -177,7 +130,7 @@ fn main raise {
   let retry_root = @aggregate.AggregateRoot::new(
     "demo-effect-1",
     effect_handler,
-    @event.EventApplier::Single(account_applier),
+    @event.EventApplier::Single(@bank.account_applier),
     @bank.AccountState::init(),
   )
   let effect_done = retry_root.exec_with_effect(
@@ -202,12 +155,12 @@ fn main raise {
     cmd : @bank.AccountCommand,
   ) -> Array[@bank.AccountEvent] raise @command.CommandError {
     invalid_calls = invalid_calls + 1
-    account_handler(state, cmd)
+    @bank.account_handler(state, cmd)
   }
   let invalid_root = @aggregate.AggregateRoot::new(
     "demo-effect-2",
     invalid_watcher,
-    @event.EventApplier::Single(account_applier),
+    @event.EventApplier::Single(@bank.account_applier),
     @bank.AccountState::init(),
   )
   let mut effect2_rejected = false
@@ -237,9 +190,9 @@ fn main raise {
   let closable = @aggregate.AggregateRoot::from_events(
     aggregate_id,
     store.load(aggregate_id, 0),
-    account_handler,
-    @event.EventApplier::Single(account_applier),
-    account_empty_state(),
+    @bank.account_handler,
+    @event.EventApplier::Single(@bank.account_applier),
+    @bank.account_empty_state(),
   )
   let records = store.to_event_store()
   let after_withdraw = @mooncmd.dispatch(
@@ -266,16 +219,16 @@ fn main raise {
   let snapshottable = @aggregate.AggregateRoot::from_events(
     aggregate_id,
     loaded,
-    account_handler,
-    @event.EventApplier::Single(account_applier),
-    account_empty_state(),
+    @bank.account_handler,
+    @event.EventApplier::Single(@bank.account_applier),
+    @bank.account_empty_state(),
   )
   let snapshot = snapshottable.to_snapshot()
   let from_snapshot = @aggregate.AggregateRoot::from_events(
     aggregate_id,
     store.load(aggregate_id, snapshot.version),
-    account_handler,
-    @event.EventApplier::Single(account_applier),
+    @bank.account_handler,
+    @event.EventApplier::Single(@bank.account_applier),
     snapshot.state,
   )
   let snap_state = from_snapshot.current_state()
@@ -292,9 +245,9 @@ fn main raise {
   let full_replay = @aggregate.AggregateRoot::from_events(
     aggregate_id,
     store.load(aggregate_id, 0),
-    account_handler,
-    @event.EventApplier::Single(account_applier),
-    account_empty_state(),
+    @bank.account_handler,
+    @event.EventApplier::Single(@bank.account_applier),
+    @bank.account_empty_state(),
   )
   let full_state = full_replay.current_state()
   let equiv_ok = full_replay.version() == from_snapshot.version() &&

@@ -23,6 +23,15 @@ bank 包成员改 `@bank.` 限定）。可执行门换径：`moon run examples/b
 --target native`（README/spec 同步）。测试读数不变（native 75/75，wasm
 58/58），EXAMPLE:PASS 续绿。
 
+**装配胶水六桥件入 regen 面**（二版拍1,发射器主仓 skelschema 先行,
+本仓 bank/bank_demo 跟随消费;mooncmd 本体 API 零变,不动版）。
+`examples/bank` 增 `account_glue.mbt`（发射产物,黄金门逐字节:六桥件
+handler/applier/empty_state/serialize/deserialize/type_name,桥面零
+手写）;`examples/bank_demo` 六桥手写桥退役改直消费 `@bank.*`（消双
+实现 drift;type_name 标签随 glue 裸名形,store 仅记不比对）。测试读数
+不变（native 85/85 + EXAMPLE:PASS）;主仓黄金门 39/39 + cmd 仓 golden
+双探针同谱。
+
 ## 0.2.2（2026-10-31）
 
 文档面版本：README「测试与验证」补 quicktest 生命周期随机状态机说明（事件
