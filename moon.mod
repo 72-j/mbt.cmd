@@ -1,8 +1,8 @@
 // MoonBit module manifest — cmd
 // 定位:mooncmd(消费者径)的 moonx 命令面——薄模块,根包即可执行。
-// 吃聚合词表 TOML,吐骨架代码三件(`<name>_gen.mbt` 纯生成区 /
-// `<name>_policy.mbt` 决策体 stub 区 / `<name>_contract_wbtest.mbt`
-// 契约罐)。preferred_target = wasm:moonx 只跑注册表预编译 wasm
+// 吃聚合词表 TOML,吐骨架代码四件(`<name>_gen.mbt` 纯生成区 /
+// `<name>_glue.mbt` 装配胶水六桥件 / `<name>_policy.mbt` 决策体 stub
+// 区 / `<name>_contract_wbtest.mbt` 契约罐)。preferred_target = wasm:moonx 只跑注册表预编译 wasm
 // (经 moonrun 宿主,async 栈同一 API)。air 同形(bitbang3 = wasm 版
 // moonx 轻量版库)。发射器抽自主仓 skelschema 体保真;治理三律
 // (变更单向 / golden 漂移探测 / 发布配对)见 README;契约锚 =
@@ -14,7 +14,7 @@
 
 name = "thy1016/cmd"
 
-version = "0.0.1"
+version = "0.1.0"
 
 readme = "README.md"
 

@@ -1,8 +1,10 @@
 // ===== cmd —— mooncmd 聚合词表 → 骨架代码(命令面)=====
 // 用法:moonx thy1016/cmd@latest <table.toml>
-// 读 aggregate 词表 → parse/validate → 发射三件(落表同目录):
+// 读 aggregate 词表 → parse/validate → 发射四件(落表同目录):
 //   <名>_gen.mbt             骨架本体(事件/命令/状态/分派/wire/账本)
 //   <名>_contract_wbtest.mbt 契约门脚手架(init 契约 + wire roundtrip + 确定性)
+//   <名>_glue.mbt            装配胶水六桥件(handler/applier/empty_state/
+//                            serialize/deserialize/type_name)
 //   <名>_policy.mbt          裁决策略 stub(仅缺位时落,regen 永不覆写)
 // 溯源三件烙进产物头注(source_table = 调用方给的径;治理②:换库换径即
 // 重发)。exit 码:0 成功 / 2 缺参 / 3 表读不到 / 4 parse 拒 / 5 validate 拒。
@@ -30,7 +32,7 @@ fn dir_prefix_of_table(table_path : String) -> String {
 async fn run(args : Array[String]) -> Int32 {
   if args.length() < 1 {
     println(
-      "用法:moonx thy1016/cmd@latest <table.toml>(aggregate 词表;产出 <名>_gen.mbt + <名>_contract_wbtest.mbt + <名>_policy.mbt[仅缺位时落])",
+      "用法:moonx thy1016/cmd@latest <table.toml>(aggregate 词表;产出 <名>_gen.mbt + <名>_contract_wbtest.mbt + <名>_glue.mbt + <名>_policy.mbt[仅缺位时落])",
     )
     return 2
   }
@@ -63,6 +65,7 @@ async fn run(args : Array[String]) -> Int32 {
   let dir = dir_prefix_of_table(table_path)
   let gen_path = dir + def.name + "_gen.mbt"
   let contract_path = dir + def.name + "_contract_wbtest.mbt"
+  let glue_path = dir + def.name + "_glue.mbt"
   let policy_path = dir + def.name + "_policy.mbt"
   let provenance = @gen.SchemaProvenance::{
     source_table: table_path,
@@ -76,6 +79,10 @@ async fn run(args : Array[String]) -> Int32 {
   @fs.write_file(
     contract_path,
     @utf8.encode(@gen.emit_mooncmd_agg_contract_tests(def)),
+  )
+  @fs.write_file(
+    glue_path,
+    @utf8.encode(@gen.emit_mooncmd_agg_glue(def, provenance~)),
   )
   let policy_absent = try {
     let _ = @fs.read_file(policy_path).binary()
@@ -94,9 +101,9 @@ async fn run(args : Array[String]) -> Int32 {
   } else {
     println("policy 已在,未触碰: \{policy_path}")
   }
-  println("cmd codegen: \{gen_path} + \{contract_path} 已写")
+  println("cmd codegen: \{gen_path} + \{contract_path} + \{glue_path} 已写")
   println(
-    "装配指引:\{def.name}_hooks() 填好裁决体后传入 \{def.name}_decide(见 \{gen_path} 分派骨架);契约罐 \{contract_path} 随包 moon test 即验",
+    "装配指引:六桥件已发射(\{glue_path})——moon.pkg 生产 import 块加 thy1016/mooncmd/command + moonbitlang/core/encoding/utf8;裁决体填 \{policy_path} 的 \{def.name}_hooks() 四钩子(Err(\"TODO\") 即未填);装配 = AggregateRoot::new(id, \{def.name}_handler, EventApplier::Single(\{def.name}_applier), \{def.name}_empty_state()) + SQLiteEventStore::new(path, \{def.name}_serialize, \{def.name}_deserialize, \{def.name}_type_name);契约罐 \{contract_path} 随包 moon test 即验",
   )
   return 0
 }

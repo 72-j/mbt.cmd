@@ -1,8 +1,9 @@
 #!/bin/sh
 # cmd 一令门(开发径收口;air driver 规格:判行 / cleanup / 前检):
 #   ① 双目标 check(--deny-warn --no-mbti)
-#   ② gen 包 × native|wasm 测试(9 罐:parse 正负例 + golden 字节探针 +
-#     stub/contract 钉;golden 探针 = 治理②漂移探测器本体)
+#   ② gen 包 × native|wasm 测试(12 罐:parse 正负例 + golden 双字节探针
+#     [gen+glue] + stub/contract/glue 钉;golden 探针 = 治理②漂移探测器
+#     本体,二版拍1 扩面)
 #   ③ e2e 台(判行 CMD-E2E: PASS)
 # cmd 无叠层需求(依赖全在 registry:toml/async/x;漂移探测走 gen 包
 # 仓内冻结 fixture,不挂 mooncmd 仓)。

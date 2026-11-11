@@ -174,6 +174,86 @@ test "mooncmd agg policy stub zero-payload bare lambda" {
 }
 
 ///|
+/// 钉9·装配胶水发射（二版拍1）:六桥件名位（蛇形+pub 形）+ handler 桥
+/// hooks 装配/InvalidCommand 同界 + wire 桥 utf8 面 + 依赖 note 烙明
+/// + 发射确定性。
+test "mooncmd agg glue emission six bridges" {
+  let def = match @gen.parse_mooncmd_agg(AGG_SAMPLE) {
+    Ok(def) => def
+    Err(msg) => fail(msg)
+  }
+  let glue = @gen.emit_mooncmd_agg_glue(def, provenance=agg_test_prov())
+  assert_true(glue.contains("pub fn counter_handler("))
+  assert_true(glue.contains("pub fn counter_applier("))
+  assert_true(glue.contains("pub fn counter_empty_state() -> CounterState"))
+  assert_true(
+    glue.contains("pub fn counter_serialize(event : CounterEvent) -> Bytes"),
+  )
+  assert_true(
+    glue.contains(
+      "pub fn counter_deserialize(data : Bytes) -> CounterEvent raise",
+    ),
+  )
+  assert_true(
+    glue.contains("pub fn counter_type_name(event : CounterEvent) -> String"),
+  )
+  assert_true(glue.contains("match counter_decide(state, cmd, counter_hooks())"))
+  assert_true(
+    glue.contains(
+      "Err(msg) => raise @command.CommandError::InvalidCommand(msg)",
+    ),
+  )
+  assert_true(glue.contains("@utf8.encode(event.to_wire())"))
+  assert_true(glue.contains("abort(\"bad event wire payload: \\{text}\")"))
+  // type_name 桥:单载荷 arity 通配 + 依赖 note 行烙明
+  assert_true(glue.contains("Bumped(_) => \"Bumped\""))
+  assert_true(
+    glue.contains("thy1016/mooncmd/command + moonbitlang/core/encoding/utf8"),
+  )
+  assert_eq(glue, @gen.emit_mooncmd_agg_glue(def, provenance=agg_test_prov()))
+}
+
+///|
+/// 钉10·glue 零载荷事件裸名模式:type_name 零 arity = 裸构造（非 `X()` 形）。
+test "mooncmd agg glue zero-payload event bare pattern" {
+  let sample = AGG_SAMPLE.replace(
+    old="evolve = [\"add count=delta\"]",
+    new="evolve = [\"add count=delta\"]\n\n[[aggregate.events]]\nname = \"Reset\"\nfields = []",
+  )
+  let def = match @gen.parse_mooncmd_agg(sample) {
+    Ok(def) => def
+    Err(msg) => fail(msg)
+  }
+  let glue = @gen.emit_mooncmd_agg_glue(def, provenance=agg_test_prov())
+  assert_true(glue.contains("Reset => \"Reset\""))
+  assert_true(glue.contains("Bumped(_) => \"Bumped\""))
+}
+
+///|
+/// 钉G2·glue golden 字节探针(治理②漂移探测器扩面):bank 表 → parse →
+/// validate → emit_glue → 逐字节等 golden 文件(= 主仓 committed
+/// account_glue.mbt + 溯源三件换算)。头注同源钉随行。
+async test "gen golden probe glue: bank table emits committed glue bytes" {
+  let table_text = @utf8.decode(
+    @fs.read_file("gen/testdata/bank_account_agg.toml").binary(),
+  )
+  let def = match @gen.parse_mooncmd_agg(table_text) {
+    Ok(value) => value
+    Err(msg) => fail("golden glue: parse failed: \{msg}")
+  }
+  match @gen.validate_mooncmd_agg(def) {
+    Ok(_) => ()
+    Err(msg) => fail("golden glue: validate failed: \{msg}")
+  }
+  let emitted = @gen.emit_mooncmd_agg_glue(def, provenance=golden_probe_prov())
+  let golden = @utf8.decode(
+    @fs.read_file("gen/testdata/bank_account_glue.golden").binary(),
+  )
+  assert_eq(emitted, golden)
+  assert_true(golden.contains("moonx thy1016/cmd@latest"))
+}
+
+///|
 /// golden 探针溯源三件(与 fixture 头注换算三行逐字节同源——probe 侧
 /// 字符串与 fixture 换算必须一致,失一致 = 假红)。
 fn golden_probe_prov() -> @gen.SchemaProvenance {

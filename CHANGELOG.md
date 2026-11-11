@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.1.0 (2026-11-11)
+
+二版拍1·装配胶水发射(发射器三件套 → 四件,主仓 skelschema 先行、本仓
+跟随;治理三律同谱):
+
+- `emit_mooncmd_agg_glue` 六桥件发射(handler/applier/empty_state/
+  serialize/deserialize/type_name——handler 桥 decide Result →
+  CommandError::InvalidCommand 同界 + hooks 装配;wire 桥 utf8 面;
+  type_name 桶 arity 通配,零载荷裸模式);
+- driver 三件落盘 → 四件落盘(gen/contract/glue/policy),装配指引印
+  升级为配方形(桥面零手写,裁决仍只填 policy 钩子);
+- golden 字节探针扩面双探针(gen + glue,钉G2),罐 9→12;e2e 台扩
+  五判(四件落盘/glue 体零漂/消费项目核身 glue 腿 = registry 冻结件
+  `thy1016/mooncmd@0.2.2` 授亲 + command/utf8 包级 import);
+- 上游配套:mooncmd 仓 bank/bank_demo 消费 committed glue(demo 六桥
+  手写桥退役 = 消双实现 drift),bank glue 入黄金门(39/39)。
+
 ## 0.0.1 (2026-11-10)
 
 首版。mooncmd 聚合词表 → 骨架代码的 moonx 命令面:

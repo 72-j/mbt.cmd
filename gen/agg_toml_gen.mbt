@@ -814,3 +814,90 @@ pub fn emit_mooncmd_agg_policy_stub(def : MooncmdAggDef) -> String {
   sb <+ "  }\n}\n"
   sb.to_string()
 }
+
+///|
+/// 装配胶水发射（二版拍1;byte-stable）：六桥件（handler/applier/
+/// empty_state/serialize/deserialize/type_name）= 消费者对 gen 产面的
+/// 纯换名包装（bank_demo 手写六桥机械升格;零裁决语义——红线7 裁决仍在
+/// policy 手写钩子）。落位 = 第四件 `<name>_glue.mbt`（regen 覆写区,
+/// 与 gen 同形 committed 进 owner 包）。依赖 thy1016/mooncmd/command +
+/// moonbitlang/core/encoding/utf8——消费者包 moon.pkg 生产 import 块自配
+/// （note 行烙明）。handler 桥错 = InvalidCommand(msg) 机械缺省（策略
+/// String 错域唯一去处）;type_name = 裸事件名（owner 包内视角,store
+/// 仅记不比对——标签串演进不破读链）。
+pub fn emit_mooncmd_agg_glue(
+  def : MooncmdAggDef,
+  provenance~ : SchemaProvenance,
+) -> String {
+  let sb = StringBuilder()
+  let state_type = schema_upper_first(def.name) + "State"
+  let event_type = schema_upper_first(def.name) + "Event"
+  let command_type = schema_upper_first(def.name) + "Command"
+  schema_emit_header(
+    sb,
+    provenance,
+    def.schema_version,
+    "// 装配胶水:六桥件（handler/applier/empty_state/serialize/deserialize/type_name）——依赖 thy1016/mooncmd/command + moonbitlang/core/encoding/utf8,消费者包 moon.pkg 生产 import 块自配;裁决装配点 = \{def.name}_hooks()（policy 件手写——红线7 裁决不入表）。",
+  )
+  // 统一头尾留恰好一个换行;首块（handler 桥）无前导空行,自补一空行
+  sb <+ "\n"
+  // handler 桥:decide Result → 框架命令错误（bank_demo 手写形升格）
+  sb <+ "///|\n"
+  sb <+ "/// 桥接:gen 分派（String 错域）→ 框架命令错误（InvalidCommand 同界）——\n"
+  sb <+ "/// 裁决装配点 = \{def.name}_hooks()（policy 件手写——红线7 裁决不入表）\n"
+  sb <+ "pub fn \{def.name}_handler(\n"
+  sb <+ "  state : \{state_type},\n"
+  sb <+ "  cmd : \{command_type},\n"
+  sb <+ ") -> Array[\{event_type}] raise @command.CommandError {\n"
+  sb <+ "  match \{def.name}_decide(state, cmd, \{def.name}_hooks()) {\n"
+  sb <+ "    Ok(events) => events\n"
+  sb <+ "    Err(msg) => raise @command.CommandError::InvalidCommand(msg)\n"
+  sb <+ "  }\n}\n\n"
+  // applier 桥
+  sb <+ "///|\n"
+  sb <+ "/// 事件应用器（EventApplier::Single 装配位）\n"
+  sb <+ "pub fn \{def.name}_applier(\n"
+  sb <+ "  state : \{state_type},\n"
+  sb <+ "  event : \{event_type},\n"
+  sb <+ ") -> \{state_type} {\n"
+  sb <+ "  event.apply(state)\n}\n\n"
+  // empty_state 桥
+  sb <+ "///|\n"
+  sb <+ "/// 空初态（AggregateRoot::new / from_events 装配位）\n"
+  sb <+ "pub fn \{def.name}_empty_state() -> \{state_type} {\n"
+  sb <+ "  \{state_type}::init()\n}\n\n"
+  // serialize 桥
+  sb <+ "///|\n"
+  sb <+ "/// 事件序列化（SQLiteEventStore::new 装配位;wire 契约 = 契约门 roundtrip 钉）\n"
+  sb <+ "pub fn \{def.name}_serialize(event : \{event_type}) -> Bytes {\n"
+  sb <+ "  @utf8.encode(event.to_wire())\n}\n\n"
+  // deserialize 桥
+  sb <+ "///|\n"
+  sb <+ "/// 事件反序列化（坏载荷 abort——wire 格式契约由契约门钉）\n"
+  sb <+ "pub fn \{def.name}_deserialize(data : Bytes) -> \{event_type} raise {\n"
+  sb <+ "  let text = @utf8.decode(data)\n"
+  sb <+ "  match \{event_type}::from_wire(text) {\n"
+  sb <+ "    Some(event) => event\n"
+  sb <+ "    None => abort(\"bad event wire payload: \\{text}\")\n"
+  sb <+ "  }\n}\n\n"
+  // type_name 桥:逐变体 arity 通配（零载荷 = 裸构造模式）
+  sb <+ "///|\n"
+  sb <+ "/// 事件类型标签（SQLite store 记录面;裸事件名）\n"
+  sb <+ "pub fn \{def.name}_type_name(event : \{event_type}) -> String {\n"
+  sb <+ "  match event {\n"
+  for event in def.events {
+    let arity = event.fields.length()
+    if arity == 0 {
+      sb <+ "    \{event.name} => \"\{event.name}\"\n"
+    } else {
+      let wildcards : Array[String] = []
+      for _ in 0..<arity {
+        wildcards.push("_")
+      }
+      sb <+
+        "    \{event.name}(\{agg_join(wildcards, ", ")}) => \"\{event.name}\"\n"
+    }
+  }
+  sb <+ "  }\n}\n"
+  sb.to_string()
+}
