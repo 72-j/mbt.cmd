@@ -7,8 +7,13 @@
 //                            serialize/deserialize/type_name)
 //   <名>_policy.mbt          裁决策略 stub(仅缺位时落,regen 永不覆写)
 // 溯源三件烙进产物头注(source_table = 调用方给的径;治理②:换库换径即
-// 重发)。exit 码:0 成功 / 2 缺参 / 3 表读不到 / 4 parse 拒 / 5 validate 拒。
-// 发射本体住 gen 包(纯 String→String,wasm-safe;治理三律见 README)。
+// 重发)。exit 码:0 成功 / 2 缺参或未知选项 / 3 表读不到 / 4 parse 拒 /
+// 5 validate 拒。发射本体住 gen 包(纯 String→String,wasm-safe;治理
+// 三律见 README)。
+
+///|
+/// CLI 版本位(与 moon.mod version 同步改——发布两处纪律)。
+const VERSION : String = "0.1.1"
 
 ///|
 /// 表径的目录前缀(含尾 '/';无 '/' = 空串 = 产物落当前目录)。
@@ -27,16 +32,65 @@ fn dir_prefix_of_table(table_path : String) -> String {
 }
 
 ///|
-/// driver 主径:argv → 读表 → parse/validate → 发射三件 → 指引印。
-/// 返回 exit 码(main 统一出口)。
-async fn run(args : Array[String]) -> Int32 {
-  if args.length() < 1 {
-    println(
-      "用法:moonx thy1016/cmd@latest <table.toml>(aggregate 词表;产出 <名>_gen.mbt + <名>_contract_wbtest.mbt + <名>_glue.mbt + <名>_policy.mbt[仅缺位时落])",
-    )
-    return 2
+/// CLI 用法两行(无参/未知选项共用)。
+fn print_usage() -> Unit {
+  println("cmd \{VERSION} — mooncmd 聚合词表 → 骨架代码")
+  println("用法: moonx thy1016/cmd@latest <table.toml>")
+  println("选项: --version  --help")
+}
+
+///|
+/// CLI 选项预扫:命中即短路返回 exit 码。首遇 '-' 开头实参判定,
+/// 非选项位留给表径。
+fn scan_flags(args : Array[String]) -> Int32? {
+  for arg in args {
+    if arg.has_prefix("-") {
+      match arg {
+        "--version" | "-V" => {
+          println("cmd \{VERSION}")
+          return Some(0)
+        }
+        "--help" | "-h" => {
+          print_usage()
+          return Some(0)
+        }
+        _ => {
+          println("cmd: 未知选项 \{arg}")
+          print_usage()
+          return Some(2)
+        }
+      }
+    }
   }
-  let table_path = args[0]
+  None
+}
+
+///|
+/// 首个非选项实参 = 表径。
+fn positional_arg(args : Array[String]) -> String? {
+  for arg in args {
+    if !arg.has_prefix("-") {
+      return Some(arg)
+    }
+  }
+  None
+}
+
+///|
+/// driver 主径:argv → 选项预扫 → 读表 → parse/validate → 发射四件
+/// → 清单汇报。返回 exit 码(main 统一出口)。
+async fn run(args : Array[String]) -> Int32 {
+  match scan_flags(args) {
+    Some(exit_code) => return exit_code
+    None => ()
+  }
+  let table_path = match positional_arg(args) {
+    Some(path) => path
+    None => {
+      print_usage()
+      return 2
+    }
+  }
   let readable = try {
     let _ = @fs.read_file(table_path).binary()
     true
@@ -63,48 +117,56 @@ async fn run(args : Array[String]) -> Int32 {
     }
   }
   let dir = dir_prefix_of_table(table_path)
-  let gen_path = dir + def.name + "_gen.mbt"
-  let contract_path = dir + def.name + "_contract_wbtest.mbt"
-  let glue_path = dir + def.name + "_glue.mbt"
-  let policy_path = dir + def.name + "_policy.mbt"
+  let gen_file = def.name + "_gen.mbt"
+  let contract_file = def.name + "_contract_wbtest.mbt"
+  let glue_file = def.name + "_glue.mbt"
+  let policy_file = def.name + "_policy.mbt"
   let provenance = @gen.SchemaProvenance::{
     source_table: table_path,
     regen_command: "moonx thy1016/cmd@latest " + table_path,
     binder_path: "thy1016/cmd/gen(agg 方言 parse/validate/emit 三件套)",
   }
   @fs.write_file(
-    gen_path,
+    dir + gen_file,
     @utf8.encode(@gen.emit_mooncmd_agg(def, provenance~)),
   )
   @fs.write_file(
-    contract_path,
+    dir + contract_file,
     @utf8.encode(@gen.emit_mooncmd_agg_contract_tests(def)),
   )
   @fs.write_file(
-    glue_path,
+    dir + glue_file,
     @utf8.encode(@gen.emit_mooncmd_agg_glue(def, provenance~)),
   )
   let policy_absent = try {
-    let _ = @fs.read_file(policy_path).binary()
+    let _ = @fs.read_file(dir + policy_file).binary()
     false
   } catch {
     _ => true
   }
   if policy_absent {
     @fs.write_file(
-      policy_path,
+      dir + policy_file,
       @utf8.encode(@gen.emit_mooncmd_agg_policy_stub(def)),
     )
-    println(
-      "policy stub 已落(仅缺位时落,regen 永不覆写): \{policy_path}",
-    )
-  } else {
-    println("policy 已在,未触碰: \{policy_path}")
   }
-  println("cmd codegen: \{gen_path} + \{contract_path} + \{glue_path} 已写")
+  let header_line = if dir == "" {
+    "✓ \{def.name} 骨架四件"
+  } else {
+    "✓ \{def.name} 骨架四件 · \{dir}"
+  }
+  println(header_line)
+  println("  \{gen_file}")
+  println("  \{contract_file}")
+  println("  \{glue_file}")
+  let policy_mark = if policy_absent { "新落" } else { "保留" }
+  println("  \{policy_file}    \{policy_mark}")
+  println("下一步")
+  println("  1. 填裁决体 \{policy_file}")
   println(
-    "装配指引:六桥件已发射(\{glue_path})——moon.pkg 生产 import 块加 thy1016/mooncmd/command + moonbitlang/core/encoding/utf8;裁决体填 \{policy_path} 的 \{def.name}_hooks() 四钩子(Err(\"TODO\") 即未填);装配 = AggregateRoot::new(id, \{def.name}_handler, EventApplier::Single(\{def.name}_applier), \{def.name}_empty_state()) + SQLiteEventStore::new(path, \{def.name}_serialize, \{def.name}_deserialize, \{def.name}_type_name);契约罐 \{contract_path} 随包 moon test 即验",
+    "  2. import thy1016/mooncmd/command + moonbitlang/core/encoding/utf8",
   )
+  println("  3. moon test")
   return 0
 }
 

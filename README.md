@@ -18,8 +18,9 @@ moonx = 取注册表预编译 wasm → moonrun 执行)。
 moonx thy1016/cmd@latest <table.toml>
 ```
 
-`@latest` 恒写(消费口径;版本钉进产物头注溯源)。产物落**表同目录**。
-exit 码:0 成功 / 2 缺参 / 3 表读不到 / 4 parse 拒 / 5 validate 拒。
+选项:`--version` / `-V`、`--help` / `-h`。`@latest` 恒写(消费口径;版本钉进
+产物头注溯源)。产物落**表同目录**。
+exit 码:0 成功 / 2 缺参或未知选项 / 3 表读不到 / 4 parse 拒 / 5 validate 拒。
 
 产出后两步:
 
