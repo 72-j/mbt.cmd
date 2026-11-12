@@ -172,7 +172,10 @@ wasm-safe；moonx = 取注册表预编译 wasm → moonrun）：
 moonx thy1016/cmd@latest <table.toml>
 ```
 
-`@latest` 恒写。产出四件落**表同目录**：`<名>_gen.mbt` +
+选项：`--version` / `-V`、`--help` / `-h`。exit 码：0 成功 / 2 缺参或
+未知选项 / 3 表读不到 / 4 parse 拒 / 5 validate 拒。`@latest` 恒写。
+成功输出 = 清单形（四件名 + policy「新落/保留」标记 + 三步「下一步」）。
+产出四件落**表同目录**：`<名>_gen.mbt` +
 `<名>_contract_wbtest.mbt` + `<名>_glue.mbt`（装配胶水六桥件：
 handler/applier/empty_state/serialize/deserialize/type_name——regen
 覆写，桥面零手写）+ `<名>_policy.mbt`（裁决策略 stub，**仅缺位时落，
@@ -182,8 +185,19 @@ regen 永不覆写**——stub-zone）。填好裁决体后装配：消费包 `m
 `AggregateRoot::new(id, <名>_handler, EventApplier::Single(<名>_applier),
 <名>_empty_state())` + `SQLiteEventStore::new(path, <名>_serialize,
 <名>_deserialize, <名>_type_name)`；契约罐随包 `moon test` 即验。
-发射器与 mooncmd 词表方言的契约 = 治理三律（变更
-单向 / 漂移探测 / 发布配对），见 cmd 仓 README。
+
+注意事项：
+
+- 词表封闭集：字段类型 `string|int|bool`、演化指令
+  `set|add|append|remove`；裁决语义不入表（红线 7）——余额不足类
+  业务裁决只进 policy 钩子；
+- 三件纯产物（`_gen` / `_contract_wbtest` / `_glue`）regen 覆写，
+  **禁手改**；手写只进 `_policy.mbt`（stub-zone）；
+- 词表 `target_package` 填消费包路径（烙进产物头注溯源，换库换径
+  即重发）；
+- 生成即验收：契约罐红了先对词表再改代码；
+- 发射器与 mooncmd 词表方言的契约 = 治理三律（变更
+  单向 / 漂移探测 / 发布配对），见 cmd 仓 README。
 
 ### 手写聚合配方（消费者径）
 

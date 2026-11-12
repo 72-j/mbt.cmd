@@ -30,7 +30,10 @@ handler/applier/empty_state/serialize/deserialize/type_name,桥面零
 手写）;`examples/bank_demo` 六桥手写桥退役改直消费 `@bank.*`（消双
 实现 drift;type_name 标签随 glue 裸名形,store 仅记不比对）。测试读数
 不变（native 85/85 + EXAMPLE:PASS）;主仓黄金门 39/39 + cmd 仓 golden
-双探针同谱。
+双探针同谱。README「命令面发射」小节回灌 cmd 0.1.1 使用说明（CLI
+选项 `--version` / `-V`、`--help` / `-h`；exit 码 0/2/3/4/5；成功输出
+清单形）与注意事项五条（词表封闭集与红线 7 / 三件纯产物禁手改
+stub-zone 唯一手写 / target_package 溯源 / 生成即验收 / 治理三律）。
 
 ## 0.2.2（2026-10-31）
 
