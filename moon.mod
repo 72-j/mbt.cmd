@@ -33,6 +33,8 @@ import {
   "moonbitlang/x@0.5.5",
   "moonbit-community/sqlite3@0.2.3",
   "f4ah6o/uuidm@0.2.1",
+  // 役10 serde wire 投影（[aggregate.serde] 键控;仅 bank 开键包消费）
+  "moonbit-community/serde.mbt@0.3.1",
   // quicktest 随机状态机脚手架（仅 mooncmd/quicktest 测试面消费）
   "moonbit-community/quickcheck_statemachine@0.0.1",
   // quickcheck 统一最新（0.14.0 注册表 tarball 是旧格式 moon.mod.json，新工具链拒装）

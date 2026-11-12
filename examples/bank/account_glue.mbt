@@ -33,19 +33,19 @@ pub fn account_empty_state() -> AccountState {
 }
 
 ///|
-/// 事件序列化（SQLiteEventStore::new 装配位;wire 契约 = 契约门 roundtrip 钉）
+/// 事件序列化（SQLiteEventStore::new 装配位;serde JSON 外部标签制——
+/// [aggregate.serde] 键开投影;事件域封闭 = 全原语字段,SerError 结构性
+/// 不可达,catch 臂为型收口——端口签名无 raise 域）
 pub fn account_serialize(event : AccountEvent) -> Bytes {
-  @utf8.encode(event.to_wire())
+  @json.to_bytes(event) catch {
+    _ => Bytes::from_array([])
+  }
 }
 
 ///|
-/// 事件反序列化（坏载荷 abort——wire 格式契约由契约门钉）
+/// 事件反序列化（serde JSON 径——坏载荷 raise SerError 透传,store 重放错误域自然传播）
 pub fn account_deserialize(data : Bytes) -> AccountEvent raise {
-  let text = @utf8.decode(data)
-  match AccountEvent::from_wire(text) {
-    Some(event) => event
-    None => abort("bad event wire payload: \{text}")
-  }
+  @json.from_string(@utf8.decode(data))
 }
 
 ///|

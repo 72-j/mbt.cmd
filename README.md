@@ -158,10 +158,37 @@ moon test                           # 生成产物结构钉 + 契约测试 + 已
 骨架、wire 序列化（含 schema 版本预留位）、契约测试门（init 值契约 +
 wire 往返恒等）、装配胶水六桥件（`account_glue.mbt`，二版拍1 起：
 handler/applier/empty_state/serialize/deserialize/type_name，
-`examples/bank` 直消费）。事件命名与粒度属通用语言决策，由词表声明；
+`examples/bank` 直消费）。词表开 `[aggregate.serde]` 键时另产 serde
+JSON 投影件（见下节）。事件命名与粒度属通用语言决策，由词表声明；
 机械演化与序列化由生成器承担。完整上手路径见 `examples/bank_demo`
 （可运行全链自证：`moon run examples/bank_demo --target native`；行为与
 测试住 `examples/bank` 库包）。
+
+### serde JSON 投影（可选键，键控发射）
+
+词表开可选键（键缺席 = 零发射 = 旧表字节稳，存量消费者零漂）：
+
+```toml
+[aggregate.serde]
+json = true
+```
+
+regen 额外产出 `<名>_serde_gen.mbt`：事件枚举的
+[serde.mbt](https://github.com/moonbit-community/serde.mbt) JSON 投影
+（Serialize / Deserialize 双 impl，`[0079]` 隐式晋升弃用显式 extend
+收口）。词表加变体 → regen 同批刷新投影——新字段静默 skip 的手写
+Deserialize 数据黑洞从结构上不发生。要点：
+
+- 外部标签制：`{"MoneyDeposited":42}`（newtype）/
+  `{"AccountCreated":["ada",100]}`（tuple）/
+  `"AccountClosed"`（unit）；变体 index = 词表表序；
+- 未知变体名拒收（`UnknownVariant`，带路径与期望变体表）；
+- 开键后胶水 serialize/deserialize 桥件换 JSON 径
+  （`@json.to_bytes` / `@json.from_string`），wire 行格式路径退役；
+- 消费者依赖自带（mooncmd 主模块零 serde 依赖）：moon.mod 钉
+  `moonbit-community/serde.mbt@0.3.1`，moon.pkg 生产 import 块加
+  `"moonbit-community/serde.mbt" @serde`（模块名尾 `.mbt` 无缺省
+  别名，显式别名必填）+ `"moonbit-community/serde.mbt/json"`。
 
 ### 命令面发射（消费者径，moonx）
 
@@ -269,14 +296,16 @@ moon test --target native               # 全模块测试（wasm 同支持）
 moon run examples/bank_demo --target native  # 全链自证，终行 EXAMPLE:PASS
 ```
 
-运行时输出各测试面的计数行（下表实测于 2026-10-31；分包读数，native
-合计 75 / 75，wasm 58 / 58）：
+运行时输出各测试面的计数行（下表实测于 2026-11-12；分包读数，native
+合计 87 / 87，wasm 66 / 66——`examples/bank` 为 native 钉包，wasm 腿
+不在册）：
 
 | 面 | 读数 |
 |---|---|
-| 单元与端到端测试（主包 + 各域子包：聚合生命周期、乐观并发、投影契约、Router 分发全流程） | 45 / 45 |
-| 词表生成门与契约测试（`examples/bank`：生成产物逐字节比对、已知答案、init 值契约 + wire 往返恒等） | 17 / 17 |
+| 单元与端到端测试（主包 + 各域子包：聚合生命周期、乐观并发、投影契约、Router 分发全流程、时间源注入） | 46 / 46 |
+| 词表生成门与契约测试（`examples/bank`：生成产物逐字节比对、已知答案、init 值契约 + wire 往返恒等、serde JSON 投影罐） | 21 / 21 |
 | quicktest 随机状态机（生命周期机 + 守恒律四罐） | 13 / 13 |
+| 手写聚合配方可跑件（`examples/bank_handwritten` 契约罐） | 7 / 7 |
 | 示例全链自证（`moon run examples/bank_demo`） | 终行 `EXAMPLE:PASS` |
 
 ### quicktest 生命周期随机状态机

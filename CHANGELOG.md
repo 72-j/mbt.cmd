@@ -2,6 +2,26 @@
 
 ## 未发布
 
+**serde JSON 投影 gen 化**（役10，词表可选键 `[aggregate.serde]`
+`json = true` 键控发射，键缺席 = 零发射 = 存量表字节零漂）。
+发射器（主仓 skelschema）增 `emit_mooncmd_agg_serde`：事件枚举的
+serde.mbt JSON 投影（Serialize/Deserialize 双 impl 外部标签制三形
+unit/newtype/tuple + 变体 index=表序 + UnknownVariant 拒收 +
+`[0079]` 显式 extend 收口），产物 `<聚合根前缀>_serde_gen.mbt`
+（例 `examples/bank/account_serde_gen.mbt`，黄金门逐字节随批）。
+开键后胶水 serialize/deserialize 桥件换 JSON 径（`@json.to_bytes`
+catch 空收口——事件域封闭全原语字段，SerError 结构性不可达 +
+`@json.from_string`）；词表加变体 regen 同批刷新投影，手写
+Deserialize 漏新字段的数据黑洞结构性不发生。消费者依赖自带：
+moon.mod 钉 `moonbit-community/serde.mbt@0.3.1` + moon.pkg 主
+import 块 `@serde`/`json` 显式别名；mooncmd 主模块零 serde 依赖。
+罐面：bank 负例分变体（Some 包装形精确捕获 UnknownVariant）+
+roundtrip 四变体金罐字节锚；主仓 skelschema 四钉（键缺席缺省/
+键开形状锚三形全谱/键在值坏拒收/glue 键控臂）+ golden serde 门
+（键开 = 逐字节对拍，键关 = 产物不在清单）。读数：mooncmd native
+87/87 + wasm 66/66（bank 为 native 钉包，serde 罐随 bank 分包
+21/21），主仓 golden 39/39，skelschema 61/61。
+
 **时间源注入代码化**（`clock?` / `id_gen?` 可选槽，缺省行为不变）。
 信封构造器（`CommandMessage::new` / `EventMessage::new` /
 `EventMessage::from_command` / `Snapshot::new`）、聚合根三级构造

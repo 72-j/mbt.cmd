@@ -78,3 +78,7 @@ fields = [
 [[aggregate.commands]]
 name = "CloseAccount"
 fields = []
+
+# 役10 serde 键控（A′案:序列化 impl = 表的投影;键关 = 旧表字节稳零发射）
+[aggregate.serde]
+json = true
