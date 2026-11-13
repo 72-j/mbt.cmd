@@ -100,6 +100,42 @@ pub fn account_decide(
 }
 
 ///|
+/// 裁决钩子槽位（declare let 顶层值;实现 = policy 件 let 闭包,槽名 = account_<snake(Cmd)>——缺位 = [0068] 告警+运行时 init 陷阱）
+declare pub let account_create_account : (AccountState, String, Int32) -> Result[
+  Array[AccountEvent],
+  String,
+]
+
+///|
+declare pub let account_deposit_money : (AccountState, Int32) -> Result[
+  Array[AccountEvent],
+  String,
+]
+
+///|
+declare pub let account_withdraw_money : (AccountState, Int32) -> Result[
+  Array[AccountEvent],
+  String,
+]
+
+///|
+declare pub let account_close_account : (AccountState) -> Result[
+  Array[AccountEvent],
+  String,
+]
+
+///|
+/// 钩子工厂（机械映射——裁决/演化体 = policy 件槽位闭包,红线7）
+pub fn account_hooks() -> AccountDecideHooks {
+  {
+    create_account: account_create_account,
+    deposit_money: account_deposit_money,
+    withdraw_money: account_withdraw_money,
+    close_account: account_close_account,
+  }
+}
+
+///|
 /// wire 映射（役7+ D-MG-6;行格式 = "1\t<Event>\t<fields...>";首列 = schema_version 预留位,现版只认 1）
 pub fn AccountEvent::to_wire(self : AccountEvent) -> String {
   match self {

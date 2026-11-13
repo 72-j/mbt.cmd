@@ -206,7 +206,10 @@ moonx thy1016/cmd@latest <table.toml>
 `<名>_contract_wbtest.mbt` + `<名>_glue.mbt`（装配胶水六桥件：
 handler/applier/empty_state/serialize/deserialize/type_name——regen
 覆写，桥面零手写）+ `<名>_policy.mbt`（裁决策略 stub，**仅缺位时落，
-regen 永不覆写**——stub-zone）。填好裁决体后装配：消费包 `moon.pkg`
+regen 永不覆写**——stub-zone）。裁决槽位 = `<agg>_<snake(Cmd)>` let
+闭包（gen 侧 `declare let` 声明配对——机械验收清单 `grep "^declare"
+<名>_gen.mbt` 直读）；分派/钩子工厂 = gen 机械映射，手写只补槽体。
+填好裁决体后装配：消费包 `moon.pkg`
 生产 import 块加 `thy1016/mooncmd/command` +
 `moonbitlang/core/encoding/utf8`（moon.mod 模块级授亲），然后
 `AggregateRoot::new(id, <名>_handler, EventApplier::Single(<名>_applier),
@@ -238,7 +241,7 @@ regen 永不覆写**——stub-zone）。填好裁决体后装配：消费包 `m
 | `[[aggregate.events]]` | 事件枚举 | `pub(all) enum`，一行一变体，载荷字段照表 |
 | `[[aggregate.commands]]` | 命令枚举 | 同上 |
 | evolve 指令 | `apply` 演化链 | 封闭集四指令（set/add/append/remove）直写 `{ ..state, field: value, }` 更新链（同字段后写覆前写）；封闭集外的演化属裁决，进钩子 |
-| —— | 裁决钩子 + 分派 | `DecideHooks` 记录型函数面 + `decide` 分派骨架（只做载荷拆包）；**裁决体手写**（红线 7：余额不足类业务裁决不进 apply 链，参照 `account_policy.mbt`；MoonBit 记录字段作函数调用要带括号：`(hooks.deposit_money)(state, amount)`） |
+| —— | 裁决钩子 + 分派 | `DecideHooks` 记录型函数面 + `decide` 分派骨架（只做载荷拆包）+ `declare let` 槽位与钩子工厂（机械映射——表加命令 regen 自动扩）；**裁决体手写 = `<agg>_<snake(Cmd)>` let 闭包槽位**（红线 7：余额不足类业务裁决不进 apply 链，参照 `account_policy.mbt`；MoonBit 记录字段作函数调用要带括号：`(hooks.deposit_money)(state, amount)`） |
 | —— | wire 序列化 | `to_wire` / `from_wire` 行格式 `"1\t<Event>\t<fields>"`，首列 = `schema_version` 预留位（现版只认 `"1"`，坏载荷返 `None`） |
 
 手写验收清单 = 上段「生成物包含」逐项自配：init 值契约（每字段初值可
