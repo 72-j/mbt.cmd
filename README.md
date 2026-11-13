@@ -104,6 +104,21 @@ let committed = @mooncmd.dispatch(
 )
 ```
 
+**中间件管道**（`middleware~` 可选槽）：验证/日志/遥测/审计挂点，洋葱律
+（before 顺、after 逆），主链五步错才触发 failure 挂点后原样上浮——
+before/after 自身抛错直接穿透。自带 `logging_middleware(clock~, log~)`
+参考件（时钟/日志汇显式注入，框架不读钟不绑日志面）：
+
+```moonbit
+let mw = @mooncmd.logging_middleware(
+  clock=fn() { @async.now().to_int64() },
+  log=fn(s) { @mooncmd.make_console_logger().info(s) },
+)
+let committed = @mooncmd.dispatch(
+  records, None, root, cmd, middleware=[mw],
+)
+```
+
 ### Effect 重试（乐观并发自动重试）
 
 ```moonbit

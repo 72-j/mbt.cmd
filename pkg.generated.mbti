@@ -11,7 +11,7 @@ import {
 }
 
 // Values
-pub fn[Id, S, C, E] dispatch(@store.EventStore[Id, E], @event.EventBus[Id, E]?, @aggregate.AggregateRoot[Id, S, C, E], C, projections? : Array[@projection.LiveProjection[Id, E]], consistency? : Consistency, poll_wait? : (Int64) -> Unit, poll_budget? : Int32) -> @aggregate.AggregateRoot[Id, S, C, E] raise EventSourcingErr
+pub fn[Id, S, C, E] dispatch(@store.EventStore[Id, E], @event.EventBus[Id, E]?, @aggregate.AggregateRoot[Id, S, C, E], C, projections? : Array[@projection.LiveProjection[Id, E]], consistency? : Consistency, poll_wait? : (Int64) -> Unit, poll_budget? : Int32, middleware? : Array[DispatchMiddleware[Id, C, E]]) -> @aggregate.AggregateRoot[Id, S, C, E] raise EventSourcingErr
 
 pub fn[AggregateId, S, E] dispatch_ask() -> @monads.Reader[RouteEnv[AggregateId, S, E], RouteEnv[AggregateId, S, E]]
 
@@ -28,6 +28,8 @@ pub fn[AggregateId, S, E, R] dispatch_reader_run(@monads.Reader[RouteEnv[Aggrega
 pub fn effect_kind_of_sourcing_err(EventSourcingErr) -> @aggregate.EffectErrorKind
 
 pub fn log_warn(String) -> Unit
+
+pub fn[Id, C, E] logging_middleware(clock~ : () -> Int64, log~ : (String) -> Unit) -> DispatchMiddleware[Id, C, E]
 
 pub fn make_console_logger() -> ConsoleLogger
 
@@ -62,6 +64,20 @@ pub(all) enum Consistency {
 type ConsoleLogger
 pub fn ConsoleLogger::info(Self, String) -> Unit
 pub impl Logger for ConsoleLogger
+
+pub(all) struct DispatchContext[Id, C, E] {
+  aggregate_id : Id
+  command : C
+  events : Array[@event.EventMessage[Id, E]]
+  version : Int32
+}
+
+pub(all) struct DispatchMiddleware[Id, C, E] {
+  name : String
+  before : (DispatchContext[Id, C, E]) -> Unit raise EventSourcingErr
+  after : (DispatchContext[Id, C, E]) -> Unit raise EventSourcingErr
+  failure : (DispatchContext[Id, C, E], EventSourcingErr) -> Unit
+}
 
 type MuteLogger
 pub fn MuteLogger::info(Self, String) -> Unit

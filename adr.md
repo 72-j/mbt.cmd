@@ -57,6 +57,13 @@
 - **证据罐三件**：bank 定钟全链（事件时间戳全取注入值）/ 同输入同钟同 id 源两次运行事件流逐字段相等（id 消费序 = envelope 1 格 + event 1 格）/ Router env 注钟落库时间戳透传。native 78/78 + EXAMPLE:PASS + 主仓 golden 17/17 零涟漪（gen 链未触）。
 - **被否方案**：① trait Clock 注入——加抽象层 + 跨包 impl 面，业务侧无第二形态需求（D1 后议条件封死）；② RouterBuilder 加 clock 字段——两级已覆盖（env 级即 Router 全链），builder 重复（D4）；③ 只注 root 不注 env——Router 内部 from_snapshot 构造点会落到系统钟，全链受控破功（D2 反向依据）。
 
+## ADR-MC-009 dispatch 中间件管道（记录型函数面）`[定案 2026-11-13]`
+
+- **裁定四条**（对标 Commanded pipeline，`lib/commanded/middleware/`；立项 = 对齐茗篇 `commanded_alignment_ming.md` C-09，P2-5）：D1 = **记录型函数面三槽**（`name` + `before` / `after` / `failure`；ADR-MC-003 同族——无 trait 无 behaviour 宏）；D2 = **洋葱律**：`before` 按数组序、`after` 逆序（Commanded pipeline 同款）；`failure` 按数组序且**只对主链五步错误触发**——中间件自身抛错直接穿透不进 failure 槽（防自触发递归 + 主链错/挂点错语义分明）；D3 = **DispatchContext 只读记录**四字段（`aggregate_id` / `command` / `events` / `version`——before 时 events 空数组、version 为现版本；after 时 events 全量、version 为落库后版本）；D4 = **门面零新时钟**：中间件若需计时，时钟由用户闭包捕获注入（红线 6 不破——参考件 `logging_middleware(clock~, ...)` 显式收钟）。
+- **设计依据**：Commanded 现役四件中两件结构性不需要——`extract_aggregate_identity`（Commanded 的 dispatch 收命令模块需提取聚合 ID；mooncmd 直收聚合根，ID 在手）与 `consistency_guarantee`（门面第⑤步已内建）。故 mooncmd 中间件面收窄为**用户挂点**（验证 / 日志 / 遥测 / 审计），管道本身零业务语义。
+- **落地面**：`dispatch` 门面 +`middleware~` 可选槽（缺省空数组 = 现行为字节稳——宪法新键 optional）；根包新件 `middleware.mbt`（DispatchContext + DispatchMiddleware + logging_middleware 参考件）；测试四钉（触发序/逆序/failure 路径/挂点错误穿透）。
+- **被否方案**：① trait 形中间件——加抽象层 + 跨包 impl 面，无第二形态需求（MC-008 D1 同律）；② 中间件错误进 failure 槽——failure 递归自触发风险 + 主链错与挂点错混淆（D2 反向依据）；③ before/after 拆两个记录型——单记录两阶段构造即可，拆面徒增。
+
 ---
 
 > **签发记(2026-10-22)**:ADR-MC-001..006 全数 [定案 2026-10-22 签发] → **[定案]**——独立仓 0.1.0 首发(RELEASE:PASS)+ 役5a/5b/5d/7 实战检验 + Account 金样对照,定版窗口兑现(随役5c 契约清债笔)。逐条正文不动,状态标记即签发。
