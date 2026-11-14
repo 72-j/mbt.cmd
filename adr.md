@@ -66,12 +66,23 @@
 
 ---
 
+## ADR-MC-010 快照自动节律可配置（snapshot_every 差值判定）`[定案 2026-11-14]`
+
+- **勘定注记**：现役 `dispatch_once` Step 5 已有落帧但形制为**硬编码模判定** `version % 100 == 0`（0.1.0 首发遗留，f3e4e0e 随迁）——茗篇 C-10 描述「缺落帧节律」stale；本役实际落件 = 模判定退役 → Commanded 差值判定 + 配置槽 + 缺省关闭（对标 `lib/commanded/snapshotting.ex:68` 一行判定式，立项 = 茗篇 C-10 / todo P2-6）。
+- **裁定四条**：D1 = **RouteEnv 配置槽** `snapshot_every : Int32` + `RouteEnv::new` 可选参（缺省 0 = 关闭；ADR-MC-008 `clock?`/`id_gen?` 同形两级注入位）；D2 = **判定式 Commanded 同款差值制** `version - base_version >= snapshot_every`（base_version = Step 0 快照基版本，无快照 = 0；量纲 = 自上次快照以来的版本跨度 = 重建成本的真量纲）；D3 = **模判定退役**（`% 100` 删除——零测试断言、零文档承诺，首发遗留无兼容面；缺省行为从「每 100 版」变「关闭」= Commanded snapshotting 缺省禁用语义对位）；D4 = **落帧时机与失败语义不动**（Step 5 位置、commit 前、`SnapshotErr` 诚实穿透）。
+- **设计依据**：差值制 vs 模制——聚合自快照基版本重建后（如 base=97），模判定只在整百开火（错位盲区），差值制量「自上次快照以来的跨度」与基版本对齐无关；且命令不推进版本时差值不变，无虚假重写。
+- **落地面**：`RouteEnv` +1 字段 +1 可选参（9 处调用点零涟漪）；`dispatch_once` Step 5 判定替换 + 头注拨正；spec.md §2 一处措辞；测试四钉（差值开火 / 缺省关闭 / 阈值不满足不落 + 快照后重计 / Step 0 读径闭环）。
+- **被否方案**：① 模制保留 + 配置并存——双节律两套语义徒增（装配差异不是代码分叉）；② RouterBuilder / CommandConfig 加槽——节律是环境级（全部 dispatch 路径共用 env），CommandConfig 是单命令执行参数，错位；③ SnapshotPolicy trait / 回调形——无第二形态需求（MC-008/009 D1 同律）。
+
+---
+
 > **签发记(2026-10-22)**:ADR-MC-001..006 全数 [定案 2026-10-22 签发] → **[定案]**——独立仓 0.1.0 首发(RELEASE:PASS)+ 役5a/5b/5d/7 实战检验 + Account 金样对照,定版窗口兑现(随役5c 契约清债笔)。逐条正文不动,状态标记即签发。
 
 ## 变更记录
 
 | 版本 | 日期 | 变更 |
 |---|---|---|
+| v1.3.0 | 2026-11-14 | **ADR-MC-010 立条**（快照自动节律可配置，差值判定 + RouteEnv 槽缺省关闭，模判定退役）；ADR-MC-009 变更记录行补账（役11 立条时漏行）。 |
 | v1.2.0 | 2026-11-07 | **ADR-MC-008 立条**（时间源注入代码化，用户五裁定案 D1–D5：裸 fn 槽 / 两级 / 双槽同形 / RouterBuilder 不动 / 随下版 0.2.3）；红线 6 Supersede 走 const.md v1.2.0 另簿。 |
 | v1.1.0 | 2026-10-21 | **ADR-MC-007 立条**（独立成仓在树 mbt.cmd，Supersede ADR-MC-001 包路径口径）；同步去敏三处（内部项目名→中性表述，release_review ③ 类门对齐）。 |
 | v1.0.0 | 2026-10-08 | 建卷（用户令「开 MU2 立卷笔」）：ADR-MC-001..006 自 MCMD-S1 §二原样搬迁（状态标记原样，拆卷 ≠ 签发）；建卷同笔登记全仓 ADR 索引（generator/README.md §3 一行）。源档归档 `bak/requirements.md`。 |

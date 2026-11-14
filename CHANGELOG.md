@@ -2,6 +2,21 @@
 
 ## 未发布
 
+**快照自动节律可配置**（ADR-MC-010）：`RouteEnv::new` 尾部可选参
+`snapshot_every? : Int32`（缺省 0 = 关闭，`clock?`/`id_gen?` 同形）；
+Router 分发主流程 Step5 快照判定换 Commanded 同款差值制
+`version - 快照基版本 >= snapshot_every`（错位免疫），硬编码
+`version % 100` 模判定退役（0.1.0 首发遗留，零测试零文档依赖）。
+节律四钉（阈值精确 / 缺省关闭 / 错位基版本 / 快照后重计）+
+根包 74/74 + native deny-warn 95/95 + bank 21/21 零涟漪。
+
+**dispatch 中间件管道**（ADR-MC-009）：`dispatch` 门面增 `middleware~`
+可选槽（缺省空数组 = 行为字节稳）；`DispatchMiddleware` 记录型函数面
+三槽（before 顺 / after 逆 / failure 只对主链五步错触发，挂点自身抛错
+穿透不进 failure 防自触发递归）；`logging_middleware` 参考件
+（`clock~` / `log~` 闭包显式注入）。middleware 四钉 +
+根包 70/70 + bank 21/21 零涟漪。
+
 **serde JSON 投影 gen 化**（役10，词表可选键 `[aggregate.serde]`
 `json = true` 键控发射，键缺席 = 零发射 = 存量表字节零漂）。
 发射器（主仓 skelschema）增 `emit_mooncmd_agg_serde`：事件枚举的

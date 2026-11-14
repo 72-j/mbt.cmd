@@ -8,6 +8,8 @@
 pub struct RouteEnv[AggregateId, S, E] {
   event_store : @store.EventStore[AggregateId, E]
   snapshot_store : @store.SnapshotStore[AggregateId, S]
+  // 快照自动节律（版本差阈值，0 = 关闭；ADR-MC-010）
+  snapshot_every : Int32
   event_bus : @event.EventBus[AggregateId, E]?
   logger : &Logger
   default_timeout : Int64
@@ -26,6 +28,7 @@ pub fn[AggregateId, E, S] RouteEnv::new(
   default_retry : Int32,
   clock? : () -> Int64,
   id_gen? : () -> String,
+  snapshot_every? : Int32,
 ) -> RouteEnv[AggregateId, S, E] {
   let env_clock = match clock {
     Some(clock_fn) => clock_fn
@@ -44,6 +47,10 @@ pub fn[AggregateId, E, S] RouteEnv::new(
     default_retry,
     clock: env_clock,
     id_gen: env_id_gen,
+    snapshot_every: match snapshot_every {
+      Some(n) => n
+      None => 0
+    },
   }
 }
 // }
@@ -294,7 +301,7 @@ fn event_bus_error_of(e : Error) -> @event.EventBusError {
 /// 快照版本）→ Step 2 from_snapshot 重建 → Step 3 执行 → Step 4 append
 /// （错误穿透不抹平）→ Step 4.5 EventBus 发布（失败 = Failed
 /// 诚实——事件已持久，盲目重试 dispatch 会双重作用，at-least-once 投递
-/// 归后续裁定）→ Step 5 快照（每 100 版）→ Step 6 commit。
+/// 归后续裁定）→ Step 5 快照（snapshot_every 差值判定，0 = 关闭）→ Step 6 commit。
 fn[AggregateId, S, C, E] Router::dispatch_once(
   env : RouteEnv[AggregateId, S, E],
   aggregate_id : AggregateId,
@@ -350,9 +357,9 @@ fn[AggregateId, S, C, E] Router::dispatch_once(
       }
     None => ()
   }
-  // ========== Step 5: 保存快照（每 100 个事件）==========
+  // ========== Step 5: 保存快照（snapshot_every 差值判定，0 = 关闭）==========
   let version = aggregate.version()
-  if version > 0 && version % 100 == 0 {
+  if env.snapshot_every > 0 && version - base_version >= env.snapshot_every {
     let snapshot = aggregate.to_snapshot()
     (env.snapshot_store.save)(
       snapshot.aggregate_id,

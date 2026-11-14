@@ -22,7 +22,9 @@ correlation / causation 追溯链、时间戳、schema 版本），Router 作为
   事务失败整体回滚。
 - 快照加速：`to_snapshot` / `SnapshotStore` 记录面 + `from_snapshot`
   基态重建（快照读路径已接入分发主流程）；快照态起跑 + 尾部重放与全量
-  重放等价有契约钉。
+  重放等价有契约钉。自动落帧节律 `RouteEnv(snapshot_every~)`（差值判定
+  `version - 基版本 >= snapshot_every`，缺省 0 = 关闭；Commanded
+  snapshotting 对位，ADR-MC-010）。
 - 拉取式投影：`Projection` 记录面 + `LiveProjection`（订阅位置
   Origin / Current / FromVersion，检查点即版本）+ SQLite 持久化投影。
 - Effect 重试状态机：`RetryMachine` 协议面（错误分类封闭集 + 纯裁决，

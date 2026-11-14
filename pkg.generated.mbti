@@ -86,6 +86,7 @@ pub impl Logger for MuteLogger
 pub struct RouteEnv[AggregateId, S, E] {
   event_store : @store.EventStore[AggregateId, E]
   snapshot_store : @store.SnapshotStore[AggregateId, S]
+  snapshot_every : Int32
   event_bus : @event.EventBus[AggregateId, E]?
   logger : &Logger
   default_timeout : Int64
@@ -93,7 +94,7 @@ pub struct RouteEnv[AggregateId, S, E] {
   clock : () -> Int64
   id_gen : () -> String
 }
-pub fn[AggregateId, E, S] RouteEnv::new(@store.EventStore[AggregateId, E], @store.SnapshotStore[AggregateId, S], @event.EventBus[AggregateId, E]?, Int64, Int32, clock? : () -> Int64, id_gen? : () -> String) -> Self[AggregateId, S, E]
+pub fn[AggregateId, E, S] RouteEnv::new(@store.EventStore[AggregateId, E], @store.SnapshotStore[AggregateId, S], @event.EventBus[AggregateId, E]?, Int64, Int32, clock? : () -> Int64, id_gen? : () -> String, snapshot_every? : Int32) -> Self[AggregateId, S, E]
 
 pub struct Router[AggregateId, S, C, E] {
   env : RouteEnv[AggregateId, S, E]
