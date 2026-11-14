@@ -78,10 +78,54 @@
 
 > **签发记(2026-10-22)**:ADR-MC-001..006 全数 [定案 2026-10-22 签发] → **[定案]**——独立仓 0.1.0 首发(RELEASE:PASS)+ 役5a/5b/5d/7 实战检验 + Account 金样对照,定版窗口兑现(随役5c 契约清债笔)。逐条正文不动,状态标记即签发。
 
+## ADR-MC-011 Process Manager 框架面（显式泵 + 词表 gen 化路线）`[定案 2026-11-14]`
+
+**勘定**（C-08 对标,茗篇 commanded_alignment §3）：Commanded saga =
+四回调 behaviour（interested?/handle/apply/error）+ 全局事件流重处理。
+mooncmd 组装积木勘定三则：EventStore 按 aggregate_id 分流**无全局流**
+（重处理面结构性不在）;EventBus 单槽 publish **无订阅多播**;SnapshotStore
+面同族可复用（零新表）。落件形态用户拍定 = **词表 gen 化**（2026-11-14）;
+切法两役 = 13a 框架面（gen 产物消费的接口面,手写）→ 13b 词表 gen 化
+（skelschema `pm_toml_gen` 方言 + cmd 搬运路由 + 演示样例切换 gen 产物）。
+
+**裁定**：
+- **D1 = 四回调记录面**（记录型函数面同族——middleware/projection
+  同形制）：`interested`（相关性预判）/ `saga_id_of`（分片键,收完整
+  EventMessage 信封——键可取 aggregate_id 或载荷字段）/ `handle`（产
+  `DirectedCommand`（命令本体 + target_aggregate_id 跨聚合地址）/ `apply`
+  （状态演化）。error/3 裁决**不立**——显式泵下失败 = raise 透传
+  （EmitFailed/StateFailed 独立 suberror,不混 dispatch 主链
+  EventSourcingErr——加臂涟漪重试裁决六臂分类）,裁决权在调用方
+  catch;钩子槽挂账候真需求。
+- **D2 = 显式泵**（`ProcessManagerRunner.pump/pump_event`）：逐事件
+  interested→装态（load 缺失 = init）→handle→逐条 emit（任一失败
+  fail-fast,状态不推进）→apply→save。订阅组装留调用方（bus publish
+  闭包串 pump / dispatch 后显式喂任选）。**语义差诚实记**：Commanded
+  「事件确认前崩溃→重启重处理」不在 mooncmd 面（无全局流）;emit 成功
+  后 save 前崩溃 = 命令已发状态未进,重喂重发——exactly-once 责任在
+  调用方泵序,add 类 evolve 不幂等挂账。
+- **D3 = 状态持久化复用 SnapshotStore**：键 = "<pm名>:<saga_id>"
+  命名空间隔离多 PM;version 槽 = 源事件聚合版本（诚实溯源,saga
+  语义弱化——PM 不在同一聚合流上）。多 PM = 多 runner 互不干扰。
+- **D4 = 命令发射注入闭包**：`(target_id, C) -> Unit raise
+  ProcessManagerErr`——调用方组装 dispatch/Router 任一径;失败转译
+  一次进 EmitFailed 文案。
+
+**被否方案**：①EventBus 扩订阅多播（动现役记录面,bank bus 用法涟漪,
+且推模式常驻泵与 mooncmd 无进程驻留哲学相抵）②EventSourcingErr 加
+ProcessManagerErr 臂（六臂分类消费面全涟漪）③error/3 钩子槽（无
+第二形态需求,显式泵调用方裁决已足）。
+
+**13b 预告**（词表 gen 化边界,红线7 同族）：gen 产 = interested
+封闭集 match + handle 字段直通映射（emit 行:命令名+target_field+
+字段 source→target 对）+ apply evolve 行（复用 set/add 封闭集）+
+状态 struct;计算级映射 = stub zone 手写（红线7 裁决不入表）。
+
 ## 变更记录
 
 | 版本 | 日期 | 变更 |
 |---|---|---|
+| v1.4.0 | 2026-11-14 | **ADR-MC-011 立条**（Process Manager 框架面:四回调记录面 + 显式泵 + SnapshotStore 复用 + 命令发射注入;词表 gen 化两役切法 13a→13b,13b 挂候令）。 |
 | v1.3.0 | 2026-11-14 | **ADR-MC-010 立条**（快照自动节律可配置，差值判定 + RouteEnv 槽缺省关闭，模判定退役）；ADR-MC-009 变更记录行补账（役11 立条时漏行）。 |
 | v1.2.0 | 2026-11-07 | **ADR-MC-008 立条**（时间源注入代码化，用户五裁定案 D1–D5：裸 fn 槽 / 两级 / 双槽同形 / RouterBuilder 不动 / 随下版 0.2.3）；红线 6 Supersede 走 const.md v1.2.0 另簿。 |
 | v1.1.0 | 2026-10-21 | **ADR-MC-007 立条**（独立成仓在树 mbt.cmd，Supersede ADR-MC-001 包路径口径）；同步去敏三处（内部项目名→中性表述，release_review ③ 类门对齐）。 |

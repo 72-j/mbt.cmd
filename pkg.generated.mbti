@@ -45,6 +45,12 @@ pub(all) suberror EventSourcingErr {
   ConsistencyErr(String)
 }
 
+pub(all) suberror ProcessManagerErr {
+  EmitFailed(String)
+  StateFailed(String)
+}
+pub fn ProcessManagerErr::to_string(Self) -> String
+
 // Types and methods
 pub(all) struct CommandConfig {
   timeout_ms : Int64
@@ -65,6 +71,11 @@ type ConsoleLogger
 pub fn ConsoleLogger::info(Self, String) -> Unit
 pub impl Logger for ConsoleLogger
 
+pub(all) struct DirectedCommand[C] {
+  target_aggregate_id : String
+  command : C
+}
+
 pub(all) struct DispatchContext[Id, C, E] {
   aggregate_id : Id
   command : C
@@ -82,6 +93,24 @@ pub(all) struct DispatchMiddleware[Id, C, E] {
 type MuteLogger
 pub fn MuteLogger::info(Self, String) -> Unit
 pub impl Logger for MuteLogger
+
+pub(all) struct ProcessManager[S, C, E] {
+  name : String
+  init_state : () -> S
+  interested : (E) -> Bool
+  saga_id_of : (@event.EventMessage[String, E]) -> String
+  handle : (S, E) -> Array[DirectedCommand[C]]
+  apply : (S, E) -> S
+}
+
+pub(all) struct ProcessManagerRunner[S, C, E] {
+  manager : ProcessManager[S, C, E]
+  snapshots : @store.SnapshotStore[String, S]
+  emit : (String, C) -> Unit raise ProcessManagerErr
+}
+pub fn[S, C, E] ProcessManagerRunner::new(ProcessManager[S, C, E], @store.SnapshotStore[String, S], (String, C) -> Unit raise ProcessManagerErr) -> Self[S, C, E]
+pub fn[S, C, E] ProcessManagerRunner::pump(Self[S, C, E], Array[@event.EventMessage[String, E]]) -> Int32 raise ProcessManagerErr
+pub fn[S, C, E] ProcessManagerRunner::pump_event(Self[S, C, E], @event.EventMessage[String, E]) -> Bool raise ProcessManagerErr
 
 pub struct RouteEnv[AggregateId, S, E] {
   event_store : @store.EventStore[AggregateId, E]

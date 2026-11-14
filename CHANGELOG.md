@@ -2,6 +2,20 @@
 
 ## 未发布
 
+**Process Manager 框架面**（ADR-MC-011）：`ProcessManager` 四回调
+记录面（`interested` / `saga_id_of`（收 EventMessage 信封）/
+`handle`（产 `DirectedCommand`（命令 + `target_aggregate_id` 跨聚合
+地址））/ `apply`）+ `ProcessManagerRunner` 显式泵（单事件
+interested→装态（load 缺失 = init）→handle→逐条 emit（任一失败
+fail-fast 状态不推进）→apply→save）；状态复用 SnapshotStore（键
+`<pm名>:<saga_id>`）；命令发射注入闭包；错误面 `ProcessManagerErr`
+独立 suberror（不混 dispatch 主链）。语义差诚实记 ADR：EventStore
+无全局流（Commanded 崩溃重处理不在）、emit 成功后 save 前崩溃 =
+命令已发状态未进、exactly-once 责任在调用方泵序。罐五钉（全链
+持久化 / skip 律 / saga 分片 / fail-fast / 既有态装载）+ native
+100/100 + wasm 79/79 + bank 21/21 零涟漪。词表 gen 化切 13b
+（skelschema `pm_toml_gen` 方言）挂候令。
+
 **快照自动节律可配置**（ADR-MC-010）：`RouteEnv::new` 尾部可选参
 `snapshot_every? : Int32`（缺省 0 = 关闭，`clock?`/`id_gen?` 同形）；
 Router 分发主流程 Step5 快照判定换 Commanded 同款差值制
