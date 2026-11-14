@@ -13,8 +13,17 @@ fail-fast 状态不推进）→apply→save）；状态复用 SnapshotStore（�
 无全局流（Commanded 崩溃重处理不在）、emit 成功后 save 前崩溃 =
 命令已发状态未进、exactly-once 责任在调用方泵序。罐五钉（全链
 持久化 / skip 律 / saga 分片 / fail-fast / 既有态装载）+ native
-100/100 + wasm 79/79 + bank 21/21 零涟漪。词表 gen 化切 13b
-（skelschema `pm_toml_gen` 方言）挂候令。
+100/100 + wasm 79/79 + bank 21/21 零涟漪。**词表 gen 化落地**（役
+13b,ADR-MC-011 下半,当日续）：`[[process_manager]]` 方言件
+`pm_toml_gen.mbt`（skelschema parse/validate/emit 三件套;schema
+0.2.0;六段产物 = 状态 struct / interested 封闭集 / saga_id_of /
+handle 直通映射 / apply evolve 行 / PM 记录面;装配不在词表 = 红线
+7 同源）+ `examples/bank/account_pm.toml` 样例表 +
+`account_pm_gen.mbt`
+入库产物（transfer saga 手写件退役随批）+ `pm_toml_gen_test.mbt` 四钉 +
+主仓黄金门 PM 行（REGEN≡DISK）;cmd 仓搬运同步 = 方言件体保真 + CLI PM 路由
+（双拒合成错 exit 4）+ serde 第五件随补 + 役12 漂移补齐（hooks
+工厂/declare 槽位/serde 发射器三面,烟测咬出）。
 
 **快照自动节律可配置**（ADR-MC-010）：`RouteEnv::new` 尾部可选参
 `snapshot_every? : Int32`（缺省 0 = 关闭，`clock?`/`id_gen?` 同形）；

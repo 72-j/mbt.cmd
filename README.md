@@ -27,8 +27,10 @@ correlation / causation 追溯链、时间戳、schema 版本），Router 作为
   snapshotting 对位，ADR-MC-010）。
 - Process Manager（saga）：`ProcessManager` 四回调记录面 +
   `ProcessManagerRunner` 显式泵（事件 → 命令跨聚合编排；状态持久化
-  复用 SnapshotStore；命令发射注入闭包）。词表 gen 化（`[[process_manager]]`
-  方言）规划中（ADR-MC-011 两役切法：13a 框架面已落 → 13b gen 化）。
+  复用 SnapshotStore；命令发射注入闭包）。词表 gen 化已落（`[[process_manager]]`
+  方言，ADR-MC-011：`moonx thy1016/cmd@latest <pm表>.toml` 单件产
+  `<名>_pm_gen.mbt`；装配（Runner/emit 闭包/SnapshotStore）= 消费方
+  组合根，不在词表）。
 - 拉取式投影：`Projection` 记录面 + `LiveProjection`（订阅位置
   Origin / Current / FromVersion，检查点即版本）+ SQLite 持久化投影。
 - Effect 重试状态机：`RetryMachine` 协议面（错误分类封闭集 + 纯裁决，

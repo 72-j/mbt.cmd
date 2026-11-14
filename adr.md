@@ -121,11 +121,23 @@ ProcessManagerErr 臂（六臂分类消费面全涟漪）③error/3 钩子槽（
 字段 source→target 对）+ apply evolve 行（复用 set/add 封闭集）+
 状态 struct;计算级映射 = stub zone 手写（红线7 裁决不入表）。
 
+**13b 履行笔**（2026-11-14 当日落地,边界兑现核对）：`skelschema/
+pm_toml_gen.mbt` 方言件（parse/validate/emit 三件套,schema 0.2.0）
++ `examples/bank/account_pm.toml` 样例表 + `account_pm_gen.mbt` 入库产物
+（transfer saga 手写件退役随批）+ `pm_toml_gen_test.mbt` 四钉（解析
+校验/词根拒/saga_key 双径/形状锚+装配哨兵）+ 主仓黄金门 PM 行;cmd
+仓搬运同步（方言件体保真 + CLI
+PM 路由双拒合成错 + serde 第五件随补 + 役12 漂移补齐）。预告边界
+逐条兑现：六段产物（状态 struct/interested 封闭集/saga_id_of/
+handle 直通映射/apply evolve 行/PM 记录面）全机械;`emit` 行 =
+数据;装配（ProcessManagerRunner::new/emit 闭包/SnapshotStore）不
+在词表 = 消费方组合根（红线7 同源,PM 罐哨兵钉死产物零装配体）。
+
 ## 变更记录
 
 | 版本 | 日期 | 变更 |
 |---|---|---|
-| v1.4.0 | 2026-11-14 | **ADR-MC-011 立条**（Process Manager 框架面:四回调记录面 + 显式泵 + SnapshotStore 复用 + 命令发射注入;词表 gen 化两役切法 13a→13b,13b 挂候令）。 |
+| v1.4.0 | 2026-11-14 | **ADR-MC-011 立条**（Process Manager 框架面:四回调记录面 + 显式泵 + SnapshotStore 复用 + 命令发射注入;词表 gen 化两役切法 13a→13b,13b 同日落地,履行笔见上）。 |
 | v1.3.0 | 2026-11-14 | **ADR-MC-010 立条**（快照自动节律可配置，差值判定 + RouteEnv 槽缺省关闭，模判定退役）；ADR-MC-009 变更记录行补账（役11 立条时漏行）。 |
 | v1.2.0 | 2026-11-07 | **ADR-MC-008 立条**（时间源注入代码化，用户五裁定案 D1–D5：裸 fn 槽 / 两级 / 双槽同形 / RouterBuilder 不动 / 随下版 0.2.3）；红线 6 Supersede 走 const.md v1.2.0 另簿。 |
 | v1.1.0 | 2026-10-21 | **ADR-MC-007 立条**（独立成仓在树 mbt.cmd，Supersede ADR-MC-001 包路径口径）；同步去敏三处（内部项目名→中性表述，release_review ③ 类门对齐）。 |
