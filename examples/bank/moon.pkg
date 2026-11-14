@@ -8,17 +8,21 @@
 // (@aggregate/@command/@event/@store)。
 import {
   "moonbitlang/core/encoding/utf8",
+  "thy1016/mooncmd",
   "thy1016/mooncmd/aggregate",
   "thy1016/mooncmd/command",
+  "thy1016/mooncmd/event",
   "moonbit-community/serde.mbt" @serde,
   "moonbit-community/serde.mbt/json",
 }
 
 import {
   "moonbitlang/x/fs",
+  "thy1016/mooncmd",
   "thy1016/mooncmd/aggregate",
   "thy1016/mooncmd/command",
   "thy1016/mooncmd/event",
+  "thy1016/mooncmd/store",
 } for "test"
 
 supported_targets = "native"
