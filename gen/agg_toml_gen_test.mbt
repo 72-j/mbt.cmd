@@ -133,16 +133,21 @@ test "mooncmd agg contract scaffold emission" {
 }
 
 ///|
-/// 钉7·策略 stub 发射（stub-zone）:工厂名 + 守卫 Err("TODO") + stub-zone
-/// 头注 + 发射确定性（形状 = bank 手写孪生件 account_policy.mbt 同构）。
+/// 钉7·策略 stub 发射（stub-zone;役13b 同步新架构）:槽位 let 形（与 gen
+/// declare 声明配对——工厂/分派 = gen 机械面,stub 只补槽体）+ 守卫
+/// Err("TODO") + stub-zone 头注 + 发射确定性。槽头 83>80 = fmt 正典折形。
 test "mooncmd agg policy stub emission" {
   let def = match @gen.parse_mooncmd_agg(AGG_SAMPLE) {
     Ok(def) => def
     Err(msg) => fail(msg)
   }
   let stub = @gen.emit_mooncmd_agg_policy_stub(def)
-  assert_true(stub.contains("pub fn counter_hooks() -> CounterDecideHooks"))
-  assert_true(stub.contains("bump: (state, delta) => {"))
+  // 工厂已迁 gen 机械面——stub 不得再含工厂（旧架构哨兵）。
+  assert_true(!stub.contains("pub fn counter_hooks"))
+  assert_true(
+    stub.contains("pub let counter_bump : (CounterState, Int32) -> Result["),
+  )
+  assert_true(stub.contains("] = (state, delta) => {"))
   // 哑消费行(deny-warn 面:stub 参数全未用 = unused_value 红,消费项目
   // 核身实证 2026-11-10)——多参元组形/单参裸形各钉。
   assert_true(stub.contains("let _ = (state, delta)"))
@@ -154,7 +159,8 @@ test "mooncmd agg policy stub emission" {
 }
 
 ///|
-/// 钉8·stub 单参裸形（fmt 正典）:零载荷命令闭包 = `cmd: state =>` 无括号形。
+/// 钉8·stub 单参裸形（fmt 正典）:零载荷命令槽 = `= state => {` 无括号形
+/// （71≤80 槽头单行收整）。
 test "mooncmd agg policy stub zero-payload bare lambda" {
   let sample = AGG_SAMPLE.replace(
     old="[[aggregate.commands]]\nname = \"Bump\"\nfields = [ { name = \"delta\", type = \"int\" } ]",
@@ -165,8 +171,11 @@ test "mooncmd agg policy stub zero-payload bare lambda" {
     Err(msg) => fail(msg)
   }
   let stub = @gen.emit_mooncmd_agg_policy_stub(def)
-  assert_true(stub.contains("bump: (state, delta) => {"))
-  assert_true(stub.contains("reset: state => {"))
+  assert_true(
+    stub.contains(
+      "pub let counter_reset : (CounterState) -> Result[Array[CounterEvent], String] = state => {",
+    ),
+  )
   assert_true(stub.contains("let _ = state\n"))
   assert_true(
     stub.contains("Err(\"TODO(Reset): 裁决体待填——红线7\")"),
@@ -197,7 +206,9 @@ test "mooncmd agg glue emission six bridges" {
   assert_true(
     glue.contains("pub fn counter_type_name(event : CounterEvent) -> String"),
   )
-  assert_true(glue.contains("match counter_decide(state, cmd, counter_hooks())"))
+  assert_true(
+    glue.contains("match counter_decide(state, cmd, counter_hooks())"),
+  )
   assert_true(
     glue.contains(
       "Err(msg) => raise @command.CommandError::InvalidCommand(msg)",

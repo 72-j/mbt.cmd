@@ -1,17 +1,18 @@
 ///|
-/// `mooncmd` 聚合词表方言（消费者径）——`<agg>_agg.toml` 定义集：
+/// cmd/gen agg 方言发射器:抽自主仓 skelschema/mooncmd_agg_toml_gen.mbt
+/// 体保真搬运(役13b 漂移补齐 2026-11-14——上轮快照缺 declare 槽位+
+/// 钩子工厂尾段,golden 哨兵红灯驱动同步)。治理①变更单向律——本件
+/// 只跟随搬运,能力变更先落主仓。
+/// `mooncmd` 聚合词表方言（役7 D-MG;第十二方言）——`<agg>_agg.toml` 定义集：
 /// [aggregate]（词根/id 域）+ [aggregate.state] 字段（形状区+init 值区）+
 /// [[aggregate.events]] 事件（字段+演化指令）+ [[aggregate.commands]] 命令词形。
-/// 分工判据（mooncmd README 配方节 + const.md 红线7-9 护栏）:gen 产**类型/apply/
+/// 分工判据（宪法 §1 同源;mooncmd const.md 红线7-9 护栏）:gen 产**类型/apply/
 /// 分派骨架**（形状与机械演化）,**裁决 = 策略件手写钩子**（红线7 裁决不入表;
 /// 演化指令集封闭 set/add/append/remove——红线8,scope 门把封闭集外指令判红）。
 /// 产物 = 消费包 `<agg>_gen.mbt`:state struct + init + 事件/命令枚举（标签
 /// 载荷）+ apply（evolve 指令逐条链式,同字段后写覆前写）+ DecideHooks 记录
 /// + decide 分派（载荷拆包后直调钩子）。词表封闭:类型 string/int/bool;
 /// id 词形安全检查(保留字族)。
-/// 抽出源 = 主仓 skelschema/mooncmd_agg_toml_gen.mbt(体保真);治理三律
-/// (变更单向/golden 漂移探测/发布配对)见仓 README——本件只跟随搬运,
-/// 发射能力变更先落主仓 skelschema。
 
 ///|
 /// `mooncmd` 保留字族（词根/字段名安全检查;AGENTS 坑账汇总）。
@@ -105,6 +106,10 @@ pub(all) struct MooncmdAggDef {
   state_fields : Array[AggFieldDef]
   events : Array[AggEventDef]
   commands : Array[AggCommandDef]
+  /// 役10 serde 键控：[aggregate.serde] json=true 时发射
+  /// `<name>_serde_gen.mbt`（serde wire 投影）;缺席 = false = 零发射
+  /// （旧表字节稳——四刀律①可选键缺省即旧形）。
+  serde_json : Bool
 }
 
 ///|
@@ -249,6 +254,23 @@ pub fn validate_mooncmd_agg(def : MooncmdAggDef) -> Result[Unit, String] {
         return Err("mooncmd_agg: bad event field name \"\{field.name}\"")
       }
     }
+    // `...` 整件委托（演化手写域）:唯一元才合法——混合 = 偷渡偏序语义（红线8 扩条）
+    let delegated = agg_event_hook_delegated(event)
+    let mut has_ellipsis = delegated
+    for op_text in event.evolve {
+      if op_text == "..." {
+        has_ellipsis = true
+        break
+      }
+    }
+    if has_ellipsis && !delegated {
+      return Err(
+        "mooncmd_agg: event \"\{event.name}\" evolve mixes \"...\" with mechanical ops — 整件委托须唯一元（红线8 扩条）",
+      )
+    }
+    if delegated {
+      continue
+    }
     for op_text in event.evolve {
       match
         agg_parse_evolve_op(op_text, event.fields, def.state_fields, event.name) {
@@ -376,6 +398,19 @@ pub fn parse_mooncmd_agg(content : String) -> Result[MooncmdAggDef, String] {
     Ok(value) => value
     Err(msg) => return Err(msg)
   }
+  // [aggregate.serde] 可选键（役10 四刀律②双构造点：缺席 = false = 零发射;
+  // 键在而值坏 = Err——键在即严格,缺席才缺省）
+  let serde_json : Bool = match aggregate.get("serde") {
+    Some(TomlTable(inner)) =>
+      match inner.get("json") {
+        Some(TomlBoolean(value)) => value
+        Some(_) =>
+          return Err("mooncmd_agg: [aggregate.serde] json must be a boolean")
+        None => return Err("mooncmd_agg: [aggregate.serde] missing json key")
+      }
+    Some(_) => return Err("mooncmd_agg: [aggregate.serde] must be a table")
+    None => false
+  }
   let def = MooncmdAggDef::{
     schema_version: schema_header_field(table, "schema_version"),
     generator: schema_header_field(table, "generator"),
@@ -385,6 +420,7 @@ pub fn parse_mooncmd_agg(content : String) -> Result[MooncmdAggDef, String] {
     state_fields,
     events,
     commands,
+    serde_json,
   }
   match validate_mooncmd_agg(def) {
     Ok(_) => Ok(def)
@@ -452,9 +488,46 @@ fn agg_snake(word : String) -> String {
 }
 
 ///|
+/// 整件委托判别（`...` 钩子委托）:evolve = ["..."] 唯一元 = 该事件演化
+/// 属手写域（表内明示边界）——gen 只产臂形与钩子记录,演化体 = policy 件。
+fn agg_event_hook_delegated(event : AggEventDef) -> Bool {
+  event.evolve.length() == 1 && event.evolve[0] == "..."
+}
+
+///|
+/// 表内 `...` 委托事件存在判别（表驱动 apply 签名:含委托事件 → 双参
+/// hooks;全机械表单参——bank 旧形字节稳）。
+fn agg_has_hook_delegated(events : Array[AggEventDef]) -> Bool {
+  let mut found = false
+  for event in events {
+    if agg_event_hook_delegated(event) {
+      found = true
+    }
+  }
+  found
+}
+
+///|
 /// 演化指令链发射:每指令一条 let（s0/s1/…链式,同字段后写覆前写）;
-/// operand = 载荷引用（punning 变量; "-" 前缀取负）或字面量。
+/// operand = 载荷引用（punning 变量; "-" 前缀取负）或字面量;
+/// `...` 委托事件 = 钩子记录字段直调臂（载荷拆包全量透传）。
 fn agg_emit_apply_arm(sb : StringBuilder, event : AggEventDef) -> Unit {
+  if agg_event_hook_delegated(event) {
+    let hook_field = agg_snake(event.name)
+    let names : Array[String] = ["state"]
+    for field in event.fields {
+      names.push(field.name)
+    }
+    let call_args = agg_join(names, ", ")
+    let unpack = agg_emit_unpack(event.fields)
+    if unpack == "" {
+      sb <+ "    \{event.name} => (hooks.\{hook_field})(\{call_args})\n"
+    } else {
+      sb <+
+        "    \{event.name}(\{unpack}) => (hooks.\{hook_field})(\{call_args})\n"
+    }
+    return
+  }
   let unpack = agg_emit_unpack(event.fields)
   if event.evolve.length() == 0 {
     sb <+ "    \{event.name} => state\n"
@@ -507,6 +580,84 @@ fn agg_emit_apply_arm(sb : StringBuilder, event : AggEventDef) -> Unit {
 }
 
 ///|
+/// 钩子槽位名（聚合根前缀 + 蛇形词——`account_create_account` 形;
+/// 用户拍 2026-11-13:名字带表前缀,聚合根前缀）。
+fn agg_hook_slot_name(def_name : String, word : String) -> String {
+  "\{def_name}_\{agg_snake(word)}"
+}
+
+///|
+/// 裁决槽位 declare 行发射（Result 型:头部 ≤80 单行,超宽折 Result 载荷
+/// 2 空格续行+`]` 落 0 列——fmt 正典探针 2026-11-13 二轮,顶层形）。
+fn agg_emit_declare_result(
+  sb : StringBuilder,
+  slot : String,
+  param_types : Array[String],
+  event_type : String,
+) -> Unit {
+  let params = "(\{agg_join(param_types, ", ")})"
+  let head = "declare pub let \{slot} : \{params} -> Result[Array[\{event_type}], String]"
+  if head.length() <= 80 {
+    sb <+ "\{head}\n"
+  } else {
+    sb <+
+      "declare pub let \{slot} : \{params} -> Result[\n  Array[\{event_type}],\n  String,\n]\n"
+  }
+}
+
+///|
+/// 演化槽位 declare 行发射（plain 型:≤94 单行——fmt 实测 92 字符并行行、
+/// 116 折参数（2026-11-13 探针）,超宽折参数逐行）。
+fn agg_emit_declare_plain(
+  sb : StringBuilder,
+  slot : String,
+  param_types : Array[String],
+  state_type : String,
+) -> Unit {
+  let one_line = "declare pub let \{slot} : (\{agg_join(param_types, ", ")}) -> \{state_type}"
+  if one_line.length() <= 94 {
+    sb <+ "\{one_line}\n"
+  } else {
+    sb <+ "declare pub let \{slot} : (\n"
+    for ty in param_types {
+      sb <+ "  \{ty},\n"
+    }
+    sb <+ ") -> \{state_type}\n"
+  }
+}
+
+///|
+/// 钩子工厂发射（机械映射:记录字段 → policy 槽位值——表加命令 regen 自动扩,
+/// 用户只补槽体;记录体 ≤80 单行,超宽逐字段——fmt 正典探针 2026-11-13）。
+fn agg_emit_hooks_factory(
+  sb : StringBuilder,
+  factory_name : String,
+  hooks_type : String,
+  mappings : Array[String],
+) -> Unit {
+  sb <+ "\n///|\n"
+  sb <+
+    "/// 钩子工厂（机械映射——裁决/演化体 = policy 件槽位闭包,红线7）\n"
+  sb <+ "pub fn \{factory_name}() -> \{hooks_type} {\n"
+  if mappings.length() == 0 {
+    // 空 struct 字面 `{}` 在返回位置解析为空 Map（坑账 [0022] 族）——全形收口
+    sb <+ "  \{hooks_type}::{}\n"
+  } else {
+    let one_line = "  { \{agg_join(mappings, ", ")}, }"
+    if one_line.length() <= 80 {
+      sb <+ "\{one_line}\n"
+    } else {
+      sb <+ "  {\n"
+      for m in mappings {
+        sb <+ "    \{m},\n"
+      }
+      sb <+ "  }\n"
+    }
+  }
+  sb <+ "}\n"
+}
+
+///|
 /// 产物发射（byte-stable:遍历序 = 表序,零时间戳零哈希）。
 pub fn emit_mooncmd_agg(
   def : MooncmdAggDef,
@@ -517,6 +668,8 @@ pub fn emit_mooncmd_agg(
   let event_type = schema_upper_first(def.name) + "Event"
   let command_type = schema_upper_first(def.name) + "Command"
   let hooks_type = schema_upper_first(def.name) + "DecideHooks"
+  let hooks_evolve_type = schema_upper_first(def.name) + "EvolveHooks"
+  let has_hooks = agg_has_hook_delegated(def.events)
   schema_emit_header(
     sb,
     provenance,
@@ -569,13 +722,16 @@ pub fn emit_mooncmd_agg(
   sb <+ "}\n\n"
   sb <+ "///|\n"
   sb <+ "pub extend \{command_type} with Eq::{not_equal, equal}\n\n"
-  // apply
+  // apply（表驱动签名:表含 `...` 委托事件 → 双参 hooks;全机械表单参字节稳）
   sb <+ "///|\n"
   sb <+
     "/// 事件演化（机械:evolve 指令逐条链式;同字段后写覆前写）\n"
   sb <+ "pub fn \{event_type}::apply(\n"
   sb <+ "  self : \{event_type},\n"
   sb <+ "  state : \{state_type},\n"
+  if has_hooks {
+    sb <+ "  hooks : \{hooks_evolve_type},\n"
+  }
   sb <+ ") -> \{state_type} {\n"
   sb <+ "  match self {\n"
   for event in def.events {
@@ -629,6 +785,91 @@ pub fn emit_mooncmd_agg(
     }
   }
   sb <+ "  }\n}\n"
+  // 裁决钩子槽位+工厂（declare let 顶层值声明——实现 = policy 件
+  // <agg>_<snake(Cmd)> let 闭包;槽全部缺位 = [0068] 告警+运行时 init 陷阱,响亮）
+  sb <+ "\n///|\n"
+  sb <+
+    "/// 裁决钩子槽位（declare let 顶层值;实现 = policy 件 let 闭包,槽名 = \{def.name}_<snake(Cmd)>——缺位 = [0068] 告警+运行时 init 陷阱）\n"
+  let mut first_decide_slot = true
+  for command in def.commands {
+    let slot = agg_hook_slot_name(def.name, command.name)
+    let param_types : Array[String] = [state_type]
+    for field in command.fields {
+      param_types.push(agg_moonbit_type(field.ty))
+    }
+    // fmt 正典:连续 declare 各自独立 ///| 块（探针 2026-11-13——doc 随首槽,
+    // 后续槽各起一块）
+    if first_decide_slot {
+      first_decide_slot = false
+    } else {
+      sb <+ "\n///|\n"
+    }
+    agg_emit_declare_result(sb, slot, param_types, event_type)
+  }
+  let decide_mappings : Array[String] = []
+  for command in def.commands {
+    let slot = agg_hook_slot_name(def.name, command.name)
+    decide_mappings.push("\{agg_snake(command.name)}: \{slot}")
+  }
+  agg_emit_hooks_factory(sb, "\{def.name}_hooks", hooks_type, decide_mappings)
+  // 演化钩子记录（`...` 委托事件表次发射;演化体 = policy 件槽闭包——无裁决,返终态）
+  if has_hooks {
+    sb <+ "\n///|\n"
+    sb <+
+      "/// 演化钩子（`...` 事件整件委托;演化体 = policy 件手写——无裁决,返终态）\n"
+    sb <+ "pub(all) struct \{hooks_evolve_type} {\n"
+    for event in def.events {
+      if agg_event_hook_delegated(event) {
+        let snake = agg_snake(event.name)
+        let mut params = "(\{state_type}"
+        for field in event.fields {
+          params = params + ", \{agg_moonbit_type(field.ty)}"
+        }
+        params = params + ")"
+        let one_line = "  \{snake} : \{params} -> \{state_type}"
+        // 新 fmt 正典：≤80 收单行，超宽折参数逐行（R-G1a 宽度判据）
+        if one_line.length() <= 80 {
+          sb <+ "\{one_line}\n"
+        } else {
+          sb <+ "  \{snake} : (\n    \{state_type},\n"
+          for field in event.fields {
+            sb <+ "    \{agg_moonbit_type(field.ty)},\n"
+          }
+          sb <+ "  ) -> \{state_type}\n"
+        }
+      }
+    }
+    sb <+ "}\n"
+    // 演化槽位+工厂（declare let;实现 = policy 件 <agg>_<snake(Event)> let 闭包）
+    sb <+ "\n///|\n"
+    sb <+
+      "/// 演化钩子槽位（declare let 顶层值;实现 = policy 件 let 闭包——缺位 = [0068] 告警+运行时 init 陷阱）\n"
+    let evolve_mappings : Array[String] = []
+    let mut first_evolve_slot = true
+    for event in def.events {
+      if agg_event_hook_delegated(event) {
+        let slot = agg_hook_slot_name(def.name, event.name)
+        let param_types : Array[String] = [state_type]
+        for field in event.fields {
+          param_types.push(agg_moonbit_type(field.ty))
+        }
+        // fmt 正典:连续 declare 各自独立 ///| 块（同裁决面）
+        if first_evolve_slot {
+          first_evolve_slot = false
+        } else {
+          sb <+ "\n///|\n"
+        }
+        agg_emit_declare_plain(sb, slot, param_types, state_type)
+        evolve_mappings.push("\{agg_snake(event.name)}: \{slot}")
+      }
+    }
+    agg_emit_hooks_factory(
+      sb,
+      "\{def.name}_evolve_hooks",
+      hooks_evolve_type,
+      evolve_mappings,
+    )
+  }
   // wire 映射（役7+ D-MG-6）
   sb <+ "\n///|\n"
   sb <+
@@ -709,6 +950,153 @@ pub fn emit_mooncmd_agg(
 }
 
 ///|
+/// serde wire 投影发射（役10;[aggregate.serde] 键控——调用方判键后调用，
+/// byte-stable:遍历序 = 表序,零时间戳零哈希;模板 = .mingspace/serde_probe
+/// 探针手稿形,fmt 正典对齐）。
+pub fn emit_mooncmd_agg_serde(
+  def : MooncmdAggDef,
+  provenance~ : SchemaProvenance,
+) -> String {
+  let sb = StringBuilder()
+  let enum_name = schema_upper_first(def.name) + "Event"
+  schema_emit_header(
+    sb,
+    provenance,
+    def.schema_version,
+    "// serde wire 投影(役10;JSON 外部标签制,反读按表序 index 分派;变体表/臂序 = 词表序——词表加变体 = 同批再生)",
+  )
+  sb <+ "\n"
+  // 变体名表(反读分派基表)——fmt 宽度判据复刻:内联打包形(fmt 把短表
+  // 折成单内行;94 = 实测稳定上限,更长词表逐行,阈值带由黄金门自显)。
+  sb <+ "///|\n"
+  sb <+
+    "/// 变体名表(反读分派 = 表序 index;词表加变体 = 同批再生,漏行 = 金罐红)。\n"
+  sb <+ "let \{def.name}_event_variants : ReadOnlyArray[String] = [\n"
+  let mut line = ""
+  for event in def.events {
+    let item = "\"\{event.name}\","
+    if line == "" {
+      line = "  " + item
+    } else {
+      let candidate = line + " " + item
+      if candidate.length() <= 94 {
+        line = candidate
+      } else {
+        sb <+ "\{line}\n"
+        line = "  " + item
+      }
+    }
+  }
+  if line != "" {
+    sb <+ "\{line}\n"
+  }
+  sb <+ "]\n\n"
+  // Serialize impl
+  sb <+ "///|\n"
+  sb <+
+    "/// 序列化(外部标签制:unit=裸串/载荷=单条目对象;臂序 = 词表序)。\n"
+  sb <+
+    "pub impl @serde.Serialize for \{enum_name} with fn serialize(self, s) {\n"
+  sb <+ "  let enum_name = \"\{enum_name}\"\n"
+  sb <+ "  match self {\n"
+  let mut index = 0
+  for event in def.events {
+    match event.fields.length() {
+      0 => {
+        // fmt 宽度判据(R-G1a 同款):单行 ≤80 单行;>80 折「臂换行+调用单行」
+        let one_line = "    \{event.name} => s.serialize_unit_variant({ enum_name, index: \{index}, name: \"\{event.name}\", })"
+        if one_line.length() <= 80 {
+          sb <+ "\{one_line}\n"
+        } else {
+          sb <+
+            "    \{event.name} =>\n      s.serialize_unit_variant({ enum_name, index: \{index}, name: \"\{event.name}\", })\n"
+        }
+      }
+      1 => {
+        let field = event.fields[0]
+        let one_line = "    \{event.name}(\{field.name}) => s.serialize_newtype_variant({ enum_name, index: \{index}, name: \"\{event.name}\", }, \{field.name})"
+        let call_line = "      s.serialize_newtype_variant({ enum_name, index: \{index}, name: \"\{event.name}\", }, \{field.name})"
+        if one_line.length() <= 80 {
+          sb <+ "\{one_line}\n"
+        } else if call_line.length() <= 80 {
+          sb <+ "    \{event.name}(\{field.name}) =>\n\{call_line}\n"
+        } else {
+          sb <+
+            "    \{event.name}(\{field.name}) =>\n      s.serialize_newtype_variant(\n        { enum_name, index: \{index}, name: \"\{event.name}\", },\n        \{field.name},\n      )\n"
+        }
+      }
+      _ => {
+        let unpack = agg_emit_unpack(event.fields)
+        let total = event.fields.length()
+        sb <+ "    \{event.name}(\{unpack}) => {\n"
+        sb <+
+          "      s.serialize_tuple_variant_begin(\n        { enum_name, index: \{index}, name: \"\{event.name}\", },\n        \{total},\n      )\n"
+        for field in event.fields {
+          sb <+ "      s.serialize_tuple_variant_element(\{field.name})\n"
+        }
+        sb <+ "      s.serialize_tuple_variant_end()\n"
+        sb <+ "    }\n"
+      }
+    }
+    index = index + 1
+  }
+  sb <+ "  }\n}\n\n"
+  // Deserialize impl
+  sb <+ "///|\n"
+  sb <+
+    "/// 反序列化(反读按 index 分派 = 表序;未知 index = UnknownVariant)。\n"
+  sb <+
+    "pub impl @serde.Deserialize for \{enum_name} with fn deserialize(d) {\n"
+  sb <+
+    "  let value = match\n    d.deserialize_enum_begin(\"\{enum_name}\", \{def.name}_event_variants) {\n"
+  let mut index = 0
+  for event in def.events {
+    match event.fields.length() {
+      0 => {
+        sb <+ "    \{index} => {\n"
+        sb <+ "      d.deserialize_unit_variant()\n"
+        sb <+ "      \{event.name}\n"
+        sb <+ "    }\n"
+      }
+      1 => {
+        let one_line = "    \{index} => \{event.name}(d.deserialize_newtype_variant())"
+        // fmt 宽度判据(R-G1a 同款):≤80 单行,超宽折括号形
+        if one_line.length() <= 80 {
+          sb <+ "\{one_line}\n"
+        } else {
+          sb <+
+            "    \{index} =>\n      \{event.name}(d.deserialize_newtype_variant())\n"
+        }
+      }
+      _ => {
+        let total = event.fields.length()
+        sb <+ "    \{index} => {\n"
+        sb <+ "      d.deserialize_tuple_begin(\{total})\n"
+        for field in event.fields {
+          sb <+ "      let \{field.name} = d.deserialize_tuple_next()\n"
+        }
+        sb <+ "      d.deserialize_tuple_end()\n"
+        sb <+ "      \{event.name}(\{agg_emit_unpack(event.fields)})\n"
+        sb <+ "    }\n"
+      }
+    }
+    index = index + 1
+  }
+  sb <+
+    "    index =>\n      raise @serde.UnknownVariant(\n        path=d.path(),\n        variant=index.to_string(),\n        expected=\{def.name}_event_variants,\n      )\n"
+  sb <+ "  }\n"
+  sb <+ "  d.deserialize_enum_end()\n  value\n}\n\n"
+  // [0079] 收口 ×2(deprecate+hide 双属性,单行参数表——家法)
+  sb <+ "///|\n"
+  sb <+
+    "#deprecated(\"reach it through the `Serialize` bound\", skip_current_package=true)\n#doc(hidden)\npub extend \{enum_name} with @serde.Serialize::{serialize}\n\n"
+  sb <+ "///|\n"
+  sb <+
+    "#deprecated(\"reach it through the `Deserialize` bound\", skip_current_package=true)\n#doc(hidden)\npub extend \{enum_name} with @serde.Deserialize::{deserialize}\n"
+  sb.to_string()
+}
+
+///|
 /// 契约门脚手架发射（D-MG-5;byte-stable）：免费两钉——
 /// ① init 契约 = 词表值区声明 ② wire roundtrip 每事件恒等（Eq derived）。
 /// 场景契约（重放等价/并发拒写）= 业务语义人填（红线7），只留指路注释。
@@ -773,45 +1161,108 @@ pub fn emit_mooncmd_agg_contract_tests(def : MooncmdAggDef) -> String {
 
 ///|
 /// 策略 stub 发射（stub-zone 宪法红线）：<name>_policy.mbt 的**首次落盘形**
-/// ——裁决体 = 手写钩子（红线7 裁决不入表），发射只给**正确签名守卫闭包**
-/// （Err("TODO(<Cmd>)") 即未填）。文件层契约 = **仅缺位时落，regen 永不
-/// 覆写**（user fill-in 永不被再生覆盖；只若不在由驱动层 fs 判定）。形状
-/// 与 bank 手写孪生件（examples/bank/account_policy.mbt）同构：工厂
-/// `<name>_hooks()` + 记录字面量 + arrow 闭包（单参裸形 = fmt 正典）。
-/// 守卫体首行 = `let _ = (参数…)` 哑消费——stub 参数全未用会咬
-/// unused_value × deny-warn（消费项目核身实证 2026-11-10），未填体
-/// 也须 deny-warn 干净。
+/// ——发射只给**槽位 let 闭包守卫体**（Err("TODO(<Cmd>)") 即未填）。
+/// 文件层契约 = **仅缺位时落，regen 永不覆写**（user fill-in 永不被再生
+/// 覆盖；只若不在由驱动层 fs 判定）。形状与 gen 件的 declare 槽位配对：
+/// 槽名 = <agg>_<snake(Cmd/Event)>（聚合根前缀,用户拍 2026-11-13）;
+/// 分派/工厂/胶水 = gen 机械面,本件只补槽体。守卫体 = 体注释 +
+/// `let _ = (参数…)` 哑消费 + Err/abort 守卫（deny-warn 干净——2026-11-10 实证）。
 pub fn emit_mooncmd_agg_policy_stub(def : MooncmdAggDef) -> String {
   let sb = StringBuilder()
-  let hooks_type = schema_upper_first(def.name) + "DecideHooks"
+  let state_type = schema_upper_first(def.name) + "State"
+  let event_type = schema_upper_first(def.name) + "Event"
+  let has_hooks = agg_has_hook_delegated(def.events)
   sb <+
     "// ===== \{schema_upper_first(def.name)} 裁决策略 stub（仅缺位时落,regen 永不覆写——宪法 stub-zone）=====\n"
   sb <+ "// 源表：\{def.target_package}/\{def.name}_agg.toml\n"
   sb <+
-    "// 裁决体 = 手写钩子（mooncmd const.md 红线7 裁决不入表）：每钩子 =\n"
+    "// 钩子槽位与 \{def.name}_gen.mbt 的 declare 声明配对（分派/工厂/胶水 = gen 机械面——\n"
   sb <+
-    "// 正确签名守卫闭包，Err(\"TODO(<Cmd>)\") 即未填；语义填好后装配进\n"
-  sb <+ "// \{def.name}_decide（见 \{def.name}_gen.mbt 分派骨架）。\n"
-  sb <+ "\n///|\n"
-  sb <+ "pub fn \{def.name}_hooks() -> \{hooks_type} {\n"
-  sb <+ "  {\n"
+    "// 本件只补槽体）。裁决 = 手写闭包（mooncmd const.md 红线7 裁决不入表）：\n"
+  sb <+
+    "// 每槽 = let 闭包,Err(\"TODO(<Cmd>)\") 即未填;演化槽 abort 即未填（静默恒等是数据黑洞）。\n"
+  // 裁决槽位（Result 型:头部 ≤80 单行收整行,超宽折 Result 载荷 2 空格续行
+  // +`] = lambda` 0 列缀行尾——fmt 正典 2026-11-13 二轮探针+bank 盘上真源）
   for command in def.commands {
-    let snake = agg_snake(command.name)
+    let slot = agg_hook_slot_name(def.name, command.name)
     let names : Array[String] = ["state"]
     for field in command.fields {
       names.push(field.name)
     }
-    if names.length() == 1 {
-      sb <+ "    \{snake}: state => {\n"
-      sb <+ "      let _ = state\n"
+    let lam = if names.length() == 1 {
+      "state"
     } else {
-      sb <+ "    \{snake}: (\{agg_join(names, ", ")}) => {\n"
-      sb <+ "      let _ = (\{agg_join(names, ", ")})\n"
+      "(\{agg_join(names, ", ")})"
     }
-    sb <+ "      Err(\"TODO(\{command.name}): 裁决体待填——红线7\")\n"
-    sb <+ "    },\n"
+    let param_types : Array[String] = [state_type]
+    for field in command.fields {
+      param_types.push(agg_moonbit_type(field.ty))
+    }
+    let params = "(\{agg_join(param_types, ", ")})"
+    let head = "pub let \{slot} : \{params} -> Result[Array[\{event_type}], String]"
+    sb <+ "\n///|\n"
+    if head.length() > 80 {
+      sb <+
+        "pub let \{slot} : \{params} -> Result[\n  Array[\{event_type}],\n  String,\n] = \{lam} => {\n"
+    } else {
+      sb <+
+        "pub let \{slot} : \{params} -> Result[Array[\{event_type}], String] = \{lam} => {\n"
+    }
+    sb <+
+      "  // TODO(\{command.name}): 裁决体待填——红线7（Ok([<Event>(载荷)]) 或 Err(拒绝原因)）\n"
+    sb <+ "  let _ = \{lam}\n"
+    sb <+ "  Err(\"TODO(\{command.name}): 裁决体待填——红线7\")\n"
+    sb <+ "}\n"
   }
-  sb <+ "  }\n}\n"
+  // 演化槽位（plain 型:头 ≤80 单行+整行超宽折 lambda 参数;头超宽 type 参数
+  // 拆形+lambda 单行缀——fmt 正典 2026-11-13 二轮探针 s2 形）
+  if has_hooks {
+    for event in def.events {
+      if agg_event_hook_delegated(event) {
+        let slot = agg_hook_slot_name(def.name, event.name)
+        let names : Array[String] = ["state"]
+        for field in event.fields {
+          names.push(field.name)
+        }
+        let lam = if names.length() == 1 {
+          "state"
+        } else {
+          "(\{agg_join(names, ", ")})"
+        }
+        let param_types : Array[String] = [state_type]
+        for field in event.fields {
+          param_types.push(agg_moonbit_type(field.ty))
+        }
+        let one_line = "pub let \{slot} : (\{agg_join(param_types, ", ")}) -> \{state_type} = \{lam} => {"
+        sb <+ "\n///|\n"
+        let head_plain = "pub let \{slot} : (\{agg_join(param_types, ", ")}) -> \{state_type}"
+        if head_plain.length() > 80 {
+          // type 段超宽:参数拆形+lambda 单行缀（fmt 正典探针 2026-11-13 s2 形）
+          sb <+ "pub let \{slot} : (\n"
+          for ty in param_types {
+            sb <+ "  \{ty},\n"
+          }
+          sb <+ ") -> \{state_type} = \{lam} => {\n"
+        } else if one_line.length() > 80 {
+          // 头单行+整行超宽:lambda 参数拆形（counter_bumped 罐形正典;参数面
+          // = names 全列含 state 首参——2026-11-13 invoice 真件咬出丢参修正）
+          sb <+
+            "pub let \{slot} : (\{agg_join(param_types, ", ")}) -> \{state_type} = (\n"
+          for nm in names {
+            sb <+ "  \{nm},\n"
+          }
+          sb <+ ") => {\n"
+        } else {
+          sb <+ "\{one_line}\n"
+        }
+        sb <+
+          "  // TODO(evolve \{event.name}): 演化体待填（返终态——abort 即未填,静默恒等是数据黑洞）\n"
+        sb <+ "  let _ = \{lam}\n"
+        sb <+ "  abort(\"TODO(evolve \{event.name}): 演化体待填\")\n"
+        sb <+ "}\n"
+      }
+    }
+  }
   sb.to_string()
 }
 
@@ -833,6 +1284,7 @@ pub fn emit_mooncmd_agg_glue(
   let state_type = schema_upper_first(def.name) + "State"
   let event_type = schema_upper_first(def.name) + "Event"
   let command_type = schema_upper_first(def.name) + "Command"
+  let has_hooks = agg_has_hook_delegated(def.events)
   schema_emit_header(
     sb,
     provenance,
@@ -843,8 +1295,10 @@ pub fn emit_mooncmd_agg_glue(
   sb <+ "\n"
   // handler 桥:decide Result → 框架命令错误（bank_demo 手写形升格）
   sb <+ "///|\n"
-  sb <+ "/// 桥接:gen 分派（String 错域）→ 框架命令错误（InvalidCommand 同界）——\n"
-  sb <+ "/// 裁决装配点 = \{def.name}_hooks()（policy 件手写——红线7 裁决不入表）\n"
+  sb <+
+    "/// 桥接:gen 分派（String 错域）→ 框架命令错误（InvalidCommand 同界）——\n"
+  sb <+
+    "/// 裁决装配点 = \{def.name}_hooks()（policy 件手写——红线7 裁决不入表）\n"
   sb <+ "pub fn \{def.name}_handler(\n"
   sb <+ "  state : \{state_type},\n"
   sb <+ "  cmd : \{command_type},\n"
@@ -853,33 +1307,65 @@ pub fn emit_mooncmd_agg_glue(
   sb <+ "    Ok(events) => events\n"
   sb <+ "    Err(msg) => raise @command.CommandError::InvalidCommand(msg)\n"
   sb <+ "  }\n}\n\n"
-  // applier 桥
+  // applier bridge wiring: `...` tables get two-param apply; mechanical tables keep single-param (byte-stable)
   sb <+ "///|\n"
-  sb <+ "/// 事件应用器（EventApplier::Single 装配位）\n"
-  sb <+ "pub fn \{def.name}_applier(\n"
-  sb <+ "  state : \{state_type},\n"
-  sb <+ "  event : \{event_type},\n"
-  sb <+ ") -> \{state_type} {\n"
-  sb <+ "  event.apply(state)\n}\n\n"
+  if has_hooks {
+    sb <+ "/// 事件应用器（EventApplier::Single 装配位）\n"
+    sb <+ "pub fn \{def.name}_applier(\n"
+    sb <+ "  state : \{state_type},\n"
+    sb <+ "  event : \{event_type},\n"
+    sb <+ ") -> \{state_type} {\n"
+    sb <+ "  event.apply(state, \{def.name}_evolve_hooks())\n}\n\n"
+  } else {
+    sb <+ "/// 事件应用器（EventApplier::Single 装配位）\n"
+    sb <+ "pub fn \{def.name}_applier(\n"
+    sb <+ "  state : \{state_type},\n"
+    sb <+ "  event : \{event_type},\n"
+    sb <+ ") -> \{state_type} {\n"
+    sb <+ "  event.apply(state)\n}\n\n"
+  }
   // empty_state 桥
   sb <+ "///|\n"
   sb <+ "/// 空初态（AggregateRoot::new / from_events 装配位）\n"
   sb <+ "pub fn \{def.name}_empty_state() -> \{state_type} {\n"
   sb <+ "  \{state_type}::init()\n}\n\n"
-  // serialize 桥
+  // serialize 桥（役10 键控:键开 = serde JSON 径;键关 = wire 行格式径字节稳）
   sb <+ "///|\n"
-  sb <+ "/// 事件序列化（SQLiteEventStore::new 装配位;wire 契约 = 契约门 roundtrip 钉）\n"
-  sb <+ "pub fn \{def.name}_serialize(event : \{event_type}) -> Bytes {\n"
-  sb <+ "  @utf8.encode(event.to_wire())\n}\n\n"
-  // deserialize 桥
+  if def.serde_json {
+    sb <+
+      "/// 事件序列化（SQLiteEventStore::new 装配位;serde JSON 外部标签制——\n"
+    sb <+
+      "/// [aggregate.serde] 键开投影;事件域封闭 = 全原语字段,SerError 结构性\n"
+    sb <+
+      "/// 不可达,catch 臂为型收口——端口签名无 raise 域）\n"
+    sb <+ "pub fn \{def.name}_serialize(event : \{event_type}) -> Bytes {\n"
+    sb <+
+      "  @json.to_bytes(event) catch {\n    _ => Bytes::from_array([])\n  }\n}\n\n"
+  } else {
+    sb <+
+      "/// 事件序列化（SQLiteEventStore::new 装配位;wire 契约 = 契约门 roundtrip 钉）\n"
+    sb <+ "pub fn \{def.name}_serialize(event : \{event_type}) -> Bytes {\n"
+    sb <+ "  @utf8.encode(event.to_wire())\n}\n\n"
+  }
+  // deserialize 桥（键控同上）
   sb <+ "///|\n"
-  sb <+ "/// 事件反序列化（坏载荷 abort——wire 格式契约由契约门钉）\n"
-  sb <+ "pub fn \{def.name}_deserialize(data : Bytes) -> \{event_type} raise {\n"
-  sb <+ "  let text = @utf8.decode(data)\n"
-  sb <+ "  match \{event_type}::from_wire(text) {\n"
-  sb <+ "    Some(event) => event\n"
-  sb <+ "    None => abort(\"bad event wire payload: \\{text}\")\n"
-  sb <+ "  }\n}\n\n"
+  if def.serde_json {
+    sb <+
+      "/// 事件反序列化（serde JSON 径——坏载荷 raise SerError 透传,store 重放错误域自然传播）\n"
+    sb <+
+      "pub fn \{def.name}_deserialize(data : Bytes) -> \{event_type} raise {\n"
+    sb <+ "  @json.from_string(@utf8.decode(data))\n}\n\n"
+  } else {
+    sb <+
+      "/// 事件反序列化（坏载荷 abort——wire 格式契约由契约门钉）\n"
+    sb <+
+      "pub fn \{def.name}_deserialize(data : Bytes) -> \{event_type} raise {\n"
+    sb <+ "  let text = @utf8.decode(data)\n"
+    sb <+ "  match \{event_type}::from_wire(text) {\n"
+    sb <+ "    Some(event) => event\n"
+    sb <+ "    None => abort(\"bad event wire payload: \\{text}\")\n"
+    sb <+ "  }\n}\n\n"
+  }
   // type_name 桥:逐变体 arity 通配（零载荷 = 裸构造模式）
   sb <+ "///|\n"
   sb <+ "/// 事件类型标签（SQLite store 记录面;裸事件名）\n"

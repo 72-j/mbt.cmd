@@ -1,6 +1,7 @@
-// ===== cmd —— mooncmd 聚合词表 → 骨架代码(命令面)=====
+// ===== cmd —— mooncmd 词表 → 骨架代码(命令面)=====
 // 用法:moonx thy1016/cmd@latest <table.toml>
-// 读 aggregate 词表 → parse/validate → 发射四件(落表同目录):
+// 方言路由:PM 先试([process_manager] 词根,单件 <名>_pm_gen.mbt);
+// 拒则落回 aggregate 词表 → parse/validate → 发射四件(落表同目录):
 //   <名>_gen.mbt             骨架本体(事件/命令/状态/分派/wire/账本)
 //   <名>_contract_wbtest.mbt 契约门脚手架(init 契约 + wire roundtrip + 确定性)
 //   <名>_glue.mbt            装配胶水六桥件(handler/applier/empty_state/
@@ -34,7 +35,9 @@ fn dir_prefix_of_table(table_path : String) -> String {
 ///|
 /// CLI 用法两行(无参/未知选项共用)。
 fn print_usage() -> Unit {
-  println("cmd \{VERSION} — mooncmd 聚合词表 → 骨架代码")
+  println(
+    "cmd \{VERSION} — mooncmd 词表 → 骨架代码(agg 四件 / PM 单件)",
+  )
   println("用法: moonx thy1016/cmd@latest <table.toml>")
   println("选项: --version  --help")
 }
@@ -102,10 +105,23 @@ async fn run(args : Array[String]) -> Int32 {
     return 3
   }
   let toml_text = @utf8.decode(@fs.read_file(table_path).binary())
+  // 方言路由（役13b 体保真搬运）:PM 先试（[process_manager] 词根），
+  // 拒则落回 agg 原径；双拒 = 两行合成错，exit 4。PM 产物单件
+  // <name>_pm_gen.mbt（emit 闭包 / SnapshotStore 装配 = 消费方组合根，
+  // 红线7 同源）。
+  let pm_parsed = @gen.parse_mooncmd_pm(toml_text)
+  let pm_msg = match pm_parsed {
+    Ok(_) => ""
+    Err(m) => m
+  }
+  if pm_parsed is Ok(pm_def) {
+    return run_pm_path(table_path, pm_def)
+  }
   let def = match @gen.parse_mooncmd_agg(toml_text) {
     Ok(found) => found
     Err(msg) => {
       println("cmd: parse 拒:\{msg}")
+      println("cmd: pm 拒(参考):\{pm_msg}")
       return 4
     }
   }
@@ -138,6 +154,14 @@ async fn run(args : Array[String]) -> Int32 {
     dir + glue_file,
     @utf8.encode(@gen.emit_mooncmd_agg_glue(def, provenance~)),
   )
+  // serde 投影第五件（役10 键控:表 serde_json 开才落;与 skelschema/cmd
+  // 驱动行为对齐——cmd 仓役13b 同步带上该发射器,路由随补）。
+  if def.serde_json {
+    @fs.write_file(
+      dir + def.name + "_serde_gen.mbt",
+      @utf8.encode(@gen.emit_mooncmd_agg_serde(def, provenance~)),
+    )
+  }
   let policy_absent = try {
     let _ = @fs.read_file(dir + policy_file).binary()
     false
@@ -161,12 +185,51 @@ async fn run(args : Array[String]) -> Int32 {
   println("  \{glue_file}")
   let policy_mark = if policy_absent { "新落" } else { "保留" }
   println("  \{policy_file}    \{policy_mark}")
+  if def.serde_json {
+    println("  \{def.name}_serde_gen.mbt")
+  }
   println("下一步")
   println("  1. 填裁决体 \{policy_file}")
   println(
     "  2. import thy1016/mooncmd/command + moonbitlang/core/encoding/utf8",
   )
   println("  3. moon test")
+  return 0
+}
+
+///|
+/// PM 径:parse 已过(validate 内建于 parse)→ 单件发射 → 汇报。
+/// 产物 = <名>_pm_gen.mbt(状态/interested/saga_id/handle/apply/PM 面
+/// 六段);emit 闭包与 SnapshotStore 装配 = 消费方组合根(红线7 同源)。
+async fn run_pm_path(table_path : String, pm_def : @gen.MooncmdPmDef) -> Int32 {
+  let dir = dir_prefix_of_table(table_path)
+  let gen_file = pm_def.name + "_pm_gen.mbt"
+  let provenance = @gen.SchemaProvenance::{
+    source_table: table_path,
+    regen_command: "moonx thy1016/cmd@latest " + table_path,
+    binder_path: "thy1016/cmd/gen(pm 方言 parse/validate/emit 三件套)",
+  }
+  @fs.write_file(
+    dir + gen_file,
+    @utf8.encode(@gen.emit_mooncmd_pm(pm_def, provenance~)),
+  )
+  let header_line = if dir == "" {
+    "✓ \{pm_def.name} PM 产物单件"
+  } else {
+    "✓ \{pm_def.name} PM 产物单件 · \{dir}"
+  }
+  println(header_line)
+  println("  \{gen_file}")
+  println("下一步(组合根装配;装配不在词表)")
+  println(
+    "  1. import thy1016/mooncmd + thy1016/mooncmd/event + thy1016/mooncmd/store",
+  )
+  println("  2. let pm = \{pm_def.name}_pm()")
+  println(
+    "  3. let runner = ProcessManagerRunner::new(pm, store, emit 闭包)(emit 形 (String, C) -> Unit raise ProcessManagerErr)",
+  )
+  println("  4. runner.pump(events:Array[@event.EventMessage[String, E]])")
+  println("  5. moon test")
   return 0
 }
 
