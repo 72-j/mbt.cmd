@@ -1,20 +1,9 @@
 ///|
 /// mooncmd 全链自证示例（可执行）：银行账户聚合从定义到落库的一跑。
 /// 叙事序 = 消费方接入序：① 定义聚合 → ② 内存命令链 → ③ SQLite 落库
-/// 与重放重建 → ④ 乐观并发拒写 → ⑤ 销户闭环 → ⑥ 快照加速等价。
+/// 与重放重建 → ④ 乐观并发拒写 → ⑤ 销户闭环 → ⑥ 快照加速等价 →
+/// ⑦ PM 泵跨聚合编排（役13b 词表 gen 产物）。
 /// 终行 EXAMPLE:PASS。
-
-///|
-/// ① 聚合三件套（消费方自定义）：状态 / 命令 / 事件
-
-///|
-/// ① 聚合三件套（役7 转正:词表 gen 形）——类型/apply/分派 = account_gen.mbt
-/// （源表 account_agg.toml,黄金门逐字节）;裁决 = account_policy.mbt 手写钩子
-/// （红线7）。金样对照 = 行为金锚 + EXAMPLE:PASS 续绿（account_gate_wbtest）。
-/// 装配六桥件（handler/applier/empty_state/serialize/deserialize/type_name）
-/// = account_glue.mbt 发射产物（二版拍1;regen 覆写区,黄金门逐字节）——
-/// demo 直消费 @bank.*,本文件零手写桥（消双实现 drift;type_name 标签串
-/// 随 glue 裸名形,store 仅记不比对,:memory: 每跑新开零持久化）。
 
 ///|
 fn check(label : String, ok : Bool, detail : String) -> Bool {
@@ -260,10 +249,76 @@ fn main raise {
       equiv_ok,
       "快照径 ≡ 全量径：v\{full_replay.version()} / balance \{full_state.balance} / 户名 \{full_state.name}",
     )
+  // ========== ⑦ PM 泵：跨聚合编排（役13b 词表 gen 产物 transfer_pm 直消费）==========
+  // watch MoneyWithdrawn/AccountClosed → 命令直通发往 account-2；saga 态按
+  // 信封 aggregate_id 分片（SnapshotStore 键 transfer:<saga_id>）。EventStore
+  // 无全局流（ADR 语义差）——泵序责任在调用方，单事件直喂。
+  let pm_ledger : Array[Map[String, (@bank.TransferPmState, Int32)]] = [Map([])]
+  let pm_store : @store.SnapshotStore[String, @bank.TransferPmState] = {
+    save: (key, state, version, _ts) => pm_ledger[0][key] = (state, version),
+    load: key => pm_ledger[0].get(key),
+  }
+  let pm_sent : Array[(String, @bank.AccountCommand)] = []
+  let runner = @mooncmd.ProcessManagerRunner::new(
+    @bank.transfer_pm(),
+    pm_store,
+    (target, cmd) => pm_sent.push((target, cmd)),
+  )
+  let pm_p1 = runner.pump_event(
+    @event.EventMessage::new(@bank.MoneyWithdrawn(30), "pm-account-1", 1),
+  )
+  let pm_p2 = runner.pump_event(
+    @event.EventMessage::new(@bank.MoneyWithdrawn(12), "pm-account-1", 2),
+  )
+  let pm_p3 = runner.pump_event(
+    @event.EventMessage::new(@bank.MoneyDeposited(5), "pm-account-1", 3),
+  )
+  let pm_p4 = runner.pump_event(
+    @event.EventMessage::new(@bank.AccountClosed, "pm-account-1", 4),
+  )
+  let pm_pump_ok = pm_p1 && pm_p2 && !pm_p3 && pm_p4
+  // 命令直通映射逐条对拍（match 不作 && 链操作元——家法，块臂上提）
+  let pm_cmds_ok = if pm_sent.length() == 3 {
+    let c0 = match pm_sent[0] {
+      ("account-2", @bank.DepositMoney(30)) => true
+      _ => false
+    }
+    let c1 = match pm_sent[1] {
+      ("account-2", @bank.DepositMoney(12)) => true
+      _ => false
+    }
+    let c2 = match pm_sent[2] {
+      ("account-2", @bank.CloseAccount) => true
+      _ => false
+    }
+    c0 && c1 && c2
+  } else {
+    false
+  }
+  let pm_loaded = (pm_store.load)("transfer:pm-account-1") catch { _ => None }
+  let pm_state_ok = match pm_loaded {
+    Some((state, version)) =>
+      state.transferred == 42 && state.closed && version == 4
+    None => false
+  }
+  all_green = all_green &&
+    check(
+      "PM 泵 watch 直通",
+      pm_pump_ok,
+      "withdraw×2 + AccountClosed 全处理，MoneyDeposited 子集外跳过（sent = \{pm_sent.length()} 令）",
+    )
+  all_green = all_green &&
+    check(
+      "PM 命令直通映射", pm_cmds_ok, "account-2 ← DepositMoney(30)/DepositMoney(12)/CloseAccount（金额保真）",
+    )
+  all_green = all_green &&
+    check(
+      "PM saga 态持久", pm_state_ok, "transfer:pm-account-1 @v4：transferred = 42（30+12 累加），closed = true",
+    )
   // ========== 终判 ==========
   if all_green {
     println(
-      "EXAMPLE:PASS — mooncmd 全链自证（聚合/命令/事件/落库/并发/销户/快照）",
+      "EXAMPLE:PASS — mooncmd 全链自证（聚合/命令/事件/落库/并发/销户/快照/PM 泵）",
     )
   } else {
     println("EXAMPLE:FAIL — 见上方 [FAIL] 行")
