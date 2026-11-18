@@ -8,3 +8,4 @@ proj_dialect.toml
 
 # 测试库残留(相对路径 temp db)
 *.db
+.playground/
