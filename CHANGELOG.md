@@ -1,6 +1,6 @@
 # CHANGELOG
 
-## 未发布
+## 0.2.3（2026-11-18）
 
 **Process Manager 框架面**（ADR-MC-011）：`ProcessManager` 四回调
 记录面（`interested` / `saga_id_of`（收 EventMessage 信封）/
