@@ -1,5 +1,7 @@
 ///|
-/// 命令处理器
+/// 命令处理器（手写对照件——非 gen 产物：本地裁决直写，供
+/// AggregateRoot 生命周期/失败路径罐用。裁决链正形 =
+/// account_gen.mbt 分派骨架 + account_policy.mbt 槽位，勿以此件为范本。）
 fn account_handler(
   state : AccountState,
   cmd : AccountCommand,

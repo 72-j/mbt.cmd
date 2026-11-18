@@ -1,5 +1,7 @@
 ///|
-/// 事件应用器（单个事件）
+/// 事件应用器（手写对照件——非 gen 产物：本地 apply 直写，供
+/// AggregateRoot 提交/恢复/批量应用器罐用。演化链正形 =
+/// account_gen.mbt apply 机械指令链，勿以此件为范本。）
 fn account_applier_single(
   state : AccountState,
   event : AccountEvent,
