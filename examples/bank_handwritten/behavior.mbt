@@ -98,7 +98,64 @@ pub fn account_root(
   @aggregate.AggregateRoot::new(
     aggregate_id,
     account_handler,
-    @event.EventApplier::Single(account_applier),
+    account_event_applier(),
     AccountState::init(),
+  )
+}
+
+///|
+// event/command 中间层包装件（bank_demo account.mbt 分区③同款对位）:
+// EventApplier::Single 槽位的构造唯一入口——组装点零内联。
+pub fn account_event_applier() -> @event.EventApplier[
+  AccountState,
+  AccountEvent,
+] {
+  @event.EventApplier::Single(account_applier)
+}
+
+///|
+// 注入变体组装（确定性罐用）:clock/id_gen 显式槽转发——同输入+同注钟+
+// 同 id 源 ⇒ 同事件流。缺省形见 account_root（框架缺省钟/标识源）。
+pub fn account_root_with_sources(
+  aggregate_id : String,
+  clock~ : () -> Int64,
+  id_gen~ : () -> String,
+) -> @aggregate.AggregateRoot[
+  String,
+  AccountState,
+  AccountCommand,
+  AccountEvent,
+] {
+  @aggregate.AggregateRoot::new(
+    aggregate_id,
+    account_handler,
+    account_event_applier(),
+    AccountState::init(),
+    clock~,
+    id_gen~,
+  )
+}
+
+///|
+// 重放重建注入变体(与 account_root_with_sources 配对的 rebuild 径)。
+pub fn account_root_from_events_with_sources(
+  aggregate_id : String,
+  events : Array[@event.EventMessage[String, AccountEvent]],
+  clock~ : () -> Int64,
+  id_gen~ : () -> String,
+) -> @aggregate.AggregateRoot[
+  String,
+  AccountState,
+  AccountCommand,
+  AccountEvent,
+] {
+  @aggregate.AggregateRoot::from_events(
+    aggregate_id,
+    events,
+    account_handler,
+    account_event_applier(),
+    AccountState::init(),
+    clock~,
+    id_gen~,
   )
 }

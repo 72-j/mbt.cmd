@@ -71,14 +71,7 @@ test "full chain: exec, persist, rebuild" {
     "evt-\{seq[0]}"
   }
   let fixed_clock = fn() { 1000L }
-  let root0 = @aggregate.AggregateRoot::new(
-    "acc-001",
-    account_handler,
-    @event.EventApplier::Single(account_applier),
-    AccountState::init(),
-    clock=fixed_clock,
-    id_gen~,
-  )
+  let root0 = account_root_with_sources("acc-001", clock=fixed_clock, id_gen~)
   let root = root0
     .exec(CreateAccount("Alice", 1000))
     .exec(DepositMoney(400))
@@ -94,12 +87,9 @@ test "full chain: exec, persist, rebuild" {
   assert_eq(after_reject.version(), 3)
   assert_eq(after_reject.uncommitted_events().length(), 3)
   // 重建：从存储事件流 rebuild，状态与原根一致（事件溯源本质）。
-  let rebuilt = @aggregate.AggregateRoot::from_events(
+  let rebuilt = account_root_from_events_with_sources(
     "acc-001",
     (store.load)(store, "acc-001", 0),
-    account_handler,
-    @event.EventApplier::Single(account_applier),
-    AccountState::init(),
     clock=fixed_clock,
     id_gen~,
   )

@@ -13,133 +13,11 @@ fn check(label : String, ok : Bool, detail : String) -> Bool {
 }
 
 ///|
-/// PM 演示用内存 SnapshotStore（Map 单元引用捕获；save/load 记录面直构）。
-fn pm_memory_store() -> @store.SnapshotStore[String, @bank.TransferPmState] {
-  let ledger : Array[Map[String, (@bank.TransferPmState, Int32)]] = [Map([])]
-  {
-    save: (key, state, version, _ts) => ledger[0][key] = (state, version),
-    load: key => ledger[0].get(key),
-  }
-}
-
-///|
-/// ⑦ 演示事件流（transfer 全程：两笔取出 + 子集外存入 + 销户；版本位连续）。
-fn pm_flow(
-  saga_id : String,
-) -> Array[@event.EventMessage[String, @bank.AccountEvent]] {
-  [
-    @event.EventMessage::new(@bank.MoneyWithdrawn(30), saga_id, 1),
-    @event.EventMessage::new(@bank.MoneyWithdrawn(12), saga_id, 2),
-    @event.EventMessage::new(@bank.MoneyDeposited(5), saga_id, 3),
-    @event.EventMessage::new(@bank.AccountClosed, saga_id, 4),
-  ]
-}
-
-///|
-/// ⑦ PM 行为面 trait（消费侧手写径形）：MoonBit 无泛型 trait（泛型只在
-/// 结构体/函数）——行为面按聚合具体型立（方法收 Self 位置形），适配器
-/// 同包具体化进框架泛型记录面；ProcessManagerRunner 泵消费形唯一，泵零改。
-trait TransferRelayBehavior {
-  fn name(Self) -> String
-  fn init_state(Self) -> @bank.TransferPmState
-  fn interested(Self, @bank.AccountEvent) -> Bool
-  fn saga_id_of(Self, @event.EventMessage[String, @bank.AccountEvent]) -> String
-  fn handle(Self, @bank.TransferPmState, @bank.AccountEvent) -> Array[
-    @mooncmd.DirectedCommand[@bank.AccountCommand],
-  ]
-  fn apply(Self, @bank.TransferPmState, @bank.AccountEvent) -> @bank.TransferPmState
-}
-
-///|
-/// 行为面 → 记录面适配（trait 对象直调，[0079] 零晋升）。
-fn transfer_pm_of_behavior(
-  behavior : &TransferRelayBehavior,
-) -> @mooncmd.ProcessManager[
-  @bank.TransferPmState,
-  @bank.AccountCommand,
-  @bank.AccountEvent,
-] {
-  {
-    name: behavior.name(),
-    init_state: () => behavior.init_state(),
-    interested: e => behavior.interested(e),
-    saga_id_of: msg => behavior.saga_id_of(msg),
-    handle: (state, e) => behavior.handle(state, e),
-    apply: (state, e) => behavior.apply(state, e),
-  }
-}
-
-///|
-/// 用户手写径示例：RelayTo——转账中继行为（target 实例字段参数化；
-/// 语义与 account_pm_gen.mbt 的 transfer_pm 记录面孪生：watch
-/// MoneyWithdrawn/AccountClosed → 命令直通发往 target）。
-priv struct RelayTo {
-  target : String
-}
-
-///|
-impl TransferRelayBehavior for RelayTo with fn name(_self) -> String {
-  "transfer"
-}
-
-///|
-impl TransferRelayBehavior for RelayTo with fn init_state(_self) -> @bank.TransferPmState {
-  @bank.TransferPmState::init()
-}
-
-///|
-impl TransferRelayBehavior for RelayTo with fn interested(_self, e) -> Bool {
-  match e {
-    @bank.MoneyWithdrawn(_) => true
-    @bank.AccountClosed => true
-    _ => false
-  }
-}
-
-///|
-impl TransferRelayBehavior for RelayTo with fn saga_id_of(_self, msg) -> String {
-  msg.aggregate_id
-}
-
-///|
-impl TransferRelayBehavior for RelayTo with fn handle(self, _state, e) -> Array[
-  @mooncmd.DirectedCommand[@bank.AccountCommand],
-] {
-  match e {
-    @bank.MoneyWithdrawn(amount) =>
-      [
-        {
-          target_aggregate_id: self.target,
-          command: @bank.DepositMoney(amount),
-        },
-      ]
-    @bank.AccountClosed =>
-      [{ target_aggregate_id: self.target, command: @bank.CloseAccount, }]
-    _ => []
-  }
-}
-
-///|
-impl TransferRelayBehavior for RelayTo with fn apply(_self, state, e) -> @bank.TransferPmState {
-  match e {
-    @bank.MoneyWithdrawn(amount) =>
-      { ..state, transferred: state.transferred + amount, }
-    @bank.AccountClosed => { ..state, closed: true, }
-    _ => state
-  }
-}
-
-///|
 fn main raise {
   let mut all_green = true
   let aggregate_id = "demo-account-001"
   // ========== ② 内存命令链：命令 → 纯事件 → EventMessage 自动包装 ==========
-  let aggregate = @aggregate.AggregateRoot::new(
-      aggregate_id,
-      @bank.account_handler,
-      @event.EventApplier::Single(@bank.account_applier),
-      @bank.account_empty_state(),
-    )
+  let aggregate = account_root_new(aggregate_id)
     .exec(@bank.CreateAccount("Demo Holder", 1000))
     .exec(@bank.DepositMoney(500))
     .exec(@bank.WithdrawMoney(300))
@@ -166,21 +44,13 @@ fn main raise {
       "3 事件，版本 1..3，schema_version = \{uncommitted[0].schema_version}",
     )
   // ========== ③ SQLite 落库 + 重放重建 ==========
-  let store = @store.SQLiteEventStore::new(
-    ":memory:", @bank.account_serialize, @bank.account_deserialize, @bank.account_type_name,
-  )
+  let store = account_store()
   store.append(aggregate_id, uncommitted)
   let loaded = store.load(aggregate_id, 0)
   let load_ok = loaded.length() == 3
   all_green = all_green &&
     check("落库读回", load_ok, "load 回 \{loaded.length()} 事件")
-  let rebuilt = @aggregate.AggregateRoot::from_events(
-    aggregate_id,
-    loaded,
-    @bank.account_handler,
-    @event.EventApplier::Single(@bank.account_applier),
-    @bank.account_empty_state(),
-  )
+  let rebuilt = account_root_from_events(aggregate_id, loaded)
   let rebuilt_state = rebuilt.current_state()
   let rebuild_ok = rebuilt.version() == aggregate.version() &&
     rebuilt_state.balance == state.balance &&
@@ -233,12 +103,7 @@ fn main raise {
       [@bank.MoneyDeposited(700)]
     }
   }
-  let retry_root = @aggregate.AggregateRoot::new(
-    "demo-effect-1",
-    effect_handler,
-    @event.EventApplier::Single(@bank.account_applier),
-    @bank.AccountState::init(),
-  )
+  let retry_root = account_root_with("demo-effect-1", effect_handler)
   let effect_done = retry_root.exec_with_effect(
     @bank.DepositMoney(700),
     @bank.account_retry_machine(),
@@ -263,12 +128,7 @@ fn main raise {
     invalid_calls = invalid_calls + 1
     @bank.account_handler(state, cmd)
   }
-  let invalid_root = @aggregate.AggregateRoot::new(
-    "demo-effect-2",
-    invalid_watcher,
-    @event.EventApplier::Single(@bank.account_applier),
-    @bank.AccountState::init(),
-  )
+  let invalid_root = account_root_with("demo-effect-2", invalid_watcher)
   let mut effect2_rejected = false
   try {
     // 未激活户取款 = 业务拒（Validation 族）→ 状态机不重试，原错上抛
@@ -293,12 +153,9 @@ fn main raise {
       "业务拒零重试（执行 \{invalid_calls} 次，重放同结果）",
     )
   // ========== ⑤ 销户闭环（dispatch 门面:执行+落库+提交一步）==========
-  let closable = @aggregate.AggregateRoot::from_events(
+  let closable = account_root_from_events(
     aggregate_id,
     store.load(aggregate_id, 0),
-    @bank.account_handler,
-    @event.EventApplier::Single(@bank.account_applier),
-    @bank.account_empty_state(),
   )
   let records = store.to_event_store()
   let after_withdraw = @mooncmd.dispatch(
@@ -322,19 +179,11 @@ fn main raise {
       "户名 \{closed_state.name}，balance = \{closed_state.balance}，active = \{closed_state.is_active}",
     )
   // ========== ⑥ 快照加速：销户事件已随 dispatch 落库；快照@v3 全量态 + 尾部 v4/v5 重放 ≡ 全量 ==========
-  let snapshottable = @aggregate.AggregateRoot::from_events(
-    aggregate_id,
-    loaded,
-    @bank.account_handler,
-    @event.EventApplier::Single(@bank.account_applier),
-    @bank.account_empty_state(),
-  )
+  let snapshottable = account_root_from_events(aggregate_id, loaded)
   let snapshot = snapshottable.to_snapshot()
-  let from_snapshot = @aggregate.AggregateRoot::from_events(
+  let from_snapshot = account_root_from_state(
     aggregate_id,
     store.load(aggregate_id, snapshot.version),
-    @bank.account_handler,
-    @event.EventApplier::Single(@bank.account_applier),
     snapshot.state,
   )
   let snap_state = from_snapshot.current_state()
@@ -348,12 +197,9 @@ fn main raise {
       "快照@v\{snapshot.version}（balance \{snapshot.state.balance}）+ 尾部重放 → v\{from_snapshot.version()}，balance \{snap_state.balance}",
     )
   // 与全量重放对照：两径同果
-  let full_replay = @aggregate.AggregateRoot::from_events(
+  let full_replay = account_root_from_events(
     aggregate_id,
     store.load(aggregate_id, 0),
-    @bank.account_handler,
-    @event.EventApplier::Single(@bank.account_applier),
-    @bank.account_empty_state(),
   )
   let full_state = full_replay.current_state()
   let equiv_ok = full_replay.version() == from_snapshot.version() &&
