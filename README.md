@@ -26,11 +26,18 @@ correlation / causation 追溯链、时间戳、schema 版本），Router 作为
   `version - 基版本 >= snapshot_every`，缺省 0 = 关闭；Commanded
   snapshotting 对位，ADR-MC-010）。
 - Process Manager（saga）：`ProcessManager` 四回调记录面 +
-  `ProcessManagerRunner` 显式泵（事件 → 命令跨聚合编排；状态持久化
-  复用 SnapshotStore；命令发射注入闭包）。词表 gen 化已落（`[[process_manager]]`
-  方言，ADR-MC-011：`moonx thy1016/cmd@latest <pm表>.toml` 单件产
+  `ProcessManagerRunner` 显式泵（`pump_event` 单事件 / `pump_events`
+  批量 fail-fast；事件 → 命令跨聚合编排；状态持久化复用 SnapshotStore；
+  命令发射注入闭包）。词表 gen 化已落（`[[process_manager]]` 方言，
+  ADR-MC-011：`moonx thy1016/cmd@latest <pm表>.toml` 单件产
   `<名>_pm_gen.mbt`；装配（Runner/emit 闭包/SnapshotStore）= 消费方
-  组合根，不在词表）。
+  组合根，不在词表）。脚手架双模式：`--pm-assembly <pm表>` 产装配
+  样板（内存 store 夹具 + runner 接线，bootstrap-only .hand-maintained，
+  emit 闭包 = 命令去向决策必填显式）；`--pm-behavior <pm表>` 产行为面
+  trait 带缺省体（五缺省：saga_id_of 信封直读 / handle 零发射 / apply
+  透传 / init_state 词表零值态 / interested 不观注；name 唯一必填）——
+  用户最小实装 = `impl <Trait> for <Struct> with fn name` + 差异槽覆写
+  （`declare impl` 声明形勿用：编译过但运行时缺省不继承直落）。
 - 拉取式投影：`Projection` 记录面 + `LiveProjection`（订阅位置
   Origin / Current / FromVersion，检查点即版本）+ SQLite 持久化投影。
 - Effect 重试状态机：`RetryMachine` 协议面（错误分类封闭集 + 纯裁决，
