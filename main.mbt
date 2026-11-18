@@ -36,9 +36,12 @@ fn dir_prefix_of_table(table_path : String) -> String {
 /// CLI 用法两行(无参/未知选项共用)。
 fn print_usage() -> Unit {
   println(
-    "cmd \{VERSION} — mooncmd 词表 → 骨架代码(agg 四件 / PM 单件)",
+    "cmd \{VERSION} — mooncmd 词表 → 骨架代码(agg 四件 / PM 单件 / PM 脚手架)",
   )
   println("用法: moonx thy1016/cmd@latest <table.toml>")
+  println(
+    "模式: --pm-assembly <table.toml>(装配样板)  --pm-behavior <table.toml>(行为面 trait 带缺省体)",
+  )
   println("选项: --version  --help")
 }
 
@@ -83,11 +86,22 @@ fn positional_arg(args : Array[String]) -> String? {
 /// driver 主径:argv → 选项预扫 → 读表 → parse/validate → 发射四件
 /// → 清单汇报。返回 exit 码(main 统一出口)。
 async fn run(args : Array[String]) -> Int32 {
-  match scan_flags(args) {
+  // 脚手架模式预扫(--pm-assembly/--pm-behavior):旗标摘出,余下走
+  // 常规选项/表径扫描(未知 '-' 实参仍 exit 2)。
+  let mut scaffold_mode = ""
+  let rest_args : Array[String] = []
+  for arg in args {
+    if arg == "--pm-assembly" || arg == "--pm-behavior" {
+      scaffold_mode = arg
+    } else {
+      rest_args.push(arg)
+    }
+  }
+  match scan_flags(rest_args) {
     Some(exit_code) => return exit_code
     None => ()
   }
-  let table_path = match positional_arg(args) {
+  let table_path = match positional_arg(rest_args) {
     Some(path) => path
     None => {
       print_usage()
@@ -113,6 +127,17 @@ async fn run(args : Array[String]) -> Int32 {
   let pm_msg = match pm_parsed {
     Ok(_) => ""
     Err(m) => m
+  }
+  if scaffold_mode != "" {
+    match pm_parsed {
+      Ok(pm_def) => return run_pm_scaffold(scaffold_mode, table_path, pm_def)
+      Err(m) => {
+        println(
+          "cmd: 脚手架模式需 PM 表(\{scaffold_mode})——pm parse 拒:\{m}",
+        )
+        return 4
+      }
+    }
   }
   if pm_parsed is Ok(pm_def) {
     return run_pm_path(table_path, pm_def)
@@ -230,6 +255,57 @@ async fn run_pm_path(table_path : String, pm_def : @gen.MooncmdPmDef) -> Int32 {
   )
   println("  4. runner.pump(events:Array[@event.EventMessage[String, E]])")
   println("  5. moon test")
+  return 0
+}
+
+///|
+/// PM 脚手架径(装配样板/行为面 trait 带缺省体):单件发射落表同目录,
+/// bootstrap-only .hand-maintained(实装体住用户件——红线9 编辑点)。
+async fn run_pm_scaffold(
+  mode : String,
+  table_path : String,
+  pm_def : @gen.MooncmdPmDef,
+) -> Int32 {
+  let dir = dir_prefix_of_table(table_path)
+  let out_file = if mode == "--pm-assembly" {
+    pm_def.name + "_pm_asm.mbt"
+  } else {
+    pm_def.name + "_pm_behavior.mbt"
+  }
+  let provenance = @gen.SchemaProvenance::{
+    source_table: table_path,
+    regen_command: "moonx thy1016/cmd@latest \{mode} " + table_path,
+    binder_path: "thy1016/cmd/gen(pm 行为面/装配样板发射件)",
+  }
+  let text = if mode == "--pm-assembly" {
+    @gen.emit_mooncmd_pm_assembly(pm_def, provenance~)
+  } else {
+    @gen.emit_mooncmd_pm_behavior(pm_def, provenance~)
+  }
+  @fs.write_file(dir + out_file, @utf8.encode(text))
+  let header_line = if dir == "" {
+    "✓ \{pm_def.name} PM 脚手架单件(bootstrap-only .hand-maintained)"
+  } else {
+    "✓ \{pm_def.name} PM 脚手架单件 · \{dir}\{out_file}"
+  }
+  println(header_line)
+  println("下一步(实装体住本件;gen 件零手编)")
+  if mode == "--pm-assembly" {
+    println("  1. store 夹具换持久构造器(生产径)")
+    println(
+      "  2. emit 闭包 = 命令去向决策(必填显式——无缺省)",
+    )
+    println("  3. runner.pump_events(事件流)——泵序责任在调用方")
+  } else {
+    println(
+      "  1. impl <Trait> for <Struct> with fn name(唯一必填;五缺省自动继承)",
+    )
+    println("  2. 差异槽覆写(interested/handle/apply 照业务)")
+    println(
+      "  3. declare impl 声明形勿用(编译过+运行时缺省不继承直落)",
+    )
+  }
+  println("  moon test")
   return 0
 }
 

@@ -510,7 +510,8 @@ fn agg_has_hook_delegated(events : Array[AggEventDef]) -> Bool {
 ///|
 /// 演化指令链发射:每指令一条 let（s0/s1/…链式,同字段后写覆前写）;
 /// operand = 载荷引用（punning 变量; "-" 前缀取负）或字面量;
-/// `...` 委托事件 = 钩子记录字段直调臂（载荷拆包全量透传）。
+/// 委托事件（`...` 或 evolve 留空骨架位）= 钩子记录字段直调臂（载荷
+/// 拆包全量透传;实装 = policy 件槽闭包）。
 fn agg_emit_apply_arm(sb : StringBuilder, event : AggEventDef) -> Unit {
   if agg_event_hook_delegated(event) {
     let hook_field = agg_snake(event.name)
@@ -520,11 +521,21 @@ fn agg_emit_apply_arm(sb : StringBuilder, event : AggEventDef) -> Unit {
     }
     let call_args = agg_join(names, ", ")
     let unpack = agg_emit_unpack(event.fields)
-    if unpack == "" {
-      sb <+ "    \{event.name} => (hooks.\{hook_field})(\{call_args})\n"
+    // 判宽:单行 >80 折 `=>` 续行形(fmt 实测正典——invoice 长臂案校准)
+    let line = if unpack == "" {
+      "    \{event.name} => (hooks.\{hook_field})(\{call_args})"
     } else {
-      sb <+
-        "    \{event.name}(\{unpack}) => (hooks.\{hook_field})(\{call_args})\n"
+      "    \{event.name}(\{unpack}) => (hooks.\{hook_field})(\{call_args})"
+    }
+    if line.length() > 80 {
+      if unpack == "" {
+        sb <+ "    \{event.name} =>\n"
+      } else {
+        sb <+ "    \{event.name}(\{unpack}) =>\n"
+      }
+      sb <+ "      (hooks.\{hook_field})(\{call_args})\n"
+    } else {
+      sb <+ "\{line}\n"
     }
     return
   }
@@ -778,10 +789,21 @@ pub fn emit_mooncmd_agg(
       names.push(field.name)
     }
     let call_args = agg_join(names, ", ")
-    if unpack == "" {
-      sb <+ "    \{command.name} => (hooks.\{snake})(state)\n"
+    // 判宽:单行 >80 折 `=>` 续行形(fmt 实测正典——invoice 长名案校准)
+    let line = if unpack == "" {
+      "    \{command.name} => (hooks.\{snake})(state)"
     } else {
-      sb <+ "    \{command.name}(\{unpack}) => (hooks.\{snake})(\{call_args})\n"
+      "    \{command.name}(\{unpack}) => (hooks.\{snake})(\{call_args})"
+    }
+    if line.length() > 80 {
+      if unpack == "" {
+        sb <+ "    \{command.name} =>\n"
+      } else {
+        sb <+ "    \{command.name}(\{unpack}) =>\n"
+      }
+      sb <+ "      (hooks.\{snake})(\{call_args})\n"
+    } else {
+      sb <+ "\{line}\n"
     }
   }
   sb <+ "  }\n}\n"
@@ -881,11 +903,22 @@ pub fn emit_mooncmd_agg(
       sb <+ "    \{event.name} => \"1\\t\{event.name}\"\n"
     } else {
       let unpack = agg_emit_unpack(event.fields)
-      sb <+ "    \{event.name}(\{unpack}) => \"1\\t\{event.name}"
+      // 判宽:先拼单行候选,>80 折 `=>` 续行形(fmt 实测正典——长事件名案)
+      let mut line = "    \{event.name}(\{unpack}) => \"1\\t\{event.name}"
       for field in event.fields {
-        sb <+ "\\t\\{\{field.name}}"
+        line = line + "\\t\\{" + field.name + "}"
       }
-      sb <+ "\"\n"
+      line = line + "\""
+      if line.length() > 80 {
+        sb <+ "    \{event.name}(\{unpack}) =>\n"
+        let mut body = "      \"1\\t\{event.name}"
+        for field in event.fields {
+          body = body + "\\t\\{" + field.name + "}"
+        }
+        sb <+ "\{body}\"\n"
+      } else {
+        sb <+ "\{line}\n"
+      }
     }
   }
   sb <+ "  }\n}\n\n"
