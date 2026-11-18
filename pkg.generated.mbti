@@ -109,8 +109,8 @@ pub(all) struct ProcessManagerRunner[S, C, E] {
   emit : (String, C) -> Unit raise ProcessManagerErr
 }
 pub fn[S, C, E] ProcessManagerRunner::new(ProcessManager[S, C, E], @store.SnapshotStore[String, S], (String, C) -> Unit raise ProcessManagerErr) -> Self[S, C, E]
-pub fn[S, C, E] ProcessManagerRunner::pump(Self[S, C, E], Array[@event.EventMessage[String, E]]) -> Int32 raise ProcessManagerErr
 pub fn[S, C, E] ProcessManagerRunner::pump_event(Self[S, C, E], @event.EventMessage[String, E]) -> Bool raise ProcessManagerErr
+pub fn[S, C, E] ProcessManagerRunner::pump_events(Self[S, C, E], Array[@event.EventMessage[String, E]]) -> Int32 raise ProcessManagerErr
 
 pub struct RouteEnv[AggregateId, S, E] {
   event_store : @store.EventStore[AggregateId, E]

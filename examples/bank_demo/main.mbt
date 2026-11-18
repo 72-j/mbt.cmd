@@ -2,7 +2,7 @@
 /// mooncmd 全链自证示例（可执行）：银行账户聚合从定义到落库的一跑。
 /// 叙事序 = 消费方接入序：① 定义聚合 → ② 内存命令链 → ③ SQLite 落库
 /// 与重放重建 → ④ 乐观并发拒写 → ⑤ 销户闭环 → ⑥ 快照加速等价 →
-/// ⑦ PM 泵跨聚合编排（役13b 词表 gen 产物）。
+/// ⑦ PM 泵跨聚合编排（gen 径 + trait 手写径，同泵双形）。
 /// 终行 EXAMPLE:PASS。
 
 ///|
@@ -10,6 +10,123 @@ fn check(label : String, ok : Bool, detail : String) -> Bool {
   let verdict = if ok { "PASS" } else { "FAIL" }
   println("[\{verdict}] \{label} — \{detail}")
   ok
+}
+
+///|
+/// PM 演示用内存 SnapshotStore（Map 单元引用捕获；save/load 记录面直构）。
+fn pm_memory_store() -> @store.SnapshotStore[String, @bank.TransferPmState] {
+  let ledger : Array[Map[String, (@bank.TransferPmState, Int32)]] = [Map([])]
+  {
+    save: (key, state, version, _ts) => ledger[0][key] = (state, version),
+    load: key => ledger[0].get(key),
+  }
+}
+
+///|
+/// ⑦ 演示事件流（transfer 全程：两笔取出 + 子集外存入 + 销户；版本位连续）。
+fn pm_flow(
+  saga_id : String,
+) -> Array[@event.EventMessage[String, @bank.AccountEvent]] {
+  [
+    @event.EventMessage::new(@bank.MoneyWithdrawn(30), saga_id, 1),
+    @event.EventMessage::new(@bank.MoneyWithdrawn(12), saga_id, 2),
+    @event.EventMessage::new(@bank.MoneyDeposited(5), saga_id, 3),
+    @event.EventMessage::new(@bank.AccountClosed, saga_id, 4),
+  ]
+}
+
+///|
+/// ⑦ PM 行为面 trait（消费侧手写径形）：MoonBit 无泛型 trait（泛型只在
+/// 结构体/函数）——行为面按聚合具体型立（方法收 Self 位置形），适配器
+/// 同包具体化进框架泛型记录面；ProcessManagerRunner 泵消费形唯一，泵零改。
+trait TransferRelayBehavior {
+  fn name(Self) -> String
+  fn init_state(Self) -> @bank.TransferPmState
+  fn interested(Self, @bank.AccountEvent) -> Bool
+  fn saga_id_of(Self, @event.EventMessage[String, @bank.AccountEvent]) -> String
+  fn handle(Self, @bank.TransferPmState, @bank.AccountEvent) -> Array[
+    @mooncmd.DirectedCommand[@bank.AccountCommand],
+  ]
+  fn apply(Self, @bank.TransferPmState, @bank.AccountEvent) -> @bank.TransferPmState
+}
+
+///|
+/// 行为面 → 记录面适配（trait 对象直调，[0079] 零晋升）。
+fn transfer_pm_of_behavior(
+  behavior : &TransferRelayBehavior,
+) -> @mooncmd.ProcessManager[
+  @bank.TransferPmState,
+  @bank.AccountCommand,
+  @bank.AccountEvent,
+] {
+  {
+    name: behavior.name(),
+    init_state: () => behavior.init_state(),
+    interested: e => behavior.interested(e),
+    saga_id_of: msg => behavior.saga_id_of(msg),
+    handle: (state, e) => behavior.handle(state, e),
+    apply: (state, e) => behavior.apply(state, e),
+  }
+}
+
+///|
+/// 用户手写径示例：RelayTo——转账中继行为（target 实例字段参数化；
+/// 语义与 account_pm_gen.mbt 的 transfer_pm 记录面孪生：watch
+/// MoneyWithdrawn/AccountClosed → 命令直通发往 target）。
+priv struct RelayTo {
+  target : String
+}
+
+///|
+impl TransferRelayBehavior for RelayTo with fn name(_self) -> String {
+  "transfer"
+}
+
+///|
+impl TransferRelayBehavior for RelayTo with fn init_state(_self) -> @bank.TransferPmState {
+  @bank.TransferPmState::init()
+}
+
+///|
+impl TransferRelayBehavior for RelayTo with fn interested(_self, e) -> Bool {
+  match e {
+    @bank.MoneyWithdrawn(_) => true
+    @bank.AccountClosed => true
+    _ => false
+  }
+}
+
+///|
+impl TransferRelayBehavior for RelayTo with fn saga_id_of(_self, msg) -> String {
+  msg.aggregate_id
+}
+
+///|
+impl TransferRelayBehavior for RelayTo with fn handle(self, _state, e) -> Array[
+  @mooncmd.DirectedCommand[@bank.AccountCommand],
+] {
+  match e {
+    @bank.MoneyWithdrawn(amount) =>
+      [
+        {
+          target_aggregate_id: self.target,
+          command: @bank.DepositMoney(amount),
+        },
+      ]
+    @bank.AccountClosed =>
+      [{ target_aggregate_id: self.target, command: @bank.CloseAccount, }]
+    _ => []
+  }
+}
+
+///|
+impl TransferRelayBehavior for RelayTo with fn apply(_self, state, e) -> @bank.TransferPmState {
+  match e {
+    @bank.MoneyWithdrawn(amount) =>
+      { ..state, transferred: state.transferred + amount, }
+    @bank.AccountClosed => { ..state, closed: true, }
+    _ => state
+  }
 }
 
 ///|
@@ -249,51 +366,19 @@ fn main raise {
       equiv_ok,
       "快照径 ≡ 全量径：v\{full_replay.version()} / balance \{full_state.balance} / 户名 \{full_state.name}",
     )
-  // ========== ⑦ PM 泵：跨聚合编排（役13b 词表 gen 产物 transfer_pm 直消费）==========
-  // watch MoneyWithdrawn/AccountClosed → 命令直通发往 account-2；saga 态按
-  // 信封 aggregate_id 分片（SnapshotStore 键 transfer:<saga_id>）。EventStore
-  // 无全局流（ADR 语义差）——泵序责任在调用方，单事件直喂。
-  let pm_ledger : Array[Map[String, (@bank.TransferPmState, Int32)]] = [Map([])]
-  let pm_store : @store.SnapshotStore[String, @bank.TransferPmState] = {
-    save: (key, state, version, _ts) => pm_ledger[0][key] = (state, version),
-    load: key => pm_ledger[0].get(key),
-  }
+  // ========== ⑦ PM 泵：跨聚合编排（gen 径 + trait 手写径，同泵双形）==========
+  // EventStore 无全局流（ADR 语义差）——泵序责任在调用方，事件流直喂。
   let pm_sent : Array[(String, @bank.AccountCommand)] = []
-  let runner = @mooncmd.ProcessManagerRunner::new(
+  let pm_store = pm_memory_store()
+  let gen_runner = @mooncmd.ProcessManagerRunner::new(
     @bank.transfer_pm(),
     pm_store,
     (target, cmd) => pm_sent.push((target, cmd)),
   )
-  let pm_p1 = runner.pump_event(
-    @event.EventMessage::new(@bank.MoneyWithdrawn(30), "pm-account-1", 1),
-  )
-  let pm_p2 = runner.pump_event(
-    @event.EventMessage::new(@bank.MoneyWithdrawn(12), "pm-account-1", 2),
-  )
-  let pm_p3 = runner.pump_event(
-    @event.EventMessage::new(@bank.MoneyDeposited(5), "pm-account-1", 3),
-  )
-  let pm_p4 = runner.pump_event(
-    @event.EventMessage::new(@bank.AccountClosed, "pm-account-1", 4),
-  )
-  let pm_pump_ok = pm_p1 && pm_p2 && !pm_p3 && pm_p4
-  // 命令直通映射逐条对拍（match 不作 && 链操作元——家法，块臂上提）
-  let pm_cmds_ok = if pm_sent.length() == 3 {
-    let c0 = match pm_sent[0] {
-      ("account-2", @bank.DepositMoney(30)) => true
-      _ => false
-    }
-    let c1 = match pm_sent[1] {
-      ("account-2", @bank.DepositMoney(12)) => true
-      _ => false
-    }
-    let c2 = match pm_sent[2] {
-      ("account-2", @bank.CloseAccount) => true
-      _ => false
-    }
-    c0 && c1 && c2
-  } else {
-    false
+  let gen_handled = gen_runner.pump_events(pm_flow("pm-account-1"))
+  let pm_first_ok = match pm_sent[0] {
+    ("account-2", @bank.DepositMoney(30)) => true
+    _ => false
   }
   let pm_loaded = (pm_store.load)("transfer:pm-account-1") catch { _ => None }
   let pm_state_ok = match pm_loaded {
@@ -301,19 +386,35 @@ fn main raise {
       state.transferred == 42 && state.closed && version == 4
     None => false
   }
+  let gen_ok = gen_handled == 3 &&
+    pm_sent.length() == 3 &&
+    pm_first_ok &&
+    pm_state_ok
   all_green = all_green &&
     check(
-      "PM 泵 watch 直通",
-      pm_pump_ok,
-      "withdraw×2 + AccountClosed 全处理，MoneyDeposited 子集外跳过（sent = \{pm_sent.length()} 令）",
+      "PM 泵 gen 径（transfer_pm 记录面）", gen_ok, "4 事件 3 处理（MoneyDeposited 子集外跳过）；DepositMoney(30)→account-2；transferred = 42、closed @v4",
     )
+  // trait 手写径：RelayTo 行为面 impl → 适配器 → 同一台泵（语义孪生对拍）。
+  let pm_sent2 : Array[(String, @bank.AccountCommand)] = []
+  let pm_store2 = pm_memory_store()
+  let trait_runner = @mooncmd.ProcessManagerRunner::new(
+    transfer_pm_of_behavior(RelayTo::{ target: "account-2", }),
+    pm_store2,
+    (target, cmd) => pm_sent2.push((target, cmd)),
+  )
+  let trait_handled = trait_runner.pump_events(pm_flow("pm-account-1"))
+  let pm_loaded2 = (pm_store2.load)("transfer:pm-account-1") catch { _ => None }
+  let pm_state2_ok = match pm_loaded2 {
+    Some((state, version)) =>
+      state.transferred == 42 && state.closed && version == 4
+    None => false
+  }
+  let trait_ok = trait_handled == 3 && pm_sent2.length() == 3 && pm_state2_ok
   all_green = all_green &&
     check(
-      "PM 命令直通映射", pm_cmds_ok, "account-2 ← DepositMoney(30)/DepositMoney(12)/CloseAccount（金额保真）",
-    )
-  all_green = all_green &&
-    check(
-      "PM saga 态持久", pm_state_ok, "transfer:pm-account-1 @v4：transferred = 42（30+12 累加），closed = true",
+      "PM 泵 trait 手写径（行为面 impl 同泵）",
+      trait_ok,
+      "RelayTo impl → 适配器进同一台泵：sent = \{pm_sent2.length()}，transferred = 42、closed @v4（与 gen 径孪生）",
     )
   // ========== 终判 ==========
   if all_green {

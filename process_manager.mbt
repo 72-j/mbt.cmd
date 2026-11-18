@@ -127,7 +127,7 @@ pub fn[S, C, E] ProcessManagerRunner::pump_event(
 ///|
 /// 批量泵(便捷件):逐事件 pump_event,返回处理计数;任一失败即
 /// fail-fast raise(已处理事件不回滚——显式泵序由调用方裁决重喂)。
-pub fn[S, C, E] ProcessManagerRunner::pump(
+pub fn[S, C, E] ProcessManagerRunner::pump_events(
   self : ProcessManagerRunner[S, C, E],
   events : Array[@event.EventMessage[String, E]],
 ) -> Int32 raise ProcessManagerErr {

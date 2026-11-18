@@ -130,7 +130,7 @@ middleware~)`
 | `Router` | `new` · `dispatch` · `dispatch_now`（显式同步捷径）· `dispatch_with_config` |
 | `DispatchReader` 组合子 | `dispatch_reader_new` / `_run` / `_map` / `_bind` · `dispatch_ask` · `dispatch_asks`（Reader Monad 注入面） |
 | `ProcessManager[S, C, E]` | 四回调记录面：`interested` · `saga_id_of`（收 EventMessage 信封）· `handle`（产 `DirectedCommand`（命令 + target_aggregate_id））· `apply`（ADR-MC-011，显式泵事件源） |
-| `ProcessManagerRunner[S, C, E]` | `new(manager, snapshots, emit)` · `pump_event`（单事件：interested→装态→handle→emit×N→apply→save）· `pump`（批量 fail-fast）；状态面 = SnapshotStore（键 `<pm名>:<saga_id>`）；错误面 `ProcessManagerErr`（EmitFailed/StateFailed）独立 suberror |
+| `ProcessManagerRunner[S, C, E]` | `new(manager, snapshots, emit)` · `pump_event`（单事件：interested→装态→handle→emit×N→apply→save）· `pump_events`（批量 fail-fast）；状态面 = SnapshotStore（键 `<pm名>:<saga_id>`）；错误面 `ProcessManagerErr`（EmitFailed/StateFailed）独立 suberror |
 
 ### 3.5 错误面
 

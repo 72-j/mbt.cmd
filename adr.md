@@ -97,7 +97,7 @@ mooncmd 组装积木勘定三则：EventStore 按 aggregate_id 分流**无全局
   （EmitFailed/StateFailed 独立 suberror,不混 dispatch 主链
   EventSourcingErr——加臂涟漪重试裁决六臂分类）,裁决权在调用方
   catch;钩子槽挂账候真需求。
-- **D2 = 显式泵**（`ProcessManagerRunner.pump/pump_event`）：逐事件
+- **D2 = 显式泵**（`ProcessManagerRunner.pump_events/pump_event`）：逐事件
   interested→装态（load 缺失 = init）→handle→逐条 emit（任一失败
   fail-fast,状态不推进）→apply→save。订阅组装留调用方（bus publish
   闭包串 pump / dispatch 后显式喂任选）。**语义差诚实记**：Commanded
