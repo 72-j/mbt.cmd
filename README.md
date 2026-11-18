@@ -3,7 +3,8 @@
 mooncmd 聚合词表 → 骨架代码的 **moonx 命令面**(独立薄模块;wasm-safe,
 moonx = 取注册表预编译 wasm → moonrun 执行)。
 
-读一份 aggregate 词表 TOML,发射四件骨架代码:
+读一份 aggregate 词表 TOML,发射四件骨架代码(agg 方言);读一份
+`[[process_manager]]` 词表则走 PM 方言(单件 + 脚手架双模式,见下):
 
 | 产物 | 内容 | regen 行为 |
 |---|---|---|
@@ -16,6 +17,13 @@ moonx = 取注册表预编译 wasm → moonrun 执行)。
 
 ```sh
 moonx thy1016/cmd@latest <table.toml>
+```
+
+模式(脚手架单件径,bootstrap-only):
+
+```sh
+moonx thy1016/cmd@latest --pm-assembly <pm表.toml>   # 装配样板(内存 store 夹具+runner 接线)
+moonx thy1016/cmd@latest --pm-behavior <pm表.toml>   # 行为面 trait 带缺省体
 ```
 
 选项:`--version` / `-V`、`--help` / `-h`。`@latest` 恒写(消费口径;版本钉进
@@ -69,6 +77,26 @@ fields = [ { name = "amount", type = "int" } ]
 
 封闭集:字段类型 `string|int|bool`;演化指令 `set|add|append|remove`;
 裁决语义**不入表**(红线7)——词表只描述结构与演化,裁决在策略件。
+
+## PM 方言(`[[process_manager]]`)
+
+PM 表走单件径:`<名>_pm_gen.mbt`(状态/interested/saga_id_of/handle/
+apply/PM 记录面六段;emit 闭包与 SnapshotStore 装配 = 消费方组合根,
+红线7 同源)。泵 API:`pump_event` 单事件 / `pump_events` 批量
+fail-fast。
+
+脚手架双模式(bootstrap-only,实装体住产出件——gen 零手编):
+
+| 模式 | 产物 | 用户实装 |
+|---|---|---|
+| `--pm-assembly` | `<名>_pm_asm.mbt`(内存 store 夹具 + runner 接线 + 冒烟罐) | store 换持久构造器;emit 闭包 = 命令去向决策(必填显式) |
+| `--pm-behavior` | `<名>_pm_behavior.mbt`(行为面 trait 五缺省体 + 适配器) | 最小实装 = `impl <Trait> for <Struct> with fn name` + 差异槽覆写(interested/handle/apply 照业务) |
+
+缺省体(安全惰值):saga_id_of = 信封 `aggregate_id` 直读 / handle =
+零发射 / apply = 透传 / init_state = 词表零值态 / interested = 不观注;
+name 唯一必填(state_key 命名空间 `<名>:<saga_id>`)。
+`declare impl` 声明形**勿用**——编译过但运行时缺省不继承直落 abort
+(勘证 2026-11-18)。
 
 ## 治理三律(与上游 mooncmd 的契约)
 

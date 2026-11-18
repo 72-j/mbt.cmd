@@ -253,7 +253,9 @@ async fn run_pm_path(table_path : String, pm_def : @gen.MooncmdPmDef) -> Int32 {
   println(
     "  3. let runner = ProcessManagerRunner::new(pm, store, emit 闭包)(emit 形 (String, C) -> Unit raise ProcessManagerErr)",
   )
-  println("  4. runner.pump(events:Array[@event.EventMessage[String, E]])")
+  println(
+    "  4. runner.pump_events(events:Array[@event.EventMessage[String, E]])",
+  )
   println("  5. moon test")
   return 0
 }
