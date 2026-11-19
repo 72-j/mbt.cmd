@@ -13,11 +13,17 @@ pub fn account_applier(AccountState, AccountEvent) -> AccountState
 
 pub fn account_decide(AccountState, AccountCommand, AccountDecideHooks) -> Result[Array[AccountEvent], String]
 
+pub fn account_event_applier() -> @event.EventApplier[AccountState, AccountEvent]
+
 pub fn account_handler(AccountState, AccountCommand) -> Array[AccountEvent] raise @command.CommandError
 
 pub fn account_hooks() -> AccountDecideHooks
 
 pub fn account_root(String) -> @aggregate.AggregateRoot[String, AccountState, AccountCommand, AccountEvent]
+
+pub fn account_root_from_events_with_sources(String, Array[@event.EventMessage[String, AccountEvent]], clock~ : () -> Int64, id_gen~ : () -> String) -> @aggregate.AggregateRoot[String, AccountState, AccountCommand, AccountEvent]
+
+pub fn account_root_with_sources(String, clock~ : () -> Int64, id_gen~ : () -> String) -> @aggregate.AggregateRoot[String, AccountState, AccountCommand, AccountEvent]
 
 // Errors
 
