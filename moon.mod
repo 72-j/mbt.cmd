@@ -31,7 +31,7 @@ preferred_target = "wasm"
 import {
   "moonbitlang/async@0.22.4",
   "moonbitlang/x@0.5.5",
-  "moonbit-community/sqlite3@0.2.3",
+  "moonbit-community/sqlite3@0.2.5",
   "f4ah6o/uuidm@0.2.1",
   // 役10 serde wire 投影（[aggregate.serde] 键控;仅 bank 开键包消费）
   "moonbit-community/serde.mbt@0.3.1",

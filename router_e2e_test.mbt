@@ -320,8 +320,8 @@ test "router e2e: event bus wired, publish failure honest with events persisted"
   let published_ok = match outcome {
     Err(
       @mooncmd.EventSourcingErr::EventBusErr(
-        @event.EventBusError::PublishError(_)
-      )
+        @event.EventBusError::PublishError(_),
+      ),
     ) => false
     Ok(_) => fail("publish-failure dispatch should fail")
     Err(_) => fail("expected EventBusErr variant")
@@ -465,8 +465,8 @@ test "router e2e: with_config retries duplicate version then succeeds" {
   let surfaced = match @mooncmd.dispatch_reader_run(reader0, env0) {
     Err(
       @mooncmd.EventSourcingErr::EventStoreErr(
-        @store.EventStoreError::DuplicateVersion(v)
-      )
+        @store.EventStoreError::DuplicateVersion(v),
+      ),
     ) => v
     _ => fail("expected typed DuplicateVersion")
   }
