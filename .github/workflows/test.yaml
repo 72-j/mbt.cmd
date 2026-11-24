@@ -53,8 +53,8 @@ jobs:
             exit 1
           fi
 
-      - name: 示例冒烟 · examples/bank_demo（native）
-        run: moon run examples/bank_demo --target native
+      - name: 示例冒烟 · examples/bank_cmd（native——cmd 产物+用户槽位点火）
+        run: moon run examples/bank_cmd --target native
 
   test:
     name: Test (${{ matrix.os }})
