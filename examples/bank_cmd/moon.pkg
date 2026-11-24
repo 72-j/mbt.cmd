@@ -1,0 +1,18 @@
+// bank_cmd:cmd CLI 产物 + 用户裁决槽位实装的可点火房间——main 点火 bank
+// 业务流四命令(gen 件本体展示房 = 隔壁 bank_cmd_gen;本房 = 同件 + 槽位
+// 实装 + 点火 main。裁决槽位住 account.mbt ① 段——本房不拷 policy stub,
+// 槽位实装与 gen declare 逐一配对)。
+import {
+  "moonbitlang/core/encoding/utf8",
+  "thy1016/mooncmd",
+  "thy1016/mooncmd/aggregate",
+  "thy1016/mooncmd/command",
+  "thy1016/mooncmd/event",
+  "thy1016/mooncmd/store",
+  "moonbit-community/serde.mbt" @serde,
+  "moonbit-community/serde.mbt/json",
+}
+
+pkgtype(kind: "executable")
+
+supported_targets = "native"
