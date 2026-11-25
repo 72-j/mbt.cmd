@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.1.2 (2026-11-25)
+
+发射器命名统一随版（对齐 mooncmd 0.4.0——错误类型后缀统一 Error）+ 新增
+PM 脚手架双模式:
+
+- `--pm-assembly <pm表.toml>`:装配样板单件(内存 store 夹具 + runner
+  接线 + 冒烟罐,bootstrap-only .hand-maintained);
+- `--pm-behavior <pm表.toml>`:行为面 trait 带缺省体单件(五缺省,
+  用户最小实装 = `impl <Trait> for <Struct> with fn name`);
+- gen/pm_assembly_gen.mbt:发射文本错误类型对齐 `ProcessManagerError`
+  (mooncmd 0.4.0 命名统一随版——体保真搬运,治理①主仓先行);
+- CLI 提示行随 `pump_events` 泵名(0.3.0 双名对齐)。
+
 ## 0.1.1 (2026-11-11)
 
 CLI 面打磨(cmd 仓本地,发射器 gen 包零变,黄金门零波及):

@@ -3,7 +3,6 @@
 // 可移植 exit)。发射本体住 gen 包(纯 String→String 面,wasm-safe)。
 import {
   "thy1016/cmd/gen",
-  "moonbitlang/async",
   "moonbitlang/async/fs",
   "moonbitlang/core/env",
   "moonbitlang/core/encoding/utf8",
