@@ -74,6 +74,32 @@ import {
 
 ## 快速上手
 
+### 消费者快径：词表 + 裁决槽位（用户只写这一层）
+
+```sh
+moonx thy1016/cmd@latest account_agg.toml   # ① 词表 → 骨架四件 + policy stub
+```
+
+```moonbit
+// ② 裁决槽位：用户只写的代码（gen declare 逐一配对;守卫 + 产事件）
+pub let account_create_account : (AccountState, String, Int32) -> Result[
+  Array[AccountEvent],
+  String,
+] = (state, name, initial) => {
+  if state.is_active {
+    Err("account already created")
+  } else {
+    Ok([AccountCreated(name, initial)])
+  }
+}
+// deposit_money / withdraw_money / close_account 同形——四槽合计 40-55 行,
+// 其余全部代码（类型 / apply 链 / 分派 / 胶水 / 契约罐）由词表生成器产出。
+```
+
+③ 装配点火 = glue 桥 + `AggregateRoot` + SQLite（十行内），可跑全样见
+`examples/bank_cmd/main.mbt`（`moon run examples/bank_cmd --target native`
+→ `EXAMPLE:PASS`；骨架封存房 = `examples/bank_cmd_gen`）。
+
 ### 定义聚合并执行命令
 
 命令处理器与事件应用器均为纯函数；`exec` 自动包装 `CommandMessage`
@@ -161,7 +187,7 @@ let root = root.exec_with_effect(
 ## 聚合词表代码生成
 
 用 TOML 声明聚合形状（字段 / 事件 / 命令 / 机械演化指令），生成器产出
-其余全部样板；模板见 `examples/bank/account_agg.toml`：
+其余全部样板；模板见 `examples/bank_cmd_gen/account_agg.toml`：
 
 ```toml
 [aggregate.state]
@@ -173,26 +199,18 @@ fields = [{ name = "amount", type = "int" }]
 evolve = ["add balance=amount"]
 ```
 
-校验（自足，克隆即可跑）：
-
-```bash
-moon test                           # 生成产物结构钉 + 契约测试 + 已知答案校验
-```
-
-词表再生成属维护侧工具链：发射器集中主仓（bitbang 仓 `skelschema` 包，
-不随本模块发布），本仓持词表（TOML）与生成产物。改 `account_agg.toml`
-等词表后，主仓仓根 `moon run skelschema/cmd` 再生刷新产物；主仓 golden
-统一户黄金门逐字节对拍（REGEN≡DISK，再生 ≡ 入库产物）；**生成物禁手写**。
+校验（自足，克隆即可跑）：`moon test examples/bank_cmd`（契约罐）。
+词表再生成：发射器集中主仓（`skelschema` 包），本仓持词表与产物；主仓
+golden 统一户逐字节对拍（REGEN≡DISK）；**生成物禁手写**。
 
 生成物包含：状态结构与初值、事件 / 命令枚举、apply 演化链、命令分派
 骨架、wire 序列化（含 schema 版本预留位）、契约测试门（init 值契约 +
 wire 往返恒等）、装配胶水六桥件（`account_glue.mbt`，二版拍1 起：
 handler/applier/empty_state/serialize/deserialize/type_name，
-`examples/bank` 直消费）。词表开 `[aggregate.serde]` 键时另产 serde
+`bank_cmd` 直消费）。词表开 `[aggregate.serde]` 键时另产 serde
 JSON 投影件（见下节）。事件命名与粒度属通用语言决策，由词表声明；
-机械演化与序列化由生成器承担。完整上手路径见 `examples/bank_demo`
-（可运行全链自证：`moon run examples/bank_demo --target native`；行为与
-测试住 `examples/bank` 库包）。
+机械演化与序列化由生成器承担。可跑上手房 = `examples/bank_cmd`
+（`moon run examples/bank_cmd --target native` → `EXAMPLE:PASS`）。
 
 ### serde JSON 投影（可选键，键控发射）
 
@@ -232,19 +250,15 @@ moonx thy1016/cmd@latest <table.toml>
 选项：`--version` / `-V`、`--help` / `-h`。exit 码：0 成功 / 2 缺参或
 未知选项 / 3 表读不到 / 4 parse 拒 / 5 validate 拒。`@latest` 恒写。
 成功输出 = 清单形（四件名 + policy「新落/保留」标记 + 三步「下一步」）。
-产出四件落**表同目录**：`<名>_gen.mbt` +
-`<名>_contract_wbtest.mbt` + `<名>_glue.mbt`（装配胶水六桥件：
-handler/applier/empty_state/serialize/deserialize/type_name——regen
-覆写，桥面零手写）+ `<名>_policy.mbt`（裁决策略 stub，**仅缺位时落，
-regen 永不覆写**——stub-zone）。裁决槽位 = `<agg>_<snake(Cmd)>` let
-闭包（gen 侧 `declare let` 声明配对——机械验收清单 `grep "^declare"
-<名>_gen.mbt` 直读）；分派/钩子工厂 = gen 机械映射，手写只补槽体。
-填好裁决体后装配：消费包 `moon.pkg`
-生产 import 块加 `thy1016/mooncmd/command` +
-`moonbitlang/core/encoding/utf8`（moon.mod 模块级授亲），然后
-`AggregateRoot::new(id, <名>_handler, EventApplier::Single(<名>_applier),
-<名>_empty_state())` + `SQLiteEventStore::new(path, <名>_serialize,
-<名>_deserialize, <名>_type_name)`；契约罐随包 `moon test` 即验。
+产出四件落**表同目录**：`<名>_gen.mbt` + `<名>_contract_wbtest.mbt` +
+`<名>_glue.mbt`（装配胶水六桥件——regen 覆写）+ `<名>_policy.mbt`
+（裁决 stub，**仅缺位时落，regen 永不覆写**——stub-zone）。裁决槽位 =
+`<agg>_<snake(Cmd)>` let 闭包（gen 侧 `declare` 配对，`grep "^declare"
+<名>_gen.mbt` 直读）；填好裁决体后装配 + 点火——完整可跑样 =
+`examples/bank_cmd`（gen 件 + 槽位实装 + `main.mbt` 三段编排）。
+脚手架双模式：`--pm-assembly <pm表>`（装配样板）/ `--pm-behavior <pm表>`
+（行为面 trait 带缺省体）——见「特性」PM 条与 `bank_cmd_gen` 房
+`transfer_pm_behavior.mbt` 现活样。
 
 注意事项：
 
@@ -262,8 +276,8 @@ regen 永不覆写**——stub-zone）。裁决槽位 = `<agg>_<snake(Cmd)>` let
 ### 手写聚合配方（消费者径）
 
 发射器不随本模块发布——构建自己的聚合时，把词表当**设计工作表**，
-按分区手写同等结构（形状对抄 `examples/bank/account_gen.mbt`，约 190 行
-样板即清单）：
+按分区手写同等结构（形状对抄 `examples/bank_cmd_gen/account_gen.mbt`，
+约 190 行样板即清单）：
 
 | 词表分区 | 手写件 | 形状要点 |
 |---|---|---|
@@ -318,7 +332,8 @@ MoonBit 面 native+wasm 双腿），另附 EventStore 端口的内存实现
   路径不读取当前时钟——同输入 + 同注钟 + 同 id 源 ⇒ 同事件流。
 - 不做分布式 / 跨进程事件总线（`EventBus` 仅进程内可选挂点）；不做
   事件升级 / 迁移框架（`schema_version` 只预留）；不承诺第二存储后端；
-  不内置业务聚合（`examples/bank` 为示例与测试模板）。
+  不内置业务聚合（`examples/bank_cmd` + `bank_cmd_gen` 为示例与测试
+  模板；历史房间 bank/bank_demo 下线 .playground 沙盘）。
 
 定位与边界的完整说明见 `spec.md`；设计裁定沿革见 `adr.md`。
 
@@ -326,20 +341,20 @@ MoonBit 面 native+wasm 双腿），另附 EventStore 端口的内存实现
 
 ```bash
 moon test --target native               # 全模块测试（wasm 同支持）
-moon run examples/bank_demo --target native  # 全链自证，终行 EXAMPLE:PASS
+moon run examples/bank_cmd --target native   # 可点火房全链一跑，终行 EXAMPLE:PASS
 ```
 
-运行时输出各测试面的计数行（下表实测于 2026-11-12；分包读数，native
-合计 87 / 87，wasm 66 / 66——`examples/bank` 为 native 钉包，wasm 腿
-不在册）：
+运行时输出各测试面的计数行（下表实测于 2026-11-24；native 全模块
+81 / 81，分包读数）：
 
 | 面 | 读数 |
 |---|---|
-| 单元与端到端测试（主包 + 各域子包：聚合生命周期、乐观并发、投影契约、Router 分发全流程、时间源注入） | 46 / 46 |
-| 词表生成门与契约测试（`examples/bank`：生成产物逐字节比对、已知答案、init 值契约 + wire 往返恒等、serde JSON 投影罐） | 21 / 21 |
+| 主包（聚合生命周期、乐观并发、dispatch 门面、中间件、时间源注入） | 21 / 21 |
+| `examples/bank_cmd`（cmd 产物点火房：gen 骨架契约罐 + 用户槽位三段编排） | 2 / 2 + `EXAMPLE:PASS` |
 | quicktest 随机状态机（生命周期机 + 守恒律四罐） | 13 / 13 |
 | 手写聚合配方可跑件（`examples/bank_handwritten` 契约罐） | 7 / 7 |
-| 示例全链自证（`moon run examples/bank_demo`） | 终行 `EXAMPLE:PASS` |
+| 主仓 golden 门（REGEN≡DISK 逐字节，跨树本地门） | 28 / 28 |
+| 历史房间 bank / bank_demo | 下线 `.playground` 沙盘（自持微模块，registry 0.2.3 消费形） |
 
 ### quicktest 生命周期随机状态机
 
@@ -353,8 +368,8 @@ moon run examples/bank_demo --target native  # 全链自证，终行 EXAMPLE:PAS
 - **账目守恒**：引擎可观状态与纯模型镜像逐步同步（双执行零漂移）；
 - **拒绝零痕迹**：业务拒命令不推版、不入流、不记账。
 
-随机 60 例 + 固定脚本回归基线 + 覆盖门；余额算术值面由 `examples/bank`
-契约门承担，本机只取生命周期位面。
+随机 60 例 + 固定脚本回归基线 + 覆盖门；余额算术值面由聚合示例房
+（`examples/bank_cmd` 契约罐）承担，本机只取生命周期位面。
 
 ```bash
 moon test -p thy1016/mooncmd/quicktest
