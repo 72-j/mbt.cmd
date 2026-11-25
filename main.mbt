@@ -14,7 +14,7 @@
 
 ///|
 /// CLI 版本位(与 moon.mod version 同步改——发布两处纪律)。
-const VERSION : String = "0.1.1"
+const VERSION : String = "0.1.2"
 
 ///|
 /// 表径的目录前缀(含尾 '/';无 '/' = 空串 = 产物落当前目录)。

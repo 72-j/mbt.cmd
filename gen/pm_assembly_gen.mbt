@@ -74,7 +74,7 @@ pub fn emit_mooncmd_pm_assembly(
     "/// runner 构造（emit 闭包 = 命令去向决策，必填显式——无缺省）。\n"
   sb <+ "fn \{def.name}_pm_asm_runner(\n"
   sb <+
-    "  emit : (String, \{t_cmd}) -> Unit raise @mooncmd.ProcessManagerErr,\n"
+    "  emit : (String, \{t_cmd}) -> Unit raise @mooncmd.ProcessManagerError,\n"
   // 判宽点③ runner 返型
   let runner_ret = ") -> @mooncmd.ProcessManagerRunner[\{t_state}, \{t_cmd}, \{t_evt}] {"
   if runner_ret.length() > 80 {
