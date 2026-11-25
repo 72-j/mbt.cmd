@@ -1,5 +1,18 @@
 # CHANGELOG
 
+## 0.2.4（2026-11-25）
+
+**依赖升钉**：`moonbit-community/sqlite3` 0.2.3 → **0.2.5**——新工具链
+core `lexbuf.StringScanner` 转只读咬冻结件编译（0.2.3 传递面编译红，
+0.2.5 上游已治）；下游消费方升钉本版即随。
+
+**示例面重组**：`examples/bank` / `bank_demo` 下线迁 `.playground`
+沙盘（自持微模块，registry 0.2.3 消费形）；新双房 `examples/bank_cmd`
+（可点火房：cmd CLI 产物 + 裁决槽位实装 + main 三段编排，
+`moon run examples/bank_cmd --target native` → `EXAMPLE:PASS`）+
+`examples/bank_cmd_gen`（cmd CLI 产物封存房）；README 快速上手回灌
+裁决槽位最小形 + 读数全量刷新（native 全模块 81 / 81）。
+
 ## 0.2.3（2026-11-18）
 
 **Process Manager 框架面**（ADR-MC-011）：`ProcessManager` 四回调
