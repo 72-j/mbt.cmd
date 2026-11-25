@@ -1,6 +1,6 @@
 # CHANGELOG
 
-## 未发布（0.4.0 前瞻 breaking）
+## 0.4.0（2026-11-25）
 
 **命名统一（术语评审修正候选采纳）**：
 - 错误类型后缀统一 `Error`：`EventSourcingErr` → **`EventSourcingError`**、
