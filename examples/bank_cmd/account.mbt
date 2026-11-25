@@ -260,11 +260,27 @@ fn pm_memory_store() -> @store.SnapshotStore[String, TransferPmState] {
 /// skip 律(子集外零发射)/saga 态持久(累加+closed@v4)。main ③ 段调用。
 pub fn pm_flow_sim() -> Bool raise {
   let pm_sent : Array[(String, AccountCommand)] = []
+  // 因果锚捕获:emit_cause 三参槽第三参 = 触发事件信封(0.3.0 新面)
+  let pm_cause : Array[String] = []
+  // 错误钩子哨兵(0.3.0 新面):本流全过 = 钩子不触发;哨兵留痕演示接线形
+  let pm_err_log : Array[String] = [""]
   let store = pm_memory_store()
   let runner = @mooncmd.ProcessManagerRunner::new(
     transfer_pm_of_behavior(RelayTo::{ target: "acc-002", }),
     store,
     (target, cmd) => pm_sent.push((target, cmd)),
+    on_error=Hook(err => {
+      pm_err_log[0] = err.to_string()
+      Raise
+    }),
+    emit_cause=@mooncmd.PmEmitSink::Sink((
+      target : String,
+      cmd : AccountCommand,
+      msg : @event.EventMessage[String, AccountEvent],
+    ) => {
+      pm_sent.push((target, cmd))
+      pm_cause.push(msg.event_id)
+    }),
   )
   // 事件流直喂:两笔取出 + 子集外存入(skip) + 销户(版本位连续)
   let events = [
@@ -293,9 +309,11 @@ pub fn pm_flow_sim() -> Bool raise {
       state.transferred == 42 && state.closed && version == 4
     None => false
   }
-  let ok = handled == 3 && sent_ok && saga_ok
+  // 因果透传对拍:三印 = 三次发射的触发信封 event_id(0.3.0 新面)
+  let cause_ok = pm_cause.length() == 3 && pm_cause[0] == events[0].event_id
+  let ok = handled == 3 && sent_ok && saga_ok && cause_ok
   println(
-    "[SIM] pm_flow_sim — handled \{handled}/4 sent \{pm_sent.length()} saga(42,closed@v4) \{saga_ok}",
+    "[SIM] pm_flow_sim — handled \{handled}/4 sent \{pm_sent.length()} saga(42,closed@v4) 因果 \{pm_cause.length()} 印 \{cause_ok}",
   )
   ok
 }
