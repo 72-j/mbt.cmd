@@ -50,8 +50,9 @@ correlation / causation 追溯链、时间戳、schema 版本），Router 作为
 - 聚合词表代码生成（维护侧工具链，产物已随模块入库）：TOML 声明（约 30–50 行）自动产出状态结构、事件与
   命令枚举、apply 演化链、命令分派骨架、wire 序列化与契约测试门；
   业务裁决归手写策略钩子。
-- Monad 注入面：`monads` 子包提供 State / Writer / Reader / EventWriter
-  纯函数基础设施，不含事件溯源语义。
+- Monad 工具包：`monads` 子包提供 State / Writer / Reader / EventWriter
+  通用纯函数工具（**维护冻结**——框架主链零依赖，Router Reader 除外）；
+  消费者面向：自建管线/管道的通用组合件，不含事件溯源语义。
 
 ## 安装
 

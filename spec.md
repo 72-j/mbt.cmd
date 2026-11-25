@@ -138,7 +138,7 @@ middleware~)`
 
 ### 3.6 monads 子包（原 mystate）
 
-State Monad（`State[S, V]`，三法则注记在案）· Writer Monad（`Writer[W, A]` + `WriterConfig`）· reader · event_writer。定位封界 = FR-MC-7 `[提案]`（纯函数基础设施，不含 ES 语义）。
+State Monad（`State[S, V]`，三法则注记在案）· Writer Monad（`Writer[W, A]` + `WriterConfig`）· reader · event_writer。定位封界 = FR-MC-7 `[提案]`（纯函数基础设施，不含 ES 语义）。**维护冻结**（2026-11-25 评审：框架主链零依赖——Router Reader 除外（`DispatchReader` = `@monads.Reader` 别名，硬依赖在册）；State/Writer/EventWriter 仓内零消费，定位 = registry 消费者通用工具，0.5.0 候下线（deprecation window——registry 反馈观察期一版）。
 
 ## 4. 存储布局（SQLiteEventStore，结构事实）
 
