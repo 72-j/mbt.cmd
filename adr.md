@@ -95,7 +95,7 @@ mooncmd 组装积木勘定三则：EventStore 按 aggregate_id 分流**无全局
   `DirectedCommand`（命令本体 + target_aggregate_id 跨聚合地址）/ `apply`
   （状态演化）。error/3 裁决**不立**——显式泵下失败 = raise 透传
   （EmitFailed/StateFailed 独立 suberror,不混 dispatch 主链
-  EventSourcingErr——加臂涟漪重试裁决六臂分类）,裁决权在调用方
+  EventSourcingError——加臂涟漪重试裁决六臂分类）,裁决权在调用方
   catch;钩子槽挂账候真需求。
 - **D2 = 显式泵**（`ProcessManagerRunner.pump_events/pump_event`）：逐事件
   interested→装态（load 缺失 = init）→handle→逐条 emit（任一失败
@@ -112,7 +112,7 @@ mooncmd 组装积木勘定三则：EventStore 按 aggregate_id 分流**无全局
   一次进 EmitFailed 文案。
 
 **被否方案**：①EventBus 扩订阅多播（动现役记录面,bank bus 用法涟漪,
-且推模式常驻泵与 mooncmd 无进程驻留哲学相抵）②EventSourcingErr 加
+且推模式常驻泵与 mooncmd 无进程驻留哲学相抵）②EventSourcingError 加
 ProcessManagerErr 臂（六臂分类消费面全涟漪）③error/3 钩子槽（无
 第二形态需求,显式泵调用方裁决已足）。
 

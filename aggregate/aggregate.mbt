@@ -135,7 +135,7 @@ pub fn[AggregateId, S, C, E] AggregateRoot::from_snapshot(
 
 ///|
 /// 执行命令（借鉴 Commanded 的 execute/apply 模式）
-pub fn[AggregateId, S, C, E] AggregateRoot::execute(
+pub fn[AggregateId, S, C, E] AggregateRoot::exec_message(
   self : AggregateRoot[AggregateId, S, C, E],
   cmd : @command.CommandMessage[C],
 ) -> AggregateRoot[AggregateId, S, C, E] raise @command.CommandError {
@@ -229,7 +229,7 @@ pub fn[AggregateId, S, C, E] AggregateRoot::exec(
   self : AggregateRoot[AggregateId, S, C, E],
   cmd : C,
 ) -> AggregateRoot[AggregateId, S, C, E] raise @command.CommandError {
-  self.execute(
+  self.exec_message(
     @command.CommandMessage::new(cmd, clock=self.clock, id_gen=self.id_gen),
   )
 }

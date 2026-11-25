@@ -9,16 +9,16 @@
 // 自由度:调用方组装 dispatch/Router 任一径)。
 
 ///|
-/// PM 处理错误面(独立 suberror,不混 dispatch 主链 EventSourcingErr
+/// PM 处理错误面(独立 suberror,不混 dispatch 主链 EventSourcingError
 /// ——加臂涟漪重试裁决六臂分类;PM runner 是独立消费面)。
-pub(all) suberror ProcessManagerErr {
+pub(all) suberror ProcessManagerError {
   EmitFailed(String)
   StateFailed(String)
 }
 
 ///|
 /// 错误文案(罐/日志面;suberror 无 Show 家法)。
-pub fn ProcessManagerErr::to_string(self : ProcessManagerErr) -> String {
+pub fn ProcessManagerError::to_string(self : ProcessManagerError) -> String {
   match self {
     EmitFailed(reason) => "pm emit failed: \{reason}"
     StateFailed(reason) => "pm state failed: \{reason}"
@@ -57,9 +57,9 @@ pub(all) struct ProcessManager[S, C, E] {
 pub(all) struct ProcessManagerRunner[S, C, E] {
   manager : ProcessManager[S, C, E]
   snapshots : @store.SnapshotStore[String, S]
-  emit : (String, C) -> Unit raise ProcessManagerErr
+  emit : (String, C) -> Unit raise ProcessManagerError
   on_error : PmOnError
-  emit_cause : (String, C, @event.EventMessage[String, E]) -> Unit raise ProcessManagerErr
+  emit_cause : (String, C, @event.EventMessage[String, E]) -> Unit raise ProcessManagerError
 }
 
 ///|
@@ -73,10 +73,10 @@ pub(all) enum PmErrorDecision {
 }
 
 ///|
-/// 错误钩子面(入口 = ProcessManagerErr 原错;产出裁决)。
+/// 错误钩子面(入口 = ProcessManagerError 原错;产出裁决)。
 pub(all) enum PmOnError {
   Transparent
-  Hook((ProcessManagerErr) -> PmErrorDecision)
+  Hook((ProcessManagerError) -> PmErrorDecision)
 }
 
 ///|
@@ -84,7 +84,7 @@ pub(all) enum PmOnError {
 /// causation 链的锚;缺省 = 旧两参 emit 包装,第三参弃用）。
 pub(all) enum PmEmitSink[C, E] {
   Sink(
-    (String, C, @event.EventMessage[String, E]) -> Unit raise ProcessManagerErr,
+    (String, C, @event.EventMessage[String, E]) -> Unit raise ProcessManagerError,
   )
 }
 
@@ -110,7 +110,7 @@ fn[S, C, E] ProcessManagerRunner::state_key(
 /// 错误裁决(钩子缺席 = 透传;Hook 臂 = 钩子定夺)。
 fn[S, C, E] ProcessManagerRunner::decide(
   self : ProcessManagerRunner[S, C, E],
-  err : ProcessManagerErr,
+  err : ProcessManagerError,
 ) -> PmErrorDecision {
   match self.on_error {
     Transparent => Raise
@@ -123,7 +123,7 @@ fn[S, C, E] ProcessManagerRunner::decide(
 pub fn[S, C, E] ProcessManagerRunner::new(
   manager : ProcessManager[S, C, E],
   snapshots : @store.SnapshotStore[String, S],
-  emit : (String, C) -> Unit raise ProcessManagerErr,
+  emit : (String, C) -> Unit raise ProcessManagerError,
   on_error? : PmOnError,
   emit_cause? : PmEmitSink[C, E],
 ) -> ProcessManagerRunner[S, C, E] {
@@ -135,7 +135,7 @@ pub fn[S, C, E] ProcessManagerRunner::new(
   let emit_cause = match emit_cause {
     Some(PmEmitSink::Sink(f)) => f
     None =>
-      fn(target, cmd, _msg) -> Unit raise ProcessManagerErr {
+      fn(target, cmd, _msg) -> Unit raise ProcessManagerError {
         emit(target, cmd)
       }
   }
@@ -152,7 +152,7 @@ pub fn[S, C, E] ProcessManagerRunner::new(
 pub fn[S, C, E] ProcessManagerRunner::pump_event(
   self : ProcessManagerRunner[S, C, E],
   msg : @event.EventMessage[String, E],
-) -> Bool raise ProcessManagerErr {
+) -> Bool raise ProcessManagerError {
   if !(self.manager.interested)(msg.event) {
     return false
   }
@@ -192,7 +192,7 @@ pub fn[S, C, E] ProcessManagerRunner::pump_event(
 pub fn[S, C, E] ProcessManagerRunner::pump_events(
   self : ProcessManagerRunner[S, C, E],
   events : Array[@event.EventMessage[String, E]],
-) -> Int32 raise ProcessManagerErr {
+) -> Int32 raise ProcessManagerError {
   let mut handled = 0
   for msg in events {
     if self.pump_event(msg) {

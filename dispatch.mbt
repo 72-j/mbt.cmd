@@ -34,7 +34,7 @@ pub fn[Id, S, C, E] dispatch(
   poll_wait~ : (Int64) -> Unit = fn(_ms) { () },
   poll_budget~ : Int32 = 100,
   middleware~ : Array[DispatchMiddleware[Id, C, E]] = [],
-) -> @aggregate.AggregateRoot[Id, S, C, E] raise EventSourcingErr {
+) -> @aggregate.AggregateRoot[Id, S, C, E] raise EventSourcingError {
   // ⓪ before 挂点（数组序；before 相位：events 空、version 现版本）
   let entry_context : DispatchContext[Id, C, E] = {
     aggregate_id: aggregate.id,
@@ -97,24 +97,24 @@ fn[Id, S, C, E] dispatch_chain(
   consistency~ : Consistency = Eventual,
   poll_wait~ : (Int64) -> Unit = fn(_ms) { () },
   poll_budget~ : Int32 = 100,
-) -> (@aggregate.AggregateRoot[Id, S, C, E], Array[@event.EventMessage[Id, E]]) raise EventSourcingErr {
+) -> (@aggregate.AggregateRoot[Id, S, C, E], Array[@event.EventMessage[Id, E]]) raise EventSourcingError {
   // ① 纯裁决（业务拒 → CommandErr，不产出事件）
   let committed = match (Ok(aggregate.exec(cmd)) catch { e => Err(e) }) {
     Ok(next) => next
-    Err(e) => raise EventSourcingErr::CommandErr(e)
+    Err(e) => raise EventSourcingError::CommandErr(e)
   }
   let events = committed.uncommitted_events()
   // 事件快照在 commit 前截取（uncommitted 数组是活引用；供 after 挂点只读视角）
   let events_snapshot = events.copy()
   // ② 持久化（DuplicateVersion 等守门错误原样上浮——分类/重试归上层 Effect 协议）
   (store.append)(store, aggregate.id, events) catch {
-    e => raise EventSourcingErr::EventStoreErr(e)
+    e => raise EventSourcingError::EventStoreErr(e)
   }
   // ③ 通知（可空选）
   match bus {
     Some(bus_ref) =>
       (bus_ref.publish)(bus_ref, events) catch {
-        e => raise EventSourcingErr::EventBusErr(e)
+        e => raise EventSourcingError::EventBusErr(e)
       }
     None => ()
   }
@@ -129,7 +129,7 @@ fn[Id, S, C, E] dispatch_chain(
       caught_up = true
       for projection in projections {
         projection.refresh() catch {
-          e => raise EventSourcingErr::EventStoreErr(e)
+          e => raise EventSourcingError::EventStoreErr(e)
         }
         if projection.checkpoint() < target {
           caught_up = false
@@ -141,7 +141,7 @@ fn[Id, S, C, E] dispatch_chain(
       }
     }
     if !caught_up {
-      raise EventSourcingErr::ConsistencyErr(
+      raise EventSourcingError::ConsistencyErr(
         "projection checkpoint behind version \{target} after \{poll_budget} polls",
       )
     }

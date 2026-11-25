@@ -11,7 +11,7 @@ import {
 }
 
 // Values
-pub fn[Id, S, C, E] dispatch(@store.EventStore[Id, E], @event.EventBus[Id, E]?, @aggregate.AggregateRoot[Id, S, C, E], C, projections? : Array[@projection.LiveProjection[Id, E]], consistency? : Consistency, poll_wait? : (Int64) -> Unit, poll_budget? : Int32, middleware? : Array[DispatchMiddleware[Id, C, E]]) -> @aggregate.AggregateRoot[Id, S, C, E] raise EventSourcingErr
+pub fn[Id, S, C, E] dispatch(@store.EventStore[Id, E], @event.EventBus[Id, E]?, @aggregate.AggregateRoot[Id, S, C, E], C, projections? : Array[@projection.LiveProjection[Id, E]], consistency? : Consistency, poll_wait? : (Int64) -> Unit, poll_budget? : Int32, middleware? : Array[DispatchMiddleware[Id, C, E]]) -> @aggregate.AggregateRoot[Id, S, C, E] raise EventSourcingError
 
 pub fn[AggregateId, S, E] dispatch_ask() -> @monads.Reader[RouteEnv[AggregateId, S, E], RouteEnv[AggregateId, S, E]]
 
@@ -25,7 +25,7 @@ pub fn[AggregateId, S, E, R] dispatch_reader_new((RouteEnv[AggregateId, S, E]) -
 
 pub fn[AggregateId, S, E, R] dispatch_reader_run(@monads.Reader[RouteEnv[AggregateId, S, E], R], RouteEnv[AggregateId, S, E]) -> R
 
-pub fn effect_kind_of_sourcing_err(EventSourcingErr) -> @aggregate.EffectErrorKind
+pub fn effect_kind_of_sourcing_err(EventSourcingError) -> @aggregate.EffectErrorKind
 
 pub fn log_warn(String) -> Unit
 
@@ -36,7 +36,7 @@ pub fn make_console_logger() -> ConsoleLogger
 pub fn make_mute_logger() -> MuteLogger
 
 // Errors
-pub(all) suberror EventSourcingErr {
+pub(all) suberror EventSourcingError {
   CommandErr(@command.CommandError)
   EventStoreErr(@store.EventStoreError)
   EventBusErr(@event.EventBusError)
@@ -45,11 +45,11 @@ pub(all) suberror EventSourcingErr {
   ConsistencyErr(String)
 }
 
-pub(all) suberror ProcessManagerErr {
+pub(all) suberror ProcessManagerError {
   EmitFailed(String)
   StateFailed(String)
 }
-pub fn ProcessManagerErr::to_string(Self) -> String
+pub fn ProcessManagerError::to_string(Self) -> String
 
 // Types and methods
 pub(all) struct CommandConfig {
@@ -85,9 +85,9 @@ pub(all) struct DispatchContext[Id, C, E] {
 
 pub(all) struct DispatchMiddleware[Id, C, E] {
   name : String
-  before : (DispatchContext[Id, C, E]) -> Unit raise EventSourcingErr
-  after : (DispatchContext[Id, C, E]) -> Unit raise EventSourcingErr
-  failure : (DispatchContext[Id, C, E], EventSourcingErr) -> Unit
+  before : (DispatchContext[Id, C, E]) -> Unit raise EventSourcingError
+  after : (DispatchContext[Id, C, E]) -> Unit raise EventSourcingError
+  failure : (DispatchContext[Id, C, E], EventSourcingError) -> Unit
 }
 
 type MuteLogger
@@ -95,7 +95,7 @@ pub fn MuteLogger::info(Self, String) -> Unit
 pub impl Logger for MuteLogger
 
 pub(all) enum PmEmitSink[C, E] {
-  Sink((String, C, @event.EventMessage[String, E]) -> Unit raise ProcessManagerErr)
+  Sink((String, C, @event.EventMessage[String, E]) -> Unit raise ProcessManagerError)
 }
 
 pub(all) enum PmErrorDecision {
@@ -105,7 +105,7 @@ pub(all) enum PmErrorDecision {
 
 pub(all) enum PmOnError {
   Transparent
-  Hook((ProcessManagerErr) -> PmErrorDecision)
+  Hook((ProcessManagerError) -> PmErrorDecision)
 }
 
 pub(all) struct ProcessManager[S, C, E] {
@@ -120,13 +120,13 @@ pub(all) struct ProcessManager[S, C, E] {
 pub(all) struct ProcessManagerRunner[S, C, E] {
   manager : ProcessManager[S, C, E]
   snapshots : @store.SnapshotStore[String, S]
-  emit : (String, C) -> Unit raise ProcessManagerErr
+  emit : (String, C) -> Unit raise ProcessManagerError
   on_error : PmOnError
-  emit_cause : (String, C, @event.EventMessage[String, E]) -> Unit raise ProcessManagerErr
+  emit_cause : (String, C, @event.EventMessage[String, E]) -> Unit raise ProcessManagerError
 }
-pub fn[S, C, E] ProcessManagerRunner::new(ProcessManager[S, C, E], @store.SnapshotStore[String, S], (String, C) -> Unit raise ProcessManagerErr, on_error? : PmOnError, emit_cause? : PmEmitSink[C, E]) -> Self[S, C, E]
-pub fn[S, C, E] ProcessManagerRunner::pump_event(Self[S, C, E], @event.EventMessage[String, E]) -> Bool raise ProcessManagerErr
-pub fn[S, C, E] ProcessManagerRunner::pump_events(Self[S, C, E], Array[@event.EventMessage[String, E]]) -> Int32 raise ProcessManagerErr
+pub fn[S, C, E] ProcessManagerRunner::new(ProcessManager[S, C, E], @store.SnapshotStore[String, S], (String, C) -> Unit raise ProcessManagerError, on_error? : PmOnError, emit_cause? : PmEmitSink[C, E]) -> Self[S, C, E]
+pub fn[S, C, E] ProcessManagerRunner::pump_event(Self[S, C, E], @event.EventMessage[String, E]) -> Bool raise ProcessManagerError
+pub fn[S, C, E] ProcessManagerRunner::pump_events(Self[S, C, E], Array[@event.EventMessage[String, E]]) -> Int32 raise ProcessManagerError
 
 pub struct RouteEnv[AggregateId, S, E] {
   event_store : @store.EventStore[AggregateId, E]
@@ -146,11 +146,11 @@ pub struct Router[AggregateId, S, C, E] {
   default_config : CommandConfig
   handlers : Map[String, (S, C) -> Array[E] raise @command.CommandError]
 }
-pub fn[AggregateId, S, C, E] Router::dispatch(Self[AggregateId, S, C, E], AggregateId, @command.CommandMessage[C], (S, C) -> Array[E] raise @command.CommandError, @event.EventApplier[S, E], S) -> @monads.Reader[RouteEnv[AggregateId, S, E], Result[@aggregate.AggregateRoot[AggregateId, S, C, E], EventSourcingErr]]
-pub fn[AggregateId, S, C, E] Router::dispatch_batch(Self[AggregateId, S, C, E], Array[(AggregateId, @command.CommandMessage[C])], (S, C) -> Array[E] raise @command.CommandError, @event.EventApplier[S, E], S) -> @monads.Reader[RouteEnv[AggregateId, S, E], Result[Array[@aggregate.AggregateRoot[AggregateId, S, C, E]], EventSourcingErr]]
-pub fn[AggregateId, S, C, E] Router::dispatch_default(Self[AggregateId, S, C, E], AggregateId, @command.CommandMessage[C], @event.EventApplier[S, E], S) -> @aggregate.AggregateRoot[AggregateId, S, C, E] raise EventSourcingErr
-pub fn[AggregateId, S, C, E] Router::dispatch_now(Self[AggregateId, S, C, E], AggregateId, @command.CommandMessage[C], (S, C) -> Array[E] raise @command.CommandError, @event.EventApplier[S, E], S) -> @aggregate.AggregateRoot[AggregateId, S, C, E] raise EventSourcingErr
-pub fn[AggregateId, S, C, E] Router::dispatch_with_config(Self[AggregateId, S, C, E], AggregateId, @command.CommandMessage[C], (S, C) -> Array[E] raise @command.CommandError, @event.EventApplier[S, E], S, Int64, Int32) -> @monads.Reader[RouteEnv[AggregateId, S, E], Result[@aggregate.AggregateRoot[AggregateId, S, C, E], EventSourcingErr]]
+pub fn[AggregateId, S, C, E] Router::dispatch(Self[AggregateId, S, C, E], AggregateId, @command.CommandMessage[C], (S, C) -> Array[E] raise @command.CommandError, @event.EventApplier[S, E], S) -> @monads.Reader[RouteEnv[AggregateId, S, E], Result[@aggregate.AggregateRoot[AggregateId, S, C, E], EventSourcingError]]
+pub fn[AggregateId, S, C, E] Router::dispatch_batch(Self[AggregateId, S, C, E], Array[(AggregateId, @command.CommandMessage[C])], (S, C) -> Array[E] raise @command.CommandError, @event.EventApplier[S, E], S) -> @monads.Reader[RouteEnv[AggregateId, S, E], Result[Array[@aggregate.AggregateRoot[AggregateId, S, C, E]], EventSourcingError]]
+pub fn[AggregateId, S, C, E] Router::dispatch_default(Self[AggregateId, S, C, E], AggregateId, @command.CommandMessage[C], @event.EventApplier[S, E], S) -> @aggregate.AggregateRoot[AggregateId, S, C, E] raise EventSourcingError
+pub fn[AggregateId, S, C, E] Router::dispatch_now(Self[AggregateId, S, C, E], AggregateId, @command.CommandMessage[C], (S, C) -> Array[E] raise @command.CommandError, @event.EventApplier[S, E], S) -> @aggregate.AggregateRoot[AggregateId, S, C, E] raise EventSourcingError
+pub fn[AggregateId, S, C, E] Router::dispatch_with_config(Self[AggregateId, S, C, E], AggregateId, @command.CommandMessage[C], (S, C) -> Array[E] raise @command.CommandError, @event.EventApplier[S, E], S, Int64, Int32) -> @monads.Reader[RouteEnv[AggregateId, S, E], Result[@aggregate.AggregateRoot[AggregateId, S, C, E], EventSourcingError]]
 pub fn[AggregateId, S, C, E] Router::new(RouteEnv[AggregateId, S, E], CommandConfig, Map[String, (S, C) -> Array[E] raise @command.CommandError]) -> Self[AggregateId, S, C, E]
 
 pub(all) struct RouterBuilder[AggregateId, S, C, E] {

@@ -25,9 +25,9 @@ pub(all) struct DispatchContext[Id, C, E] {
 /// 分明,防自触发递归)。
 pub(all) struct DispatchMiddleware[Id, C, E] {
   name : String
-  before : (DispatchContext[Id, C, E]) -> Unit raise EventSourcingErr
-  after : (DispatchContext[Id, C, E]) -> Unit raise EventSourcingErr
-  failure : (DispatchContext[Id, C, E], EventSourcingErr) -> Unit
+  before : (DispatchContext[Id, C, E]) -> Unit raise EventSourcingError
+  after : (DispatchContext[Id, C, E]) -> Unit raise EventSourcingError
+  failure : (DispatchContext[Id, C, E], EventSourcingError) -> Unit
 }
 
 ///|
@@ -37,7 +37,7 @@ pub(all) struct DispatchMiddleware[Id, C, E] {
 fn[Id, C, E] run_failure_hooks(
   middleware : Array[DispatchMiddleware[Id, C, E]],
   entry_context : DispatchContext[Id, C, E],
-  main_error : EventSourcingErr,
+  main_error : EventSourcingError,
 ) -> Unit {
   for middleware_entry in middleware {
     (middleware_entry.failure)(entry_context, main_error)
@@ -74,9 +74,9 @@ pub fn[Id, C, E] logging_middleware(
 }
 
 ///|
-/// EventSourcingErr 摘要词(suberror 无 Show 不插值——显式 match 定文案,
+/// EventSourcingError 摘要词(suberror 无 Show 不插值——显式 match 定文案,
 /// 坑账家法:自定义错误插值先补 Show 或改定文案)。
-fn event_sourcing_error_summary(error : EventSourcingErr) -> String {
+fn event_sourcing_error_summary(error : EventSourcingError) -> String {
   match error {
     CommandErr(_) => "command rejected"
     EventStoreErr(_) => "event store failure"

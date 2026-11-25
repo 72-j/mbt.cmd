@@ -2,7 +2,7 @@
 
 ///|
 /// 顶层错误类型
-pub(all) suberror EventSourcingErr {
+pub(all) suberror EventSourcingError {
   CommandErr(@command.CommandError)
   EventStoreErr(@store.EventStoreError)
   EventBusErr(@event.EventBusError)

@@ -309,10 +309,10 @@ fn[AggregateId, S, C, E] Router::dispatch_once(
   handler : @command.CommandHandler[S, C, E],
   applier : @event.EventApplier[S, E],
   empty_state : S,
-) -> @aggregate.AggregateRoot[AggregateId, S, C, E] raise EventSourcingErr {
+) -> @aggregate.AggregateRoot[AggregateId, S, C, E] raise EventSourcingError {
   // ========== Step 0: 快照基态 ==========
   let base = (env.snapshot_store.load)(aggregate_id) catch {
-    e => raise EventSourcingErr::SnapshotErr(snapshot_error_of(e))
+    e => raise EventSourcingError::SnapshotErr(snapshot_error_of(e))
   }
   let (base_state, base_version) = match base {
     Some((state, version)) => (state, version)
@@ -324,7 +324,7 @@ fn[AggregateId, S, C, E] Router::dispatch_once(
     aggregate_id,
     base_version,
   ) catch {
-    e => raise EventSourcingErr::EventStoreErr(event_store_error_of(e))
+    e => raise EventSourcingError::EventStoreErr(event_store_error_of(e))
   }
   // ========== Step 2: 快照态 + 尾事件重建聚合根 ==========
   let aggregate = @aggregate.AggregateRoot::from_snapshot(
@@ -339,21 +339,21 @@ fn[AggregateId, S, C, E] Router::dispatch_once(
     id_gen=env.id_gen,
   )
   // ========== Step 3: 执行命令 ==========
-  let aggregate = aggregate.execute(cmd) catch {
-    e => raise EventSourcingErr::CommandErr(e)
+  let aggregate = aggregate.exec_message(cmd) catch {
+    e => raise EventSourcingError::CommandErr(e)
   }
   let uncommitted_events = aggregate.uncommitted_events()
   // ========== Step 4: 保存事件（错误穿透）==========
   if !uncommitted_events.is_empty() {
     (env.event_store.append)(env.event_store, aggregate_id, uncommitted_events) catch {
-      e => raise EventSourcingErr::EventStoreErr(event_store_error_of(e))
+      e => raise EventSourcingError::EventStoreErr(event_store_error_of(e))
     }
   }
   // ========== Step 4.5: EventBus 发布 ==========
   match env.event_bus {
     Some(bus) =>
       (bus.publish)(bus, uncommitted_events) catch {
-        e => raise EventSourcingErr::EventBusErr(event_bus_error_of(e))
+        e => raise EventSourcingError::EventBusErr(event_bus_error_of(e))
       }
     None => ()
   }
@@ -367,7 +367,7 @@ fn[AggregateId, S, C, E] Router::dispatch_once(
       snapshot.version,
       snapshot.timestamp,
     ) catch {
-      e => raise EventSourcingErr::SnapshotErr(snapshot_error_of(e))
+      e => raise EventSourcingError::SnapshotErr(snapshot_error_of(e))
     }
   }
   // ========== Step 6: 提交并返回 ==========
@@ -386,7 +386,7 @@ pub fn[AggregateId, S, C, E] Router::dispatch(
   AggregateId,
   S,
   E,
-  Result[@aggregate.AggregateRoot[AggregateId, S, C, E], EventSourcingErr],
+  Result[@aggregate.AggregateRoot[AggregateId, S, C, E], EventSourcingError],
 ] {
   dispatch_reader_new(env => {
     Ok(
@@ -408,7 +408,7 @@ pub fn[AggregateId, S, C, E] Router::dispatch_now(
   handler : @command.CommandHandler[S, C, E],
   applier : @event.EventApplier[S, E],
   empty_state : S,
-) -> @aggregate.AggregateRoot[AggregateId, S, C, E] raise EventSourcingErr {
+) -> @aggregate.AggregateRoot[AggregateId, S, C, E] raise EventSourcingError {
   // let reader = self.dispatch_typed(cmd, command_type)
   let reader = self.dispatch(aggregate_id, cmd, handler, applier, empty_state)
 
@@ -439,7 +439,7 @@ pub fn[AggregateId, S, C, E] Router::dispatch_with_config(
   AggregateId,
   S,
   E,
-  Result[@aggregate.AggregateRoot[AggregateId, S, C, E], EventSourcingErr],
+  Result[@aggregate.AggregateRoot[AggregateId, S, C, E], EventSourcingError],
 ] {
   ignore(timeout_ms)
   ignore(self)
@@ -459,7 +459,7 @@ pub fn[AggregateId, S, C, E] Router::dispatch_with_config(
 /// 总错误分类（Effect 协议结构知识面——分类固定非裁决）：
 /// 命令/存储族各归各分类器；快照故障归 Storage；聚合 id 解析形归 Other。
 pub fn effect_kind_of_sourcing_err(
-  err : EventSourcingErr,
+  err : EventSourcingError,
 ) -> @aggregate.EffectErrorKind {
   match err {
     CommandErr(e) => @aggregate.effect_kind_of_command_error(e)
@@ -503,7 +503,7 @@ fn[AggregateId, S, C, E] Router::dispatch_with_retry(
   applier : @event.EventApplier[S, E],
   empty_state : S,
   machine : @aggregate.RetryMachine,
-) -> @aggregate.AggregateRoot[AggregateId, S, C, E] raise EventSourcingErr {
+) -> @aggregate.AggregateRoot[AggregateId, S, C, E] raise EventSourcingError {
   let mut attempts = 0
   let mut consecutive_failures = 0
   let mut result = Ok(
@@ -563,7 +563,7 @@ pub fn[AggregateId, S, C, E] Router::dispatch_batch(
   E,
   Result[
     Array[@aggregate.AggregateRoot[AggregateId, S, C, E]],
-    EventSourcingErr,
+    EventSourcingError,
   ],
 ] {
   dispatch_reader_new(fn(env) {
@@ -591,7 +591,7 @@ pub fn[AggregateId, S, C, E] Router::dispatch_batch(
 //   AggregateId,
 //   S,
 //   E,
-//   Result[Array[@aggregate.AggregateRoot[AggregateId, S, C, E]], EventSourcingErr],
+//   Result[Array[@aggregate.AggregateRoot[AggregateId, S, C, E]], EventSourcingError],
 // ] {
 //   @monads.Reader::new_async(async fn(env) raise {
 //     let results = Ref::new(Array::new())
@@ -637,9 +637,9 @@ pub fn[AggregateId, S, C, E] Router::dispatch_default(
   cmd : @command.CommandMessage[C],
   applier : @event.EventApplier[S, E],
   empty_state : S,
-) -> @aggregate.AggregateRoot[AggregateId, S, C, E] raise EventSourcingErr {
+) -> @aggregate.AggregateRoot[AggregateId, S, C, E] raise EventSourcingError {
   if self.handlers.is_empty() {
-    raise EventSourcingErr::CommandErr(
+    raise EventSourcingError::CommandErr(
       @command.CommandError::UnregisteredCommand("No handlers registered"),
     )
   }
@@ -649,7 +649,7 @@ pub fn[AggregateId, S, C, E] Router::dispatch_default(
   let handler = match self.handlers.iter().next() {
     Some((_, h)) => h
     None =>
-      raise EventSourcingErr::CommandErr(
+      raise EventSourcingError::CommandErr(
         @command.CommandError::UnregisteredCommand("No handlers registered"),
       )
   }

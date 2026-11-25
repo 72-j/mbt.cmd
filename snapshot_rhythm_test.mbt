@@ -30,14 +30,14 @@ fn sr_dispatch_now(
 // 错误变体标签(suberror 无 Show,abort 文案带变体防吞现场)
 
 ///|
-fn sr_err_tag(e : @mooncmd.EventSourcingErr) -> String {
+fn sr_err_tag(e : @mooncmd.EventSourcingError) -> String {
   match e {
-    @mooncmd.EventSourcingErr::CommandErr(_) => "CommandErr"
-    @mooncmd.EventSourcingErr::EventStoreErr(_) => "EventStoreErr"
-    @mooncmd.EventSourcingErr::EventBusErr(_) => "EventBusErr"
-    @mooncmd.EventSourcingErr::SnapshotErr(_) => "SnapshotErr"
-    @mooncmd.EventSourcingErr::AggregateErr(_) => "AggregateErr"
-    @mooncmd.EventSourcingErr::ConsistencyErr(_) => "ConsistencyErr"
+    @mooncmd.EventSourcingError::CommandErr(_) => "CommandErr"
+    @mooncmd.EventSourcingError::EventStoreErr(_) => "EventStoreErr"
+    @mooncmd.EventSourcingError::EventBusErr(_) => "EventBusErr"
+    @mooncmd.EventSourcingError::SnapshotErr(_) => "SnapshotErr"
+    @mooncmd.EventSourcingError::AggregateErr(_) => "AggregateErr"
+    @mooncmd.EventSourcingError::ConsistencyErr(_) => "ConsistencyErr"
   }
 }
 

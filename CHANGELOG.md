@@ -1,5 +1,25 @@
 # CHANGELOG
 
+## 未发布（0.4.0 前瞻 breaking）
+
+**命名统一（术语评审修正候选采纳）**：
+- 错误类型后缀统一 `Error`：`EventSourcingErr` → **`EventSourcingError`**、
+  `ProcessManagerErr` → **`ProcessManagerError`**（域错误五件本为 Error
+  后缀——总链信封与域错误两后缀并存致检索分裂，统一消除；arm 变体名
+  `CommandErr` 等保持不变——变体名非类型名）；
+- `AggregateRoot::execute` → **`exec_message`**（与 `exec` 裸命令自动包装
+  形分层自名——原 `exec`/`execute` 双拼写不传达「信封显式 vs 裸命令」
+  分层；调用面仅根包内 2 位 + 示例房全走 `exec`，rename 面极小）。
+- 影响面：全部 match 位与类型注解（编译器全捕获零漏，实测零漏）。
+
+**bank_cmd 0.3.0 面随版**：PM 组合根接线 `on_error` 钩子（哨兵留痕 +
+Raise 形）与 `emit_cause` 因果槽（触发信封 event_id 捕获三印）——
+`EXAMPLE:PASS` 零漂。
+
+**monads 措辞微调**：README 特性 bullet「维护冻结——框架主链零依赖
+（Router Reader 除外）」+ spec §3.6 缓刑判定成文（0.5.0 候下线，
+deprecation window 一版）。
+
 ## 0.3.0（2026-11-25）
 
 **PM 错误裁决钩子**：`ProcessManagerRunner::new(..., on_error=Hook(...))`——
@@ -219,7 +239,7 @@ result_error_return 收口，`moon check --deny-warn` 门恢复绿）。
 - `examples/` 可执行示例包：银行账户聚合全链自证（`moon run examples`——
   定义→命令链→落库→重放→乐观并发拒写→销户闭环→快照两径同果，
   终判 `EXAMPLE:PASS`）；用法即文档，业务夹具不入库公开契约面
-- 错误面：`EventSourcingErr`（Command/EventStore/Snapshot/Aggregate 四臂 suberror）
+- 错误面：`EventSourcingError`（Command/EventStore/Snapshot/Aggregate 四臂 suberror）
 - 门读数：104 测试全绿（主包 62 + mystate 42）；`moon check --deny-warn` 双 0
 
 已知路线（详见 todo.md 役5b/5c）：SQLiteEventStore→EventStore 适配器与 Router

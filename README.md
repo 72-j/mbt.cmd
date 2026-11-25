@@ -321,7 +321,7 @@ MoonBit 面 native+wasm 双腿），另附 EventStore 端口的内存实现
 
 ## 错误面
 
-总错误 `EventSourcingErr` 六臂：`CommandErr` / `EventStoreErr` /
+总错误 `EventSourcingError` 六臂：`CommandErr` / `EventStoreErr` /
 `SnapshotErr` / `EventBusErr` / `AggregateErr` / `ConsistencyErr`
 （Strong 一致性轮询超预算）。常用变体：`CommandError` 六变体
 （`InvalidCommand` / `Unauthorized` / `PreconditionFailed` / `NotFound` /

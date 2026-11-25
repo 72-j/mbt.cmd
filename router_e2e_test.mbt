@@ -319,7 +319,7 @@ test "router e2e: event bus wired, publish failure honest with events persisted"
   }
   let published_ok = match outcome {
     Err(
-      @mooncmd.EventSourcingErr::EventBusErr(
+      @mooncmd.EventSourcingError::EventBusErr(
         @event.EventBusError::PublishError(_),
       ),
     ) => false
@@ -464,7 +464,7 @@ test "router e2e: with_config retries duplicate version then succeeds" {
   )
   let surfaced = match @mooncmd.dispatch_reader_run(reader0, env0) {
     Err(
-      @mooncmd.EventSourcingErr::EventStoreErr(
+      @mooncmd.EventSourcingError::EventStoreErr(
         @store.EventStoreError::DuplicateVersion(v),
       ),
     ) => v
@@ -507,7 +507,7 @@ test "router e2e: with_config does not retry validation errors" {
   )
   let mut rejected = false
   match @mooncmd.dispatch_reader_run(reader, env) {
-    Err(@mooncmd.EventSourcingErr::CommandErr(cmd_err)) =>
+    Err(@mooncmd.EventSourcingError::CommandErr(cmd_err)) =>
       match cmd_err {
         @command.CommandError::PreconditionFailed(_) => rejected = true
         _ => fail("expected precondition failure")
@@ -578,7 +578,7 @@ test "router e2e: dispatch facade strong consistency waits projection checkpoint
   } catch {
     e =>
       match e {
-        @mooncmd.EventSourcingErr::ConsistencyErr(_) => timed_out = true
+        @mooncmd.EventSourcingError::ConsistencyErr(_) => timed_out = true
         _ => fail("expected consistency timeout")
       }
   }

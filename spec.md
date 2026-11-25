@@ -88,7 +88,7 @@ middleware~)`
 
 | 包 | 面 | 备注 |
 |---|---|---|
-| 根包 | `dispatch` 编排门面（五步串行 + Strong 一致性等待 + 中间件管道 `middleware~`）/ `Router`（`dispatch`/`dispatch_now`/`dispatch_once`/`dispatch_with_config`/`dispatch_batch`/`dispatch_default` + `DispatchReader` 组合子）/ `RouteEnv`/`CommandConfig`/`RouterBuilder` / 总错误 `EventSourcingErr`（六臂，含 ConsistencyErr）/ `Logger` / `DispatchMiddleware` + `logging_middleware` 参考件 | router_e2e 六钉（役5b 五钉 + 钉G Strong）+ 中间件四钉（ADR-MC-009） |
+| 根包 | `dispatch` 编排门面（五步串行 + Strong 一致性等待 + 中间件管道 `middleware~`）/ `Router`（`dispatch`/`dispatch_now`/`dispatch_once`/`dispatch_with_config`/`dispatch_batch`/`dispatch_default` + `DispatchReader` 组合子）/ `RouteEnv`/`CommandConfig`/`RouterBuilder` / 总错误 `EventSourcingError`（六臂，含 ConsistencyErr）/ `Logger` / `DispatchMiddleware` + `logging_middleware` 参考件 | router_e2e 六钉（役5b 五钉 + 钉G Strong）+ 中间件四钉（ADR-MC-009） |
 | `aggregate/` | `AggregateRoot`（`new`/`from_events`/`from_snapshot`/`execute`/`exec` 形态 A（在途）/`commit`/`uncommitted_events`/`version`/`current_state`/`to_snapshot`）· `AggregateId` trait + `String`/`Int32`/`AggUUID` impl · `AggregateError` | exec 形态 A 在途件 |
 | `command/` | `CommandMessage`（`new`/`with_correlation`/`with_user`）· `CommandHandler` 型 · `Command` trait · `CommandError`（六变体，Show 全） | FR-MC-6 已闭 |
 | `event/` | `EventMessage`（含 `schema_version`/`user_id`）· `EventStream` · `EventApplier` · `EventBus`（publish 已接通）· `Event` trait · `EventBusError` | |

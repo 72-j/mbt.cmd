@@ -57,7 +57,7 @@ test "middleware: failure hooks on main-chain error" {
   }
   let mut rejected = false
   match outcome {
-    Err(@mooncmd.EventSourcingErr::CommandErr(cmd_err)) =>
+    Err(@mooncmd.EventSourcingError::CommandErr(cmd_err)) =>
       match cmd_err {
         @command.CommandError::PreconditionFailed(_) => rejected = true
         _ => fail("expected precondition failure")
@@ -83,8 +83,8 @@ test "middleware: hook error passes through, failure not invoked" {
   let trace : Array[String] = []
   let mw : @mooncmd.DispatchMiddleware[String, E2eCommand, E2eEvent] = {
     name: "boom",
-    before: fn(_) raise @mooncmd.EventSourcingErr {
-      raise @mooncmd.EventSourcingErr::ConsistencyErr("hook boom")
+    before: fn(_) raise @mooncmd.EventSourcingError {
+      raise @mooncmd.EventSourcingError::ConsistencyErr("hook boom")
     },
     after: fn(_) { trace.push("after-ran") },
     failure: fn(_, _) { trace.push("failure-ran") },
@@ -95,7 +95,7 @@ test "middleware: hook error passes through, failure not invoked" {
     e => Err(e)
   }
   match outcome {
-    Err(@mooncmd.EventSourcingErr::ConsistencyErr(msg)) =>
+    Err(@mooncmd.EventSourcingError::ConsistencyErr(msg)) =>
       assert_eq(msg, "hook boom")
     _ => fail("expected hook error passthrough")
   }
