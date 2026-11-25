@@ -1,6 +1,6 @@
 # CHANGELOG
 
-## 未发布（0.3.0-dev）
+## 0.3.0（2026-11-25）
 
 **PM 错误裁决钩子**：`ProcessManagerRunner::new(..., on_error=Hook(...))`——
 泵错误（EmitFailed/StateFailed）由钩子定夺：`Skip` 吞错（本事件弃处理，
