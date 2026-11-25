@@ -227,3 +227,187 @@ test "pm nail 5: seeded state loaded instead of init" {
     None => fail("nail5 state missing")
   }
 }
+
+///|
+// 钉7(0.3.0)·错误钩子 Skip:emit 首发即咬 → 钩子 Skip 吞错 →
+// pump 返 false(事件弃处理),saga 态不落,零 raise。
+// 已发不撤(at-least-once):本罐 fail 在首发 = 零已发;部分已发形态
+// 由钉4 覆盖(透传径)。
+test "pm error hook skip swallows emit failure" {
+  let store = pm_mem_store()
+  let hook_err : Array[String] = [""]
+  let runner = @mooncmd.ProcessManagerRunner::new(
+    {
+      name: "skip",
+      init_state: () => { stage: 0, },
+      interested: e => e is Poked(_),
+      saga_id_of: msg => msg.aggregate_id,
+      handle: (_state, e) => {
+        match e {
+          Poked(n) => [{ target_aggregate_id: "t1", command: Mark(n), }]
+          Touched(_) => []
+        }
+      },
+      apply: (state, e) => {
+        match e {
+          Poked(n) => { stage: state.stage + n, }
+          Touched(_) => state
+        }
+      },
+    },
+    store,
+    (_target, _cmd) => raise EmitFailed("boom"),
+    on_error=Hook(err => {
+      hook_err[0] = err.to_string()
+      Skip
+    }),
+  )
+  let handled = runner.pump_event(pm_msg(Poked(5), "s7", 1))
+  assert_false(handled) // Skip = 弃处理(与未处理同形计数)
+  assert_true(hook_err[0].contains("boom")) // 钩子收原错
+  let loaded = (store.load)("skip:s7") catch { _ => None }
+  assert_true(loaded is None) // 状态不落
+}
+
+///|
+// 钉8·错误钩子 Raise 臂显式形:与透传缺省同果(原错原样上浮)。
+test "pm error hook raise re-raises typed" {
+  let store = pm_mem_store()
+  let runner = @mooncmd.ProcessManagerRunner::new(
+    {
+      name: "raise-hook",
+      init_state: () => { stage: 0, },
+      interested: e => e is Poked(_),
+      saga_id_of: msg => msg.aggregate_id,
+      handle: (_state, e) => {
+        match e {
+          Poked(n) => [{ target_aggregate_id: "t1", command: Mark(n), }]
+          Touched(_) => []
+        }
+      },
+      apply: (state, e) => {
+        match e {
+          Poked(n) => { stage: state.stage + n, }
+          Touched(_) => state
+        }
+      },
+    },
+    store,
+    (_target, _cmd) => raise EmitFailed("boom"),
+    on_error=Hook(_err => Raise),
+  )
+  let mut tagged = ""
+  let handled = runner.pump_event(pm_msg(Poked(5), "s8", 1)) catch {
+    e => {
+      tagged = match e {
+        EmitFailed(_) => "EmitFailed"
+        StateFailed(_) => "StateFailed"
+      }
+      false
+    }
+  }
+  assert_false(handled)
+  assert_eq(tagged, "EmitFailed")
+}
+
+///|
+// save 炸仓夹具(save 面 StorageError;load 面 None)。
+fn pm_fail_save_store() -> @store.SnapshotStore[String, PmState] {
+  {
+    save: (_key, _state, _version, _ts) => {
+      raise @store.SnapshotError::StorageError("save-boom")
+    },
+    load: _key => None,
+  }
+}
+
+///|
+// 钉9·错误钩子 Skip 于 save 面:状态不推进(handle 已发命令不撤——
+// at-least-once 已发不撤),泵继续。
+test "pm error hook skip swallows save failure" {
+  let store = pm_fail_save_store()
+  let sent : Array[(String, Int32)] = []
+  let calls : Array[Int32] = [0]
+  let runner = @mooncmd.ProcessManagerRunner::new(
+    {
+      name: "skip-save",
+      init_state: () => { stage: 0, },
+      interested: e => e is Poked(_),
+      saga_id_of: msg => msg.aggregate_id,
+      handle: (_state, e) => {
+        match e {
+          Poked(n) => [{ target_aggregate_id: "t1", command: Mark(n), }]
+          Touched(_) => []
+        }
+      },
+      apply: (state, e) => {
+        match e {
+          Poked(n) => { stage: state.stage + n, }
+          Touched(_) => state
+        }
+      },
+    },
+    store,
+    (target, cmd) => {
+      calls[0] = calls[0] + 1
+      let n = match cmd {
+        Mark(n) => n
+      }
+      sent.push((target, n))
+    },
+    on_error=Hook(_err => Skip),
+  )
+  let handled = runner.pump_event(pm_msg(Poked(5), "s9", 1)) catch {
+    _ => false
+  }
+  assert_false(handled) // skip = 弃处理
+  assert_eq(calls[0], 1) // 命令已发不撤(at-least-once)
+  assert_eq(sent.length(), 1)
+}
+
+///|
+// 钉10(0.3.0)·emit_msg 因果槽:sink 收触发事件信封(因果锚可用)——
+// 消费方 caused_by 组链:correlation 承父/causation = 父 event_id。
+test "pm emit_msg sink exposes triggering envelope for causation" {
+  let store = pm_mem_store()
+  let seen_msgs : Array[@event.EventMessage[String, PmEvent]] = []
+  let runner = @mooncmd.ProcessManagerRunner::new(
+    {
+      name: "sink",
+      init_state: () => { stage: 0, },
+      interested: e => e is Poked(_),
+      saga_id_of: msg => msg.aggregate_id,
+      handle: (_state, e) => {
+        match e {
+          Poked(n) => [{ target_aggregate_id: "t1", command: Mark(n), }]
+          Touched(_) => []
+        }
+      },
+      apply: (state, e) => {
+        match e {
+          Poked(n) => { stage: state.stage + n, }
+          Touched(_) => state
+        }
+      },
+    },
+    store,
+    (_target, _cmd) => (),
+    emit_cause=@mooncmd.PmEmitSink::Sink((_target, _cmd, msg) => {
+      seen_msgs.push(msg)
+    }),
+  )
+  let m = pm_msg(Poked(5), "s10", 1)
+  let handled = runner.pump_event(m)
+  assert_true(handled)
+  assert_eq(seen_msgs.length(), 1)
+  assert_eq(seen_msgs[0].event_id, m.event_id) // 因果锚 = 触发信封
+  // 消费方组链(caused_by 构造器:correlation 承父/causation = 父 event_id)
+  let child = @event.EventMessage::caused_by(
+    seen_msgs[0],
+    Poked(9),
+    "s10-child",
+    1,
+  )
+  assert_eq(child.causation_id, m.event_id)
+  assert_eq(child.correlation_id, m.correlation_id)
+}

@@ -234,3 +234,13 @@ pub fn[E] SQLiteEventStore::to_event_store(
     },
   }
 }
+
+///|
+/// 维护面：清空事件流（Commanded reset! 对位——测试/开发卫生，
+/// **生产禁用**：全表 DELETE 不可逆）。乐观并发守卫随空表复位
+/// （复位后版本从 0 重计）。
+pub fn[E] SQLiteEventStore::reset(self : SQLiteEventStore[E]) -> Unit raise {
+  let stmt = self.conn.prepare("DELETE FROM event_stream")
+  ignore(stmt.step())
+  stmt.finalize()
+}

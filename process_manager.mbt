@@ -58,6 +58,34 @@ pub(all) struct ProcessManagerRunner[S, C, E] {
   manager : ProcessManager[S, C, E]
   snapshots : @store.SnapshotStore[String, S]
   emit : (String, C) -> Unit raise ProcessManagerErr
+  on_error : PmOnError
+  emit_cause : (String, C, @event.EventMessage[String, E]) -> Unit raise ProcessManagerErr
+}
+
+///|
+/// PM 错误裁决(泵错误时由钩子定夺;缺省 Transparent 原错透传):
+/// Raise = 原错透传(fail-fast,状态不推进——0.2.x 缺省语义);
+/// Skip = 吞错:本事件弃处理(状态不推进,已发命令不撤——at-least-once,
+/// ADR-MC-011 D2 语差),泵继续下一事件。
+pub(all) enum PmErrorDecision {
+  Raise
+  Skip
+}
+
+///|
+/// 错误钩子面(入口 = ProcessManagerErr 原错;产出裁决)。
+pub(all) enum PmOnError {
+  Transparent
+  Hook((ProcessManagerErr) -> PmErrorDecision)
+}
+
+///|
+/// 因果发射槽（emit 三参变体:第三参 = 触发事件信封——消费方组
+/// causation 链的锚;缺省 = 旧两参 emit 包装,第三参弃用）。
+pub(all) enum PmEmitSink[C, E] {
+  Sink(
+    (String, C, @event.EventMessage[String, E]) -> Unit raise ProcessManagerErr,
+  )
 }
 
 ///|
@@ -79,13 +107,39 @@ fn[S, C, E] ProcessManagerRunner::state_key(
 }
 
 ///|
-/// 构造器(记录面直构同款便捷形)。
+/// 错误裁决(钩子缺席 = 透传;Hook 臂 = 钩子定夺)。
+fn[S, C, E] ProcessManagerRunner::decide(
+  self : ProcessManagerRunner[S, C, E],
+  err : ProcessManagerErr,
+) -> PmErrorDecision {
+  match self.on_error {
+    Transparent => Raise
+    Hook(h) => h(err)
+  }
+}
+
+///|
+/// 构造器(记录面直构同款便捷形;on_error 缺省 = 透传——0.2.x 语义零漂)。
 pub fn[S, C, E] ProcessManagerRunner::new(
   manager : ProcessManager[S, C, E],
   snapshots : @store.SnapshotStore[String, S],
   emit : (String, C) -> Unit raise ProcessManagerErr,
+  on_error? : PmOnError,
+  emit_cause? : PmEmitSink[C, E],
 ) -> ProcessManagerRunner[S, C, E] {
-  { manager, snapshots, emit, }
+  let on_error = match on_error {
+    Some(h) => h
+    None => Transparent
+  }
+  // 归一化:emit_cause 缺席 = 旧两参 emit 包装(第三参弃用——0.2.x 零漂)
+  let emit_cause = match emit_cause {
+    Some(PmEmitSink::Sink(f)) => f
+    None =>
+      fn(target, cmd, _msg) -> Unit raise ProcessManagerErr {
+        emit(target, cmd)
+      }
+  }
+  { manager, snapshots, emit, on_error, emit_cause, }
 }
 
 ///|
@@ -113,13 +167,21 @@ pub fn[S, C, E] ProcessManagerRunner::pump_event(
   }
   let commands = (self.manager.handle)(state, msg.event)
   for directed in commands {
-    (self.emit)(directed.target_aggregate_id, directed.command) catch {
-      e => raise EmitFailed(e.to_string())
+    (self.emit_cause)(directed.target_aggregate_id, directed.command, msg) catch {
+      e =>
+        match self.decide(EmitFailed(e.to_string())) {
+          Raise => raise EmitFailed(e.to_string())
+          Skip => return false // 吞错:本事件弃处理(已发命令不撤),泵继续
+        }
     }
   }
   let next_state = (self.manager.apply)(state, msg.event)
   (self.snapshots.save)(key, next_state, msg.aggregate_version, msg.timestamp) catch {
-    e => raise StateFailed(snapshot_error_text(e))
+    e =>
+      match self.decide(StateFailed(snapshot_error_text(e))) {
+        Raise => raise StateFailed(snapshot_error_text(e))
+        Skip => return false // 吞错:状态不推进(handle 已发命令不撤)
+      }
   }
   true
 }

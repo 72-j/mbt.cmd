@@ -1,5 +1,22 @@
 # CHANGELOG
 
+## 未发布（0.3.0-dev）
+
+**PM 错误裁决钩子**：`ProcessManagerRunner::new(..., on_error=Hook(...))`——
+泵错误（EmitFailed/StateFailed）由钩子定夺：`Skip` 吞错（本事件弃处理，
+状态不推进，已发命令不撤——at-least-once，泵继续）/ `Raise` 原错透传
+（缺省 `Transparent` = 0.2.x 语义零漂）。load 面保持透传（存储不可读
+无裁决域）。
+
+**causation 透传**：`new(..., emit_cause=PmEmitSink::Sink(...))` 因果
+发射槽——第三参 = 触发事件信封（因果锚）；`EventMessage::caused_by`
+构造器（correlation 承父 / causation = 父 event_id / user_id 透传）——
+PM 产命令的跨聚合追溯链不再断（0.2.x 裸命令 `correlation_id=""` 实录
+销账）。
+
+**reset 维护面**：`SQLiteEventStore::reset`——清空事件流（Commanded
+reset! 对位；乐观并发守卫随空表复位；测试/开发卫生，生产禁用）。
+
 ## 0.2.4（2026-11-25）
 
 **依赖升钉**：`moonbit-community/sqlite3` 0.2.3 → **0.2.5**——新工具链

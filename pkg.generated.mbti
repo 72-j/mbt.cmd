@@ -94,6 +94,20 @@ type MuteLogger
 pub fn MuteLogger::info(Self, String) -> Unit
 pub impl Logger for MuteLogger
 
+pub(all) enum PmEmitSink[C, E] {
+  Sink((String, C, @event.EventMessage[String, E]) -> Unit raise ProcessManagerErr)
+}
+
+pub(all) enum PmErrorDecision {
+  Raise
+  Skip
+}
+
+pub(all) enum PmOnError {
+  Transparent
+  Hook((ProcessManagerErr) -> PmErrorDecision)
+}
+
 pub(all) struct ProcessManager[S, C, E] {
   name : String
   init_state : () -> S
@@ -107,8 +121,10 @@ pub(all) struct ProcessManagerRunner[S, C, E] {
   manager : ProcessManager[S, C, E]
   snapshots : @store.SnapshotStore[String, S]
   emit : (String, C) -> Unit raise ProcessManagerErr
+  on_error : PmOnError
+  emit_cause : (String, C, @event.EventMessage[String, E]) -> Unit raise ProcessManagerErr
 }
-pub fn[S, C, E] ProcessManagerRunner::new(ProcessManager[S, C, E], @store.SnapshotStore[String, S], (String, C) -> Unit raise ProcessManagerErr) -> Self[S, C, E]
+pub fn[S, C, E] ProcessManagerRunner::new(ProcessManager[S, C, E], @store.SnapshotStore[String, S], (String, C) -> Unit raise ProcessManagerErr, on_error? : PmOnError, emit_cause? : PmEmitSink[C, E]) -> Self[S, C, E]
 pub fn[S, C, E] ProcessManagerRunner::pump_event(Self[S, C, E], @event.EventMessage[String, E]) -> Bool raise ProcessManagerErr
 pub fn[S, C, E] ProcessManagerRunner::pump_events(Self[S, C, E], Array[@event.EventMessage[String, E]]) -> Int32 raise ProcessManagerErr
 

@@ -49,6 +49,42 @@ pub fn[AggregateId, E] EventMessage::new(
 }
 
 ///|
+
+///|
+/// 因果信封构造:correlation 承父事件(追溯链延续)、causation = 父事件
+/// event_id(因果锚)、user_id 透传——PM/事件处理器产命令的跨聚合跳
+/// 组链面(对标 Commanded PM metadata 传递)。
+pub fn[AggregateId, E] EventMessage::caused_by(
+  parent : EventMessage[AggregateId, E],
+  event : E,
+  aggregate_id : AggregateId,
+  version : Int32,
+  clock? : () -> Int64,
+  id_gen? : () -> String,
+) -> EventMessage[AggregateId, E] {
+  let now = match clock {
+    Some(clock_fn) => clock_fn
+    None => fn() { @async.now() }
+  }
+  let gen_id = match id_gen {
+    Some(id_fn) => id_fn
+    None => fn() { @uuid.v4().to_string() }
+  }
+  {
+    event,
+    event_id: gen_id(),
+    aggregate_id,
+    aggregate_version: version,
+    correlation_id: parent.correlation_id,
+    causation_id: parent.event_id,
+    user_id: parent.user_id,
+    timestamp: now(),
+    metadata: @json.to_json("{}"),
+    schema_version: 1,
+  }
+}
+
+///|
 pub fn[AggregateId, E, C] EventMessage::from_command(
   event : E,
   aggregate_id : AggregateId,

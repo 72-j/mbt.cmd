@@ -38,6 +38,10 @@ correlation / causation 追溯链、时间戳、schema 版本），Router 作为
   透传 / init_state 词表零值态 / interested 不观注；name 唯一必填）——
   用户最小实装 = `impl <Trait> for <Struct> with fn name` + 差异槽覆写
   （`declare impl` 声明形勿用：编译过但运行时缺省不继承直落）。
+  错误裁决钩子：`new(..., on_error=Hook(...))` 泵错误定夺（`Skip` 吞错
+  继续泵 / `Raise` 透传；缺省 `Transparent` = 0.2.x 语义零漂）。
+  因果发射槽：`new(..., emit_cause=PmEmitSink::Sink(...))` 第三参 =
+  触发事件信封——配 `EventMessage::caused_by` 组跨聚合追溯链。
 - 拉取式投影：`Projection` 记录面 + `LiveProjection`（订阅位置
   Origin / Current / FromVersion，检查点即版本）+ SQLite 持久化投影。
 - Effect 重试状态机：`RetryMachine` 协议面（错误分类封闭集 + 纯裁决，
@@ -307,11 +311,12 @@ MoonBit 面 native+wasm 双腿），另附 EventStore 端口的内存实现
 | `aggregate` | `AggregateRoot` | 生命周期：`new` / `from_events` / `from_snapshot` / `exec` / `execute` / `commit` / `to_snapshot` |
 | `aggregate` | `exec_with_effect` | Effect 重试状态机执行（`RetryMachine` + 策略钩子 + 等待注入） |
 | `command` | `CommandMessage` / `CommandHandler` | 命令信封（correlation / causation / user）与纯函数处理器类型 |
-| `event` | `EventMessage` / `EventApplier` / `EventBus` | 事件信封（元数据全集）/ 事件应用器 / 进程内事件外发 |
-| `store` | `SQLiteEventStore` / `EventStore` / `SnapshotStore` | SQLite 后端（含 `to_event_store` 适配器）与记录型存储抽象 |
+| `event` | `EventMessage` / `EventApplier` / `EventBus` | 事件信封（元数据全集）/ 事件应用器 / 进程内事件外发；`caused_by` 因果信封构造（correlation 承父 / causation = 父 event_id） |
+| `store` | `SQLiteEventStore` / `EventStore` / `SnapshotStore` | SQLite 后端（含 `to_event_store` 适配器与 `reset` 维护面）与记录型存储抽象 |
 | `projection` | `Projection` / `LiveProjection` / `PersistedProjection` | 投影定义、内存实时投影（检查点推进）、SQLite 持久化投影 |
 | `monads` | `State` / `Writer` / `Reader` / `EventWriter` | 纯函数 Monad 基础设施 |
 | 根包 | `dispatch` / `Router` / `RouteEnv` / `RouterBuilder` | `dispatch` 统一编排门面（执行→落库→通知→提交→强一致等待）；`Router` 高级编排（快照基态 / 重试机 / Reader 注入） |
+| 根包 | `ProcessManagerRunner::new(..., on_error?, emit_cause?)` | PM 组装（`on_error` 错误裁决钩子：Skip 吞错 / Raise 透传；`emit_cause` 因果发射槽——第三参 = 触发事件信封） |
 
 ## 错误面
 

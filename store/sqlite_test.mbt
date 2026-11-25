@@ -352,3 +352,42 @@ async test "@store.SQLiteEventStore 追加和加载事件" {
 //     _ => ()
 //   }
 // }
+
+///|
+// 钉·reset 维护面(0.3.0):append 两事件 → reset → load 空 + 当前版本 0
+// (乐观并发守卫随空表复位——复位后版本从 0 重计;Commanded reset! 对位,
+// 测试/开发卫生——生产禁用)。
+test "reset clears event stream and resets version guard" {
+  let store = @store.SQLiteEventStore::new(
+    ":memory:", serialize_test_event, deserialize_test_event, get_test_event_type_name,
+  )
+  let events = [
+    @event.EventMessage::new(
+      TestEvent::Created("reset-room"),
+      "reset-acc-001",
+      1,
+    ),
+    @event.EventMessage::new(
+      TestEvent::Updated("reset-room-2"),
+      "reset-acc-001",
+      2,
+    ),
+  ]
+  store.append("reset-acc-001", events)
+  assert_eq(store.current_version("reset-acc-001"), 2)
+  assert_eq(store.load("reset-acc-001", 0).length(), 2)
+  // reset:清空事件流
+  store.reset()
+  assert_eq(store.load("reset-acc-001", 0).length(), 0)
+  assert_eq(store.current_version("reset-acc-001"), 0)
+  // 复位后版本守卫从 0 重计(版本 1 可再写)
+  let re_events = [
+    @event.EventMessage::new(
+      TestEvent::Created("reset-room"),
+      "reset-acc-001",
+      1,
+    ),
+  ]
+  store.append("reset-acc-001", re_events)
+  assert_eq(store.current_version("reset-acc-001"), 1)
+}
